@@ -1,0 +1,138 @@
+//This is a file for commented code that needs to be reintegrated
+
+            // let sqrt_stagnant_cells =
+            //     ((total_cells - slice_update_stat.active_cells) as f32).sqrt() as i32;
+
+            // let similarity_value = self.average_update_stat.similar_neighbours as f32
+            //     / (total_cells * MAX_NEIGHBOUR_COUNT) as f32;
+
+            // let similarity_value_squared = similarity_value * similarity_value;
+            // let activity_value_squared = activity_value * activity_value;
+
+            // if activity_value < 0.001 || similarity_value > 0.999 {
+            //     //if random::<i32>() % (sqrt_stagnant_cells / 2 + 1) > slice_update_stat.active_cells {
+            //     //&self.reseeder.reseed(&mut self.new_cell_array);
+            //     &self.reseeder.mutate();
+
+            //     mutate_rule_set(&mut self.rule_sets[random::<usize>() % MAX_COLORS]);
+
+            //     // for _i in 0..random::<i32>() % (sqrt_stagnant_cells + 1) {
+            //     //     self.new_cell_array[[
+            //     //         random::<usize>() % width as usize,
+            //     //         random::<usize>() % height as usize,
+            //     //     ]] = get_random_color();
+            //     // }
+            // }
+
+            // if similarity_value < random::<f32>() //It's noisy
+            // || similarity_value_squared > random::<f32>() //It's flat
+            // || activity_value > random::<f32>() //It's turbulent
+            // || activity_value_squared < random::<f32>()
+            // //It's unchanging
+            // {
+            //     let mutations = TICS_PER_UPDATE;
+
+            //     for _i in 0..random::<i32>() % mutations {
+            //         mutate_rule_set(&mut self.rule_sets[random::<usize>() % MAX_COLORS]);
+            //     }
+            // }
+
+// fn get_random_color() -> BitColor {
+//     BitColor::from_index(random::<usize>() % MAX_COLORS)
+// }
+
+//Get the alive neighbours surrounding x,y in a moore neighbourhood, this number should not exceed 8
+// fn get_alive_neighbours(
+//     old_cell_array: ArrayView2<'_, BitColor>,
+//     x: i32,
+//     y: i32,
+// ) -> ([usize; MAX_COLORS], i32) {
+//     let mut alive_neighbours = [0 as usize; MAX_COLORS]; //An array containing neighbour information for each color
+//     let mut similar_neighbours = 0;
+
+//     let this_color = old_cell_array[[x as usize, y as usize]];
+
+//     for xx in -1..=1 {
+//         for yy in -1..=1 {
+//             if !(xx == 0 && yy == 0) {
+//                 let offset_point = wrap_point_to_cell_array(old_cell_array, x + xx, y + yy);
+
+//                 let neighbour_color =
+//                     old_cell_array[[offset_point.0 as usize, offset_point.1 as usize]];
+
+//                 alive_neighbours[neighbour_color.to_index()] += 1;
+
+//                 if neighbour_color == this_color {
+//                     similar_neighbours += 1;
+//                 }
+//             }
+//         }
+//     }
+
+//     (alive_neighbours, similar_neighbours)
+// }
+
+//Get the next state for a cell
+// fn get_next_color(
+//     rule_sets: [RuleSet; MAX_COLORS],
+//     old_color: BitColor,
+//     alive_neighbours: [usize; MAX_COLORS],
+// ) -> BitColor {
+//     let mut new_color = old_color;
+
+//     for i in 0..MAX_COLORS {
+//         let index_color = BitColor::from_index(i);
+//         let current_rule = rule_sets[new_color.to_index()].rules[i];
+
+//         if new_color.has_color(index_color)
+//         //This color is alive
+//         {
+//             //This color is killed
+//             if current_rule.death_neighbours[alive_neighbours[i]] {
+//                 new_color = BitColor::from_components(new_color.take_color(index_color));
+//             }
+//         } else {
+//             //This color is dead but is being born again
+//             if current_rule.life_neighbours[alive_neighbours[i]] {
+//                 new_color = BitColor::from_components(new_color.give_color(index_color));
+//             }
+//         }
+//     }
+
+//     new_color
+// }
+
+//Simple color lerp - May be able to find a better one here: https://www.alanzucconi.com/2016/01/06/colour-interpolation/
+//fn lerp_float_color(a: FloatColor, b: FloatColor, value: f32) -> FloatColor {
+//    FloatColor {
+//        r: a.r + (b.r - a.r) * value,
+//        g: a.g + (b.g - a.g) * value,
+//        b: a.b + (b.b - a.b) * value,
+//        a: 1.0, //We don't care about transparency lerping
+//    }
+//}
+
+
+
+            // reseeder: Reseeder::Modulus {
+            //     x_mod: 4,
+            //     y_mod: 4,
+            //     x_offset: random::<usize>() % CONSTS.cell_array_width,
+            //     y_offset: random::<usize>() % CONSTS.cell_array_height,
+            //     color_table: Array2::from_shape_fn((2, 2), |_| get_random_color()),
+            // },
+
+            // rule_sets: [
+            //     generate_random_rule_set(),
+            //     generate_random_rule_set(),
+            //     generate_random_rule_set(),
+            //     generate_random_rule_set(),
+            //     generate_random_rule_set(),
+            //     generate_random_rule_set(),
+            //     generate_random_rule_set(),
+            //     generate_random_rule_set(),
+            // ],
+            
+    //The mechanism responsible for creating an initial state if all automata have died
+    //reseeder: Reseeder,
+    

@@ -1,0 +1,10 @@
+[workspace]
+members = [
+  "cellular4",
+  "mutagen",
+  "mutagen-derive",
+  "dot-serde",
+]
+
+[profile.release]
+debug = true

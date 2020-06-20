@@ -1,0 +1,21 @@
+sequences - fibonacci, powers of 2, etc
+repeating sequences - repeat sequence up to range, then invert order until 0, then repeat for all uint
+fractals - carpet, julia
+duplicate nodes for different data types - image node
+add support for infinite plane - for wave/repeating functions, noise, etc
+add coordinate swap and aspect scale
+add polar coods from arbitrary range function
+implement color blending
+implement kernel operations - sobel like & finite state automata
+implement noise extensions from library
+implement color functions from palette
+implement more conversions - byte -> int etc
+implement more data types - signed byte?
+implement int coord conversion
+implement partitioning nodes
+implement boolean equality nodes
+implement range function nodes
+implement more mutation options, addition, multiplication, etc
+implement canvas node and nodes to draw on it
+implement iterative scaling for complex fractals, so higher iterations are at a lower scale and therefore more detail is shown without having to seek it out
+implement calculations for update time, and mutate more often if running slowly

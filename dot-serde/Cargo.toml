@@ -1,0 +1,15 @@
+[package]
+name = "dot-serde"
+version = "0.1.0"
+authors = ["Patrick Chieppe <patrick.chieppe@hotmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde = "1.0.111"
+serde_json = "1.0.53"
+htmlescape = "0.3.1"
+
+[dev-dependencies]
+serde = { version = "1.0.111", features = ["derive"] }

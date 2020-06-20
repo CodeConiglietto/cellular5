@@ -1,0 +1,8 @@
+/target
+/saves
+last_seed.txt
+image_errors.log
+perf.data
+perf.data.old
+flamegraph.svg
+constants.yml

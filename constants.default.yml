@@ -1,0 +1,84 @@
+# For HP screen
+# initial_window_width: 1920.0
+# initial_window_height: 1080.0
+# cell_array_width: 640
+# cell_array_height: 360
+# tics_per_update: 72
+
+# For laptop screen
+# initial_window_width: 1600.0
+# initial_window_height: 900.0
+# cell_array_width: 800
+# cell_array_height: 450
+# tics_per_update: 150
+
+# For little screen
+# initial_window_width: 1360.0
+# initial_window_height: 768.0
+# cell_array_width: 680
+# cell_array_height: 384
+# tics_per_update: 384
+
+# Tiny window
+initial_window_width: 1200.0
+initial_window_height: 800.0
+cell_array_width: 600
+cell_array_height: 400
+tics_per_update: 100
+
+# For little screen, big res
+# initial_window_width: 1360.0
+# initial_window_height: 768.0
+# cell_array_width: 1360
+# cell_array_height: 768
+# tics_per_update: 384
+
+auto_mutate: true
+
+vsync: false
+fullscreen: false
+
+cell_array_history_length: 8
+cell_array_lerp_length: 8
+
+lerp_aggressiveness: 1.0
+
+noise_x_scale_factor: 8.0
+noise_y_scale_factor: 8.0
+noise_t_scale_factor: 0.1
+noise_x_scale_minimum: 0.001
+noise_y_scale_minimum: 0.001
+noise_t_scale_minimum: 0.5
+
+activity_value_upper_bound: 0.999
+activity_value_lower_bound: 0.005
+alpha_value_lower_bound: 0.001
+alpha_value_upper_bound: 0.999
+local_similarity_upper_bound: 0.999
+local_similarity_lower_bound: 0.1
+global_similarity_upper_bound: 0.999
+global_similarity_lower_bound: 0.1
+
+image_path: C:\Users\admin\Documents\Project Assets\Cellular\Images\
+
+byte_max_value: 255
+byte_possible_values: 256
+
+nibble_max_value: 15
+nibble_possible_values: 16
+
+max_neighbour_array_count: 9 
+max_neighbour_count: 8
+
+max_colors: 8
+
+parallelize: true
+
+min_leaf_depth: 2
+max_leaf_depth: 1000
+
+min_pipe_depth: 2
+max_pipe_depth: 4
+
+min_branch_depth: 0
+max_branch_depth: 4

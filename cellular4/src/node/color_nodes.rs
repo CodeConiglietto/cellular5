@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
+use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
 use palette::{encoding::srgb::Srgb, rgb::Rgb, Hsv, RgbHue};
 use serde::{Deserialize, Serialize};
 
@@ -200,6 +200,7 @@ impl<'a> Updatable<'a> for FloatColorNodes {
 
     fn update(&mut self, _state: mutagen::State, arg: UpdArg<'a>) {
         use FloatColorNodes::*;
+        let arg = ComArg::from(arg.reborrow());
 
         match self {
             PointDrawingBuffer {
@@ -214,7 +215,7 @@ impl<'a> Updatable<'a> for FloatColorNodes {
                 arg.coordinate_set.x = last_point.x();
                 arg.coordinate_set.y = last_point.y();
 
-                let new_point = last_point.sawtooth_add(child.compute(arg.to_com_arg()));
+                let new_point = last_point.sawtooth_add(child.compute(arg));
 
                 let points_len = points_len_child.compute(arg);
 

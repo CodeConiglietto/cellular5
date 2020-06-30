@@ -10,7 +10,7 @@ pub mod noise_nodes;
 pub mod point_nodes;
 pub mod point_set_nodes;
 
-use crate::{mutagen_args::ComArg};
+use crate::mutagen_args::ComArg;
 
 pub trait Node {
     type Output;

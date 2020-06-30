@@ -16,10 +16,10 @@ pub struct GenArg<'a> {
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, GenArg<'a>> for GenArg<'b> {
-    fn reborrow(borrow: &'a mut Self) -> GenArg<'a> {
+    fn reborrow(&'a mut self) -> GenArg<'a> {
         GenArg {
-            nodes: &mut borrow.nodes,
-            data: &mut borrow.data,
+            nodes: &mut self.nodes,
+            data: &mut self.data,
         }
     }
 }
@@ -31,10 +31,10 @@ pub struct MutArg<'a> {
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, MutArg<'a>> for MutArg<'b> {
-    fn reborrow(borrow: &'a mut Self) -> MutArg<'a> {
+    fn reborrow(&'a mut self) -> MutArg<'a> {
         MutArg {
-            nodes: &borrow.nodes,
-            data: &mut borrow.data,
+            nodes: &self.nodes,
+            data: &mut self.data,
         }
     }
 }
@@ -48,12 +48,12 @@ pub struct ComArg<'a> {
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, ComArg<'a>> for ComArg<'b> {
-    fn reborrow(borrow: &'a mut Self) -> ComArg<'a> {
+    fn reborrow(&'a mut self) -> ComArg<'a> {
         ComArg {
-            nodes: &borrow.nodes,
-            data: &borrow.data,
-            coordinate_set: borrow.coordinate_set.clone(),
-            history: &borrow.history,
+            nodes: &self.nodes,
+            data: &self.data,
+            coordinate_set: self.coordinate_set.clone(),
+            history: &self.history,
         }
     }
 }
@@ -67,12 +67,12 @@ pub struct UpdArg<'a> {
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, UpdArg<'a>> for UpdArg<'b> {
-    fn reborrow(borrow: &'a mut Self) -> UpdArg<'a> {
+    fn reborrow(&'a mut self) -> UpdArg<'a> {
         UpdArg {
-            nodes: &borrow.nodes,
-            data: &mut borrow.data,
-            coordinate_set: borrow.coordinate_set.clone(),
-            history: &borrow.history,
+            nodes: &self.nodes,
+            data: &mut self.data,
+            coordinate_set: self.coordinate_set.clone(),
+            history: &self.history,
         }
     }
 }

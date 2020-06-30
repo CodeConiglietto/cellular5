@@ -252,12 +252,12 @@ impl<'a, T: UpdatableRecursively<'a>> UpdatableRecursively<'a> for Box<T> {
 /// }
 ///
 /// impl<'a, 'b: 'a> Reborrow<'a, 'b, Foo<'a>> for Foo<'b> {
-///   fn reborrow(foo: &'a mut Self) -> Foo<'a> {
+///   fn reborrow(&'a mut self) -> Foo<'a> {
 ///     // NOTE: You CANNOT use Self in this constructor!
 ///     // Self refers to Foo<'b>, while Foo will correctly infer into Foo<'a>
 ///     Foo {
-///       some_mut_ref: &mut foo.some_mut_ref,
-///       some_ref: &foo.some_ref,
+///       some_mut_ref: &mut self.some_mut_ref,
+///       some_ref: &self.some_ref,
 ///     }
 ///   }
 /// }
@@ -277,7 +277,7 @@ where
     Self: 'b,
     T: 'a,
 {
-    fn reborrow(borrow: &'a mut Self) -> T;
+    fn reborrow(&'a mut self) -> T;
 }
 
 impl<'a, 'b, T> Reborrow<'a, 'b, T> for T
@@ -285,8 +285,8 @@ where
     'b: 'a,
     T: Copy + 'static,
 {
-    fn reborrow(borrow: &'a mut Self) -> T {
-        *borrow
+    fn reborrow(&'a mut self) -> T {
+        *self
     }
 }
 

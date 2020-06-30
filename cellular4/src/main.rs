@@ -321,7 +321,7 @@ impl MyGame {
             root_node: NodeBox::generate_rng(
                 &mut rng,
                 mutagen::State::default(),
-                &mut GenArg {
+                GenArg {
                     nodes: &mut nodes,
                     data: &mut data,
                 },

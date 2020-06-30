@@ -1,28 +1,25 @@
 use crate::{
     arena_wrappers::*,
-    datatype::{continuous::*, colors::*},
-    node_set::*,
+    datatype::{colors::*, continuous::*},
 };
 
 use generational_arena::*;
 
-pub struct DataSet
-{
+pub struct DataSet {
     unfloats: Arena<UNFloat>,
     float_colors: Arena<FloatColor>,
 }
 
-impl DataSet{
-    pub fn new() -> Self
-    {
-        DataSet{
+impl DataSet {
+    pub fn new() -> Self {
+        DataSet {
             unfloats: Arena::new(),
             float_colors: Arena::new(),
         }
     }
 }
 
-impl Storage<UNFloat> for NodeSet {
+impl Storage<UNFloat> for DataSet {
     fn insert(&mut self, t: UNFloat) -> Index {
         self.unfloats.insert(t)
     }

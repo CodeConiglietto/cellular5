@@ -1,14 +1,10 @@
 use std::{
-    env,
     f32::consts::PI,
     fs,
     iter::Sum,
-    ops::{Add, AddAssign, Div},
     path::PathBuf,
-    process::Command,
 };
 
-use failure::{ensure, Fallible};
 use ggez::{
     conf::{FullscreenType, WindowMode, WindowSetup},
     event::{self, EventHandler, KeyCode, KeyMods},
@@ -17,45 +13,45 @@ use ggez::{
     timer, Context, ContextBuilder, GameResult,
 };
 use log::{error, info};
-use mutagen::{Generatable, Mutagen, Mutatable, Updatable, UpdatableRecursively};
-use nalgebra::*;
-use ndarray::{s, Array3, ArrayView1, ArrayView3, ArrayViewMut1, Axis};
+use mutagen::Generatable;
+use ndarray::{s, Array3, ArrayView3, ArrayViewMut1, Axis};
 use rand::prelude::*;
 use rayon::prelude::*;
-use serde::{Deserialize, Serialize};
 use structopt::StructOpt;
 
 use crate::{
     arena_wrappers::*,
     constants::*,
+    coordinate_set::*,
     data_set::*,
     datatype::{
         colors::{ByteColor, FloatColor},
         continuous::*,
-        discrete::*,
+        discrete::Byte,
         image::*,
-        point_sets::*,
         points::*,
     },
+    history::*,
+    mutagen_args::*,
+    node::{Node, color_nodes::*},
     node_set::*,
-    node::{
-        color_nodes::*, continuous_nodes::*, coord_map_nodes::*, discrete_nodes::*, point_nodes::*,
-        point_set_nodes::*, Node,
-    },
     opts::Opts,
-    updatestate::*,
-    util::{DeterministicRng, RNG_SEED},
+    update_stat::UpdateStat,
+    util::{*, DeterministicRng, RNG_SEED},
 };
 
 mod arena_wrappers;
 mod constants;
-mod datatype;
 mod data_set;
+mod datatype;
+mod coordinate_set;
+mod history;
+mod mutagen_args;
 mod node;
 mod node_set;
 mod opts;
 mod preloader;
-mod updatestate;
+mod update_stat;
 mod util;
 
 fn main() {
@@ -117,84 +113,6 @@ fn setup_logging() {
         .unwrap();
 }
 
-#[derive(Debug)]
-pub struct HistoryStep {
-    cell_array: Array3<u8>,
-    computed_texture: GgImage,
-
-    update_coordinate: CoordinateSet,
-
-    rotation: f32,
-    translation: SNPoint,
-    offset: SNPoint,
-    from_scale: SNPoint,
-    to_scale: SNPoint,
-
-    root_scalar: UNFloat,
-    alpha: UNFloat,
-    rotation_scalar: UNFloat,
-    translation_scalar: UNFloat,
-    offset_scalar: UNFloat,
-    from_scale_scalar: UNFloat,
-    to_scale_scalar: UNFloat,
-}
-
-#[derive(Debug)]
-pub struct History {
-    history_steps: Vec<HistoryStep>,
-}
-
-impl History {
-    fn new(ctx: &mut Context, array_width: usize, array_height: usize, size: usize) -> Self {
-        Self {
-            history_steps: (0..size)
-                .map(|_| {
-                    let cell_array = init_cell_array(array_width, array_height);
-                    let computed_texture = compute_texture(ctx, cell_array.view());
-
-                    HistoryStep {
-                        cell_array: cell_array,
-                        computed_texture: computed_texture,
-                        update_coordinate: CoordinateSet {
-                            x: SNFloat::ZERO,
-                            y: SNFloat::ZERO,
-                            t: 0.0,
-                        },
-                        rotation: 0.0,
-                        translation: SNPoint::zero(),
-                        offset: SNPoint::zero(),
-                        from_scale: SNPoint::zero(),
-                        to_scale: SNPoint::zero(),
-
-                        root_scalar: UNFloat::default(),
-                        alpha: UNFloat::default(),
-                        rotation_scalar: UNFloat::default(),
-                        translation_scalar: UNFloat::default(),
-                        offset_scalar: UNFloat::default(),
-                        from_scale_scalar: UNFloat::default(),
-                        to_scale_scalar: UNFloat::default(),
-                    }
-                })
-                .collect(),
-        }
-    }
-
-    fn get_raw(&self, x: usize, y: usize, t: usize) -> ArrayView1<u8> {
-        let array = &self.history_steps[t % self.history_steps.len()].cell_array;
-        array.slice(s![y % array.dim().0, x % array.dim().1, ..])
-    }
-
-    fn get(&self, x: usize, y: usize, t: usize) -> ByteColor {
-        let raw = self.get_raw(x, y, t);
-        ByteColor {
-            r: raw[0],
-            g: raw[1],
-            b: raw[2],
-            a: raw[3],
-        }
-    }
-}
-
 // #[derive(Serialize, Deserialize, Generatable, Mutatable, UpdatableRecursively, Debug)]
 // struct RenderNodes {
 //     compute_offset_node: Box<CoordMapNodes>,
@@ -220,14 +138,14 @@ impl History {
 // }
 
 // impl<'a> Updatable<'a> for RenderNodes {
-//     fn update(&mut self, _state: mutagen::State, _arg: UpdateState<'a>) {}
+//     fn update(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {}
 // }
 
 // #[derive(Serialize, Deserialize, Generatable, Mutatable, UpdatableRecursively, Debug)]
 // struct NodeTree {
 //     //The root node for the tree that computes the next screen state
 //     root_node: Box<FloatColorNodes>,
-//     //Nodes for computing parameters for the next drawparam
+//     //Nodes for computing parameters for the next draw param
 //     render_nodes: RenderNodes,
 // }
 
@@ -303,7 +221,7 @@ fn save_slot_path(slot: &str) -> PathBuf {
 // }
 
 // impl<'a> Updatable<'a> for NodeTree {
-//     fn update(&mut self, _state: mutagen::State, _arg: UpdateState<'a>) {}
+//     fn update(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {}
 // }
 
 struct MyGame {
@@ -361,6 +279,9 @@ impl MyGame {
             history: &history,
         };
 
+        let nodes = Vec::new();
+        let data = DataSet::new();
+
         MyGame {
             bounds: Rect::new(0.0, 0.0, pixels_x, pixels_y),
 
@@ -399,14 +320,17 @@ impl MyGame {
                 global_similarity_value: 0.0,
             },
 
-            nodes: Vec::new(),
-            data: DataSet::new(),
-        
+            nodes: nodes,
+            data: data,
+
             root_node: NodeBox::generate_rng(
-                    &mut rng,
-                    mutagen::State::default(),
-                    update_state,
-                ),
+                &mut rng,
+                mutagen::State::default(),
+                &mut GenArg {
+                    nodes: &mut nodes,
+                    data: &mut data,
+                },
+            ),
 
             record_tree: false,
             tree_dirty: false,
@@ -416,63 +340,6 @@ impl MyGame {
             opts,
             history,
         }
-    }
-}
-
-#[derive(Default, Clone, Copy)]
-struct UpdateStat {
-    //Update stats are used to determine an approximation of the entropy of the current state
-    //Update stats contain two values:
-    //-Active cell count
-    //--If the active cell count is high, we have a lot of change
-    //--If the active cell count is low, we have a small amount of change
-    //-Neighbour similarity
-    //--If all neighbours are similar, we have close to a flat color
-    //--If all neighbours are distinct, we have visual noise
-    activity_value: f32,
-    alpha_value: f32,
-    local_similarity_value: f32,
-    global_similarity_value: f32,
-}
-
-impl Add<UpdateStat> for UpdateStat {
-    type Output = UpdateStat;
-
-    fn add(self, other: UpdateStat) -> UpdateStat {
-        UpdateStat {
-            activity_value: self.activity_value + other.activity_value,
-            alpha_value: self.alpha_value + other.alpha_value,
-            local_similarity_value: self.local_similarity_value + other.local_similarity_value,
-            global_similarity_value: self.global_similarity_value + other.global_similarity_value,
-        }
-    }
-}
-
-impl Div<f32> for UpdateStat {
-    type Output = UpdateStat;
-
-    fn div(self, other: f32) -> UpdateStat {
-        UpdateStat {
-            activity_value: self.activity_value / other,
-            alpha_value: self.alpha_value / other,
-            local_similarity_value: self.local_similarity_value / other,
-            global_similarity_value: self.global_similarity_value / other,
-        }
-    }
-}
-
-impl Sum for UpdateStat {
-    fn sum<I>(iter: I) -> Self
-    where
-        I: Iterator<Item = Self>,
-    {
-        iter.fold(UpdateStat::default(), |a, b| a + b)
-    }
-}
-
-impl AddAssign<UpdateStat> for UpdateStat {
-    fn add_assign(&mut self, other: UpdateStat) {
-        *self = *self + other;
     }
 }
 
@@ -562,10 +429,15 @@ impl EventHandler for MyGame {
 
         let root_node = &self.root_node;
 
+        let compute_arg = ComArg{
+            nodes: &self.nodes,
+            data: &self.data,
+        };
+
         let update_step = |y, x, mut new: ArrayViewMut1<u8>| {
             let total_cells = CONSTS.cell_array_width * CONSTS.cell_array_height;
 
-            let compute_result = root_node.compute(UpdateState {
+            let compute_result = root_node.compute(&UpdateState {
                 coordinate_set: CoordinateSet {
                     x: UNFloat::new(x as f32 / CONSTS.cell_array_width as f32).to_signed(),
                     y: UNFloat::new(
@@ -575,14 +447,15 @@ impl EventHandler for MyGame {
                     t: current_t as f32,
                 },
                 history,
-            });
+            },
+            compute_arg);
 
             let new_color = ByteColor::from(compute_result);
 
-            new[0] = new_color.r;
-            new[1] = new_color.g;
-            new[2] = new_color.b;
-            new[3] = new_color.a;
+            new[0] = new_color.r.into_inner();
+            new[1] = new_color.g.into_inner();
+            new[2] = new_color.b.into_inner();
+            new[3] = new_color.a.into_inner();
 
             let current_color = history.get(x, y, current_t);
             let older_color = history.get(x, y, usize::max(current_t, 1) - 1);
@@ -802,7 +675,6 @@ impl EventHandler for MyGame {
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
-
         if self.last_render_t != timer::ticks(ctx) {
             let base_params = DrawParam::new().dest([0.0, 0.0]).scale([
                 self.bounds.w as f32 / CONSTS.cell_array_width as f32,
@@ -921,29 +793,4 @@ impl EventHandler for MyGame {
 
         Ok(())
     }
-}
-
-fn init_cell_array(width: usize, height: usize) -> Array3<u8> {
-    Array3::from_shape_fn((height, width, 4), |(_y, _x, c)| {
-        if c == 3 {
-            255
-        } else {
-            0
-            // thread_rng().gen::<u8>()
-        }
-    })
-}
-
-fn compute_texture(ctx: &mut Context, cell_array: ArrayView3<u8>) -> GgImage {
-    let (height, width, _) = cell_array.dim();
-    let mut image = GgImage::from_rgba8(
-        ctx,
-        width as u16,
-        height as u16,
-        cell_array.as_slice().unwrap(),
-    )
-    .unwrap();
-
-    // image.set_filter(ggez::graphics::FilterMode::Nearest);
-    image
 }

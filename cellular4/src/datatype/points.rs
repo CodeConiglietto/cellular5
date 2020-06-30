@@ -4,7 +4,7 @@ use std::{
 };
 
 use lazy_static::lazy_static;
-use mutagen::{Generatable, Mutagen, Mutatable, Updatable, UpdatableRecursively};
+use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
 use nalgebra::*;
 use rand::prelude::*;
 use regex::Regex;
@@ -14,7 +14,7 @@ use serde::{
     Deserialize, Serialize,
 };
 
-use crate::{datatype::continuous::*, updatestate::UpdateState};
+use crate::{datatype::continuous::*, mutagen_args::*};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SNPoint {
@@ -117,6 +117,13 @@ impl SNPoint {
             SNFloat::new(rho * f32::cos(theta)),
         )
     }
+
+    pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
+        Self::new(Point2::new(
+            rng.gen_range(-1.0, 1.0),
+            rng.gen_range(-1.0, 1.0),
+        ))
+    }
 }
 
 impl Serialize for SNPoint {
@@ -179,35 +186,34 @@ impl Default for SNPoint {
     }
 }
 
-impl<'a> Mutagen<'a> for SNPoint {
-    type Arg = UpdateState<'a>;
-}
 impl<'a> Generatable<'a> for SNPoint {
+    type GenArg = GenArg<'a>;
+
     fn generate_rng<R: Rng + ?Sized>(
         rng: &mut R,
         _state: mutagen::State,
-        _arg: UpdateState<'a>,
+        _arg: &'a mut GenArg<'a>,
     ) -> Self {
-        Self::new(Point2::new(
-            rng.gen_range(-1.0, 1.0),
-            rng.gen_range(-1.0, 1.0),
-        ))
+        Self::random(rng)
     }
 }
 
 impl<'a> Mutatable<'a> for SNPoint {
+    type MutArg = MutArg<'a>;
     fn mutate_rng<R: Rng + ?Sized>(
         &mut self,
         rng: &mut R,
         state: mutagen::State,
-        arg: UpdateState<'a>,
+        arg: &'a mut MutArg<'a>,
     ) {
-        *self = Self::generate_rng(rng, state, arg);
+        *self = Self::random(rng);
     }
 }
 
 impl<'a> Updatable<'a> for SNPoint {
-    fn update(&mut self, _state: mutagen::State, _arg: UpdateState<'a>) {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -215,7 +221,7 @@ impl<'a> Updatable<'a> for SNPoint {
 }
 
 impl<'a> UpdatableRecursively<'a> for SNPoint {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdateState<'a>) {
+    fn update_recursively(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
         match self {
             _ => {}
         }

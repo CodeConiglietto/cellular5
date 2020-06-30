@@ -1,3 +1,11 @@
+use ggez::{
+    conf::{FullscreenType, WindowMode, WindowSetup},
+    event::{self, EventHandler, KeyCode, KeyMods},
+    graphics::{self, Color as GgColor, DrawParam, Image as GgImage, Rect, WHITE},
+    input::keyboard,
+    timer, Context, ContextBuilder, GameResult,
+};
+
 use std::{
     path::{Path, PathBuf},
     sync::Mutex,
@@ -7,6 +15,7 @@ use std::{
 use lazy_static::lazy_static;
 use log::debug;
 use nalgebra::*;
+use ndarray::{Array3, ArrayView3};
 use rand::{RngCore, SeedableRng};
 use walkdir::WalkDir;
 
@@ -141,4 +150,29 @@ where
     }
 
     return (c, max_iterations);
+}
+
+pub fn init_cell_array(width: usize, height: usize) -> Array3<u8> {
+    Array3::from_shape_fn((height, width, 4), |(_y, _x, c)| {
+        if c == 3 {
+            255
+        } else {
+            0
+            // thread_rng().gen::<u8>()
+        }
+    })
+}
+
+pub fn compute_texture(ctx: &mut Context, cell_array: ArrayView3<u8>) -> GgImage {
+    let (height, width, _) = cell_array.dim();
+    let mut image = GgImage::from_rgba8(
+        ctx,
+        width as u16,
+        height as u16,
+        cell_array.as_slice().unwrap(),
+    )
+    .unwrap();
+
+    // image.set_filter(ggez::graphics::FilterMode::Nearest);
+    image
 }

@@ -1,4 +1,4 @@
-use crate::constants::*;
+use crate::{mutagen_args::*,constants::*};
 use rand::prelude::*;
 //One of these for each one-way colour relation
 #[derive(Clone, Copy)]

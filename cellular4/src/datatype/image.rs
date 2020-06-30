@@ -6,11 +6,11 @@ use std::{
     sync::Arc,
 };
 
-use failure::{format_err, Fail, Fallible};
+use failure::{format_err, Fallible};
 use image::{gif, imageops, AnimationDecoder, FilterType, ImageFormat, RgbaImage};
 use lazy_static::lazy_static;
 use log::{debug, error, warn};
-use mutagen::{Generatable, Mutagen, Mutatable, Updatable, UpdatableRecursively};
+use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
 use rand::prelude::*;
 use reqwest::blocking::Client as HttpClient;
 use serde::{de::Deserializer, ser::Serializer, Deserialize, Serialize};
@@ -18,8 +18,8 @@ use serde::{de::Deserializer, ser::Serializer, Deserialize, Serialize};
 use crate::{
     constants::*,
     datatype::{colors::ByteColor, continuous::*},
+    mutagen_args::*,
     preloader::{Generator, Preloader},
-    updatestate::UpdateState,
     util::{self, DeterministicRng},
 };
 
@@ -257,15 +257,13 @@ impl<'de> Deserialize<'de> for Image {
     }
 }
 
-impl<'a> Mutagen<'a> for Image {
-    type Arg = UpdateState<'a>;
-}
-
 impl<'a> Generatable<'a> for Image {
+    type GenArg = GenArg<'a>;
+
     fn generate_rng<R: Rng + ?Sized>(
         _rng: &mut R,
         _state: mutagen::State,
-        arg: UpdateState<'a>,
+        _arg: &'a mut GenArg<'a>,
     ) -> Self {
         IMAGE_PRELOADER
             .with(|p| p.try_get_next())
@@ -274,13 +272,24 @@ impl<'a> Generatable<'a> for Image {
 }
 
 impl<'a> Mutatable<'a> for Image {
-    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, state: mutagen::State, arg: Self::Arg) {
-        *self = Self::generate_rng(rng, state, arg);
+    type MutArg = MutArg<'a>;
+
+    fn mutate_rng<R: Rng + ?Sized>(
+        &mut self,
+        rng: &mut R,
+        state: mutagen::State,
+        arg: &'a mut Self::MutArg,
+    ) {
+        *self = IMAGE_PRELOADER
+            .with(|p| p.try_get_next())
+            .unwrap_or_else(|| FALLBACK_IMAGE.clone());
     }
 }
 
 impl<'a> Updatable<'a> for Image {
-    fn update(&mut self, _state: mutagen::State, _arg: Self::Arg) {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _state: mutagen::State, _arg: &'a mut Self::UpdateArg) {
         match self {
             _ => {}
         }
@@ -288,7 +297,7 @@ impl<'a> Updatable<'a> for Image {
 }
 
 impl<'a> UpdatableRecursively<'a> for Image {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: Self::Arg) {
+    fn update_recursively(&mut self, _state: mutagen::State, _arg: &'a mut Self::UpdateArg) {
         match self {
             _ => {}
         }

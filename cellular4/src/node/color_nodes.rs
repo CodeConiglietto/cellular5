@@ -1,22 +1,21 @@
 use std::collections::VecDeque;
 
-use mutagen::{Generatable, Mutagen, Mutatable, Updatable, UpdatableRecursively};
-use nalgebra::*;
+use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
 use palette::{encoding::srgb::Srgb, rgb::Rgb, Hsv, RgbHue};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     constants::*,
-    datatype::{buffers::*, colors::*, continuous::*, image::*, points::*},
+    datatype::{buffers::*, colors::*, image::*, points::*},
+    mutagen_args::*,
     node::{
         color_blend_nodes::*, continuous_nodes::*, coord_map_nodes::*, discrete_nodes::*,
         mutagen_functions::*, point_nodes::*, point_set_nodes::*, Node,
     },
-    updatestate::UpdateState,
 };
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Serialize, Deserialize, Debug)]
-#[mutagen(mut_reroll = 0.1)]
+#[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum FloatColorNodes {
     #[mutagen(gen_weight = leaf_node_weight)]
     Constant { value: FloatColor },
@@ -108,38 +107,35 @@ pub enum FloatColorNodes {
     },
 }
 
-impl<'a> Mutagen<'a> for FloatColorNodes {
-    type Arg = UpdateState<'a>;
-}
 impl Node for FloatColorNodes {
     type Output = FloatColor;
 
-    fn compute(&self, state: UpdateState) -> Self::Output {
+    fn compute(&self, compute_arg: ComArg) -> Self::Output {
         use FloatColorNodes::*;
 
         match self {
             Constant { value } => *value,
             FromImage { image } => image
                 .get_pixel_normalised(
-                    state.coordinate_set.x,
-                    state.coordinate_set.y,
-                    state.coordinate_set.t,
+                    compute_arg.coordinate_set.x,
+                    compute_arg.coordinate_set.y,
+                    compute_arg.coordinate_set.t,
                 )
                 .into(),
-            FromCellArray => state
+            FromCellArray => compute_arg
                 .history
                 .get(
-                    ((state.coordinate_set.x.into_inner() + 1.0)
+                    ((compute_arg.coordinate_set.x.into_inner() + 1.0)
                         * 0.5
                         * CONSTS.cell_array_width as f32) as usize,
-                    ((state.coordinate_set.y.into_inner() + 1.0)
+                    ((compute_arg.coordinate_set.y.into_inner() + 1.0)
                         * 0.5
                         * CONSTS.cell_array_height as f32) as usize,
-                    state.coordinate_set.t as usize,
+                        compute_arg.coordinate_set.t as usize,
                 )
                 .into(),
             Grayscale { child } => {
-                let value = child.compute(state);
+                let value = child.compute(compute_arg);
                 FloatColor {
                     r: value,
                     g: value,
@@ -148,56 +144,59 @@ impl Node for FloatColorNodes {
                 }
             }
             RGB { r, g, b, a } => FloatColor {
-                r: r.compute(state),
-                g: g.compute(state),
-                b: b.compute(state),
-                a: a.compute(state),
+                r: r.compute(compute_arg),
+                g: g.compute(compute_arg),
+                b: b.compute(compute_arg),
+                a: a.compute(compute_arg),
             },
             HSV { h, s, v, a } => {
                 let rgb: Rgb = Hsv::<Srgb, _>::from_components((
-                    RgbHue::from_degrees(h.compute(state).into_inner() as f32 * 360.0),
-                    s.compute(state).into_inner() as f32,
-                    v.compute(state).into_inner() as f32,
+                    RgbHue::from_degrees(h.compute(compute_arg).into_inner() as f32 * 360.0),
+                    s.compute(compute_arg).into_inner() as f32,
+                    v.compute(compute_arg).into_inner() as f32,
                 ))
                 .into();
 
-                float_color_from_pallette_rgb(rgb, a.compute(state).into_inner())
+                float_color_from_pallette_rgb(rgb, a.compute(compute_arg).into_inner())
             }
-            FromBlend { child } => child.compute(state),
-            FromBitColor { child } => FloatColor::from(child.compute(state)),
-            ModifyState { child, child_state } => child.compute(UpdateState {
-                coordinate_set: child_state.compute(state),
-                ..state
-            }),
-            FromByteColor { child } => FloatColor::from(child.compute(state)),
+            FromBlend { child } => child.compute(compute_arg),
+            FromBitColor { child } => FloatColor::from(child.compute(compute_arg)),
+            ModifyState { child, child_state } => child.compute(&UpdateState {
+                coordinate_set: child_state.compute(compute_arg),
+                ..*compute_arg
+            },
+            compute_arg),
+            FromByteColor { child } => FloatColor::from(child.compute(compute_arg)),
             IfElse {
                 predicate,
                 child_a,
                 child_b,
             } => {
-                if predicate.compute(state).into_inner() {
-                    child_a.compute(state)
+                if predicate.compute(compute_arg).into_inner() {
+                    child_a.compute(compute_arg)
                 } else {
-                    child_b.compute(state)
+                    child_b.compute(compute_arg)
                 }
             }
             SetAlpha { child_a, child_b } => {
-                let mut color = child_a.compute(state);
+                let mut color = child_a.compute(compute_arg);
 
-                color.a = child_b.compute(state);
+                color.a = child_b.compute(compute_arg);
 
                 color
             }
-            PointDrawingBuffer { buffer, .. } => buffer[state.coordinate_set.xy()],
-            PointSetLineBuffer { buffer, .. } => buffer[state.coordinate_set.xy()],
-            PointSetDotBuffer { buffer, .. } => buffer[state.coordinate_set.xy()],
-            ClosestPointLineBuffer { buffer, .. } => buffer[state.coordinate_set.xy()],
+            PointDrawingBuffer { buffer, .. } => buffer[compute_arg.coordinate_set.xy()],
+            PointSetLineBuffer { buffer, .. } => buffer[compute_arg.coordinate_set.xy()],
+            PointSetDotBuffer { buffer, .. } => buffer[compute_arg.coordinate_set.xy()],
+            ClosestPointLineBuffer { buffer, .. } => buffer[compute_arg.coordinate_set.xy()],
         }
     }
 }
 
 impl<'a> Updatable<'a> for FloatColorNodes {
-    fn update(&mut self, _state: mutagen::State, mut arg: UpdateState<'a>) {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _state: mutagen::State, arg: &'a mut UpdArg<'a>) {
         use FloatColorNodes::*;
 
         match self {
@@ -213,7 +212,7 @@ impl<'a> Updatable<'a> for FloatColorNodes {
                 arg.coordinate_set.x = last_point.x();
                 arg.coordinate_set.y = last_point.y();
 
-                let new_point = last_point.sawtooth_add(child.compute(arg));
+                let new_point = last_point.sawtooth_add(child.compute(arg.to_com_arg()));
 
                 let points_len = points_len_child.compute(arg);
 
@@ -289,7 +288,7 @@ impl<'a> Updatable<'a> for FloatColorNodes {
 }
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Serialize, Deserialize, Debug)]
-#[mutagen(mut_reroll = 0.1)]
+#[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum BitColorNodes {
     #[mutagen(gen_weight = leaf_node_weight)]
     Constant { value: BitColor },
@@ -353,73 +352,70 @@ pub enum BitColorNodes {
     },
 }
 
-impl<'a> Mutagen<'a> for BitColorNodes {
-    type Arg = UpdateState<'a>;
-}
 impl Node for BitColorNodes {
     type Output = BitColor;
 
-    fn compute(&self, state: UpdateState) -> Self::Output {
+    fn compute(&self, compute_arg: ComArg) -> Self::Output {
         use BitColorNodes::*;
         match self {
             Constant { value } => *value,
             GiveColor { child_a, child_b } => {
-                BitColor::from_components(child_a.compute(state).give_color(child_b.compute(state)))
+                BitColor::from_components(child_a.compute(compute_arg).give_color(child_b.compute(compute_arg)))
             }
             TakeColor { child_a, child_b } => {
-                BitColor::from_components(child_a.compute(state).take_color(child_b.compute(state)))
+                BitColor::from_components(child_a.compute(compute_arg).take_color(child_b.compute(compute_arg)))
             }
             XorColor { child_a, child_b } => {
-                BitColor::from_components(child_a.compute(state).xor_color(child_b.compute(state)))
+                BitColor::from_components(child_a.compute(compute_arg).xor_color(child_b.compute(compute_arg)))
             }
             EqColor { child_a, child_b } => {
-                BitColor::from_components(child_a.compute(state).eq_color(child_b.compute(state)))
+                BitColor::from_components(child_a.compute(compute_arg).eq_color(child_b.compute(compute_arg)))
             }
             FromComponents { r, g, b } => BitColor::from_components([
-                r.compute(state).into_inner(),
-                g.compute(state).into_inner(),
-                b.compute(state).into_inner(),
+                r.compute(compute_arg).into_inner(),
+                g.compute(compute_arg).into_inner(),
+                b.compute(compute_arg).into_inner(),
             ]),
             FromImage { image } => image
                 .get_pixel_normalised(
-                    state.coordinate_set.x,
-                    state.coordinate_set.y,
-                    state.coordinate_set.t,
+                    compute_arg.coordinate_set.x,
+                    compute_arg.coordinate_set.y,
+                    compute_arg.coordinate_set.t,
                 )
                 .into(),
-            FromCellArray => state
+            FromCellArray => compute_arg
                 .history
                 .get(
-                    ((state.coordinate_set.x.into_inner() + 1.0)
+                    ((compute_arg.coordinate_set.x.into_inner() + 1.0)
                         * 0.5
                         * CONSTS.cell_array_width as f32) as usize,
-                    ((state.coordinate_set.y.into_inner() + 1.0)
+                    ((compute_arg.coordinate_set.y.into_inner() + 1.0)
                         * 0.5
                         * CONSTS.cell_array_height as f32) as usize,
-                    state.coordinate_set.t as usize,
+                    compute_arg.coordinate_set.t as usize,
                 )
                 .into(),
             FromUNFloat { child } => BitColor::from_index(
-                (child.compute(state).into_inner() * 0.99 * (CONSTS.max_colors) as f32) as usize,
+                (child.compute(compute_arg).into_inner() * 0.99 * (CONSTS.max_colors) as f32) as usize,
             ),
-            FromFloatColor { child } => BitColor::from_float_color(child.compute(state)),
-            FromByteColor { child } => BitColor::from_byte_color(child.compute(state)),
+            FromFloatColor { child } => BitColor::from_float_color(child.compute(compute_arg)),
+            FromByteColor { child } => BitColor::from_byte_color(child.compute(compute_arg)),
             FromNibbleIndex { child } => {
-                BitColor::from_index(child.compute(state).into_inner() as usize % 8)
+                BitColor::from_index(child.compute(compute_arg).into_inner() as usize % 8)
             }
-            ModifyState { child, child_state } => child.compute(UpdateState {
-                coordinate_set: child_state.compute(state),
-                ..state
+            ModifyState { child, child_state } => child.compute(&UpdateState {
+                coordinate_set: child_state.compute(compute_arg),
+                ..*compute_arg
             }),
             IfElse {
                 predicate,
                 child_a,
                 child_b,
             } => {
-                if predicate.compute(state).into_inner() {
-                    child_a.compute(state)
+                if predicate.compute(compute_arg).into_inner() {
+                    child_a.compute(compute_arg)
                 } else {
-                    child_b.compute(state)
+                    child_b.compute(compute_arg)
                 }
             }
         }
@@ -427,11 +423,13 @@ impl Node for BitColorNodes {
 }
 
 impl<'a> Updatable<'a> for BitColorNodes {
-    fn update(&mut self, _state: mutagen::State, _arg: UpdateState<'a>) {}
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {}
 }
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Serialize, Deserialize, Debug)]
-#[mutagen(mut_reroll = 0.1)]
+#[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum ByteColorNodes {
     #[mutagen(gen_weight = leaf_node_weight)]
     Constant { value: ByteColor },
@@ -467,51 +465,48 @@ pub enum ByteColorNodes {
     },
 }
 
-impl<'a> Mutagen<'a> for ByteColorNodes {
-    type Arg = UpdateState<'a>;
-}
 impl Node for ByteColorNodes {
     type Output = ByteColor;
 
-    fn compute(&self, state: UpdateState) -> Self::Output {
+    fn compute(&self, compute_arg: ComArg) -> Self::Output {
         use ByteColorNodes::*;
 
         match self {
             Constant { value } => *value,
             FromImage { image } => image.get_pixel_normalised(
-                state.coordinate_set.x,
-                state.coordinate_set.y,
-                state.coordinate_set.t,
+                compute_arg.coordinate_set.x,
+                compute_arg.coordinate_set.y,
+                compute_arg.coordinate_set.t,
             ),
-            FromCellArray => state.history.get(
-                ((state.coordinate_set.x.into_inner() + 1.0) * 0.5 * CONSTS.cell_array_width as f32)
+            FromCellArray => compute_arg.history.get(
+                ((compute_arg.coordinate_set.x.into_inner() + 1.0) * 0.5 * CONSTS.cell_array_width as f32)
                     as usize,
-                ((state.coordinate_set.y.into_inner() + 1.0)
+                ((compute_arg.coordinate_set.y.into_inner() + 1.0)
                     * 0.5
                     * CONSTS.cell_array_height as f32) as usize,
-                state.coordinate_set.t as usize,
+                compute_arg.coordinate_set.t as usize,
             ),
             Decompose { r, g, b, a } => ByteColor {
-                r: r.compute(state).into_inner(),
-                g: g.compute(state).into_inner(),
-                b: b.compute(state).into_inner(),
-                a: a.compute(state).into_inner(),
+                r: r.compute(compute_arg),
+                g: g.compute(compute_arg),
+                b: b.compute(compute_arg),
+                a: a.compute(compute_arg),
             },
-            FromFloatColor { child } => child.compute(state).into(),
-            FromBitColor { child } => child.compute(state).into(),
-            ModifyState { child, child_state } => child.compute(UpdateState {
-                coordinate_set: child_state.compute(state),
-                ..state
+            FromFloatColor { child } => child.compute(compute_arg).into(),
+            FromBitColor { child } => child.compute(compute_arg).into(),
+            ModifyState { child, child_state } => child.compute(&UpdateState {
+                coordinate_set: child_state.compute(compute_arg),
+                ..*compute_arg
             }),
             IfElse {
                 predicate,
                 child_a,
                 child_b,
             } => {
-                if predicate.compute(state).into_inner() {
-                    child_a.compute(state)
+                if predicate.compute(compute_arg).into_inner() {
+                    child_a.compute(compute_arg)
                 } else {
-                    child_b.compute(state)
+                    child_b.compute(compute_arg)
                 }
             }
         }
@@ -519,5 +514,7 @@ impl Node for ByteColorNodes {
 }
 
 impl<'a> Updatable<'a> for ByteColorNodes {
-    fn update(&mut self, _state: mutagen::State, _arg: UpdateState<'a>) {}
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {}
 }

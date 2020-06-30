@@ -1,18 +1,19 @@
-use mutagen::{Generatable, Mutagen, Mutatable, Updatable, UpdatableRecursively};
+use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
 use nalgebra::{geometry::Point2, geometry::Rotation2};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     datatype::{continuous::*, points::*},
+    mutagen_args::*,
     node::{
         continuous_nodes::*, discrete_nodes::*, matrix_nodes::*, mutagen_functions::*,
         point_nodes::*, point_set_nodes::*, Node,
     },
-    updatestate::{CoordinateSet, UpdateState},
+    coordinate_set::*,
 };
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Serialize, Deserialize, Debug)]
-#[mutagen(mut_reroll = 0.1)]
+#[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum CoordMapNodes {
     #[mutagen(gen_weight = pipe_node_weight)]
     Replace { child: Box<SNPointNodes> },
@@ -64,57 +65,54 @@ pub enum CoordMapNodes {
     TesellateClosestPointSet { child: Box<PointSetNodes> },
 }
 
-impl<'a> Mutagen<'a> for CoordMapNodes {
-    type Arg = UpdateState<'a>;
-}
 impl Node for CoordMapNodes {
     type Output = CoordinateSet;
 
-    fn compute(&self, state: UpdateState) -> Self::Output {
+    fn compute(&self, compute_arg: ComArg) -> Self::Output {
         use CoordMapNodes::*;
 
         match self {
-            Replace { child } => state.replace_coords(&child.compute(state)).coordinate_set,
-            Shift { x, y } => state.coordinate_set.get_coord_shifted(
-                x.compute(state),
-                y.compute(state),
+            Replace { child } => compute_arg.replace_coords(&child.compute(compute_arg)).coordinate_set,
+            Shift { x, y } => compute_arg.coordinate_set.get_coord_shifted(
+                x.compute(compute_arg),
+                y.compute(compute_arg),
                 SNFloat::new(0.0),
             ),
-            Scale { x, y } => state.coordinate_set.get_coord_scaled(
-                x.compute(state),
-                y.compute(state),
+            Scale { x, y } => compute_arg.coordinate_set.get_coord_scaled(
+                x.compute(compute_arg),
+                y.compute(compute_arg),
                 SNFloat::new(1.0),
             ),
             Rotation { angle } => {
-                let new_pos = Rotation2::new(angle.compute(state).into_inner()).transform_point(
+                let new_pos = Rotation2::new(angle.compute(compute_arg).into_inner()).transform_point(
                     &Point2::new(
-                        state.coordinate_set.x.into_inner(),
-                        state.coordinate_set.y.into_inner(),
+                        compute_arg.coordinate_set.x.into_inner(),
+                        compute_arg.coordinate_set.y.into_inner(),
                     ),
                 );
 
                 CoordinateSet {
                     x: SNFloat::new(0.0).sawtooth_add_f32(new_pos.x),
                     y: SNFloat::new(0.0).sawtooth_add_f32(new_pos.y),
-                    t: state.coordinate_set.t,
+                    t: compute_arg.coordinate_set.t,
                 }
             }
             ToPolar => {
-                let p = state.coordinate_set.get_coord_point().to_polar();
+                let p = compute_arg.coordinate_set.get_coord_point().to_polar();
 
                 CoordinateSet {
                     x: p.x(),
                     y: p.y(),
-                    t: state.coordinate_set.t,
+                    t: compute_arg.coordinate_set.t,
                 }
             }
             FromPolar => {
-                let p = state.coordinate_set.get_coord_point().from_polar();
+                let p = compute_arg.coordinate_set.get_coord_point().from_polar();
 
                 CoordinateSet {
                     x: p.x(),
                     y: p.y(),
-                    t: state.coordinate_set.t,
+                    t: compute_arg.coordinate_set.t,
                 }
             }
             IfElse {
@@ -122,26 +120,26 @@ impl Node for CoordMapNodes {
                 child_a,
                 child_b,
             } => {
-                if predicate.compute(state).into_inner() {
-                    child_a.compute(state)
+                if predicate.compute(compute_arg).into_inner() {
+                    child_a.compute(compute_arg)
                 } else {
-                    child_b.compute(state)
+                    child_b.compute(compute_arg)
                 }
             }
             ApplyMatrix { child } => {
                 let point = Point2::new(
-                    state.coordinate_set.x.into_inner(),
-                    state.coordinate_set.y.into_inner(),
+                    compute_arg.coordinate_set.x.into_inner(),
+                    compute_arg.coordinate_set.y.into_inner(),
                 )
                 .to_homogeneous();
 
                 let result =
-                    Point2::from_homogeneous(child.compute(state).into_inner() * point).unwrap();
+                    Point2::from_homogeneous(child.compute(compute_arg).into_inner() * point).unwrap();
 
                 CoordinateSet {
                     x: SNFloat::new_triangle(result.coords.x),
                     y: SNFloat::new_triangle(result.coords.y),
-                    t: state.coordinate_set.t,
+                    t: compute_arg.coordinate_set.t,
                 }
             }
             Tessellate {
@@ -172,25 +170,25 @@ impl Node for CoordMapNodes {
 
                 CoordinateSet {
                     x: SNFloat::new_triangle(
-                        SNFloat::new_triangle(state.coordinate_set.x.into_inner() * x_scale + xc)
+                        SNFloat::new_triangle(compute_arg.coordinate_set.x.into_inner() * x_scale + xc)
                             .into_inner()
                             * 0.5
                             * w
                             - xc,
                     ),
                     y: SNFloat::new_triangle(
-                        SNFloat::new_triangle(state.coordinate_set.y.into_inner() * y_scale + yc)
+                        SNFloat::new_triangle(compute_arg.coordinate_set.y.into_inner() * y_scale + yc)
                             .into_inner()
                             * 0.5
                             * h
                             - yc,
                     ),
-                    t: state.coordinate_set.t,
+                    t: compute_arg.coordinate_set.t,
                 }
             }
             TessellatePerPoint { child_a, child_b } => {
-                let a = child_a.compute(state).into_inner();
-                let b = child_b.compute(state).into_inner();
+                let a = child_a.compute(compute_arg).into_inner();
+                let b = child_b.compute(compute_arg).into_inner();
 
                 let w = b.x - a.x;
                 let h = b.y - a.y;
@@ -210,26 +208,26 @@ impl Node for CoordMapNodes {
 
                 CoordinateSet {
                     x: SNFloat::new_triangle(
-                        SNFloat::new_triangle(state.coordinate_set.x.into_inner() * x_scale + xc)
+                        SNFloat::new_triangle(compute_arg.coordinate_set.x.into_inner() * x_scale + xc)
                             .into_inner()
                             * 0.5
                             * w
                             - xc,
                     ),
                     y: SNFloat::new_triangle(
-                        SNFloat::new_triangle(state.coordinate_set.y.into_inner() * y_scale + yc)
+                        SNFloat::new_triangle(compute_arg.coordinate_set.y.into_inner() * y_scale + yc)
                             .into_inner()
                             * 0.5
                             * h
                             - yc,
                     ),
-                    t: state.coordinate_set.t,
+                    t: compute_arg.coordinate_set.t,
                 }
             }
 
             TesellateClosestPointSet { child } => {
-                let p = state.coordinate_set.get_coord_point();
-                let closest = child.compute(state).get_closest_point(p);
+                let p = compute_arg.coordinate_set.get_coord_point();
+                let closest = child.compute(compute_arg).get_closest_point(p);
 
                 let offset =
                     SNPoint::new(Point2::from(p.into_inner() - closest.into_inner()) * 0.5);
@@ -237,13 +235,13 @@ impl Node for CoordMapNodes {
                 CoordinateSet {
                     x: offset.x(),
                     y: offset.y(),
-                    t: state.coordinate_set.t,
+                    t: compute_arg.coordinate_set.t,
                 }
             }
 
             TesellatePolarTwoClosestPointSet { child } => {
-                let p = state.coordinate_set.get_coord_point();
-                let mut point_set = child.compute(state);
+                let p = compute_arg.coordinate_set.get_coord_point();
+                let mut point_set = child.compute(compute_arg);
                 let closest = point_set.get_n_closest_points(p, 2);
 
                 let polar_1 = SNPoint::new(
@@ -270,7 +268,7 @@ impl Node for CoordMapNodes {
                 CoordinateSet {
                     x: offset.x(),
                     y: offset.y(),
-                    t: state.coordinate_set.t,
+                    t: compute_arg.coordinate_set.t,
                 }
             }
         }
@@ -278,7 +276,9 @@ impl Node for CoordMapNodes {
 }
 
 impl<'a> Updatable<'a> for CoordMapNodes {
-    fn update(&mut self, _state: mutagen::State, arg: UpdateState<'a>) {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _state: mutagen::State, arg: &'a mut UpdArg<'a>) {
         match self {
             CoordMapNodes::Tessellate {
                 child_a,
@@ -298,9 +298,9 @@ impl<'a> Updatable<'a> for CoordMapNodes {
                 let translation_scale = child_scale.compute(arg).scale_unfloat(UNFloat::new(0.025));
 
                 *point_a =
-                    point_a.sawtooth_add(child_a.compute(state_a).scale_point(translation_scale));
+                    point_a.sawtooth_add(child_a.compute(&state_a).scale_point(translation_scale));
                 *point_b =
-                    point_b.sawtooth_add(child_b.compute(state_b).scale_point(translation_scale));
+                    point_b.sawtooth_add(child_b.compute(&state_b).scale_point(translation_scale));
             }
             _ => (),
         }

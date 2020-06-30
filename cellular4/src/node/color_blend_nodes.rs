@@ -1,17 +1,17 @@
-use mutagen::{Generatable, Mutagen, Mutatable, Updatable, UpdatableRecursively};
+use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     datatype::{colors::*, continuous::*},
+    mutagen_args::*,
     node::{
         color_nodes::*, continuous_nodes::*, coord_map_nodes::*, discrete_nodes::*,
         mutagen_functions::*, Node,
     },
-    updatestate::UpdateState,
 };
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]
-#[mutagen(mut_reroll = 0.1)]
+#[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum ColorBlendNodes {
     #[mutagen(gen_weight = leaf_node_weight)]
     Gray,
@@ -119,13 +119,10 @@ pub enum ColorBlendNodes {
     },
 }
 
-impl<'a> Mutagen<'a> for ColorBlendNodes {
-    type Arg = UpdateState<'a>;
-}
 impl Node for ColorBlendNodes {
     type Output = FloatColor;
 
-    fn compute(&self, state: UpdateState) -> Self::Output {
+    fn compute(&self, compute_arg: ComArg) -> Self::Output {
         use ColorBlendNodes::*;
 
         match self {
@@ -136,7 +133,7 @@ impl Node for ColorBlendNodes {
                 a: UNFloat::ONE,
             },
             Invert { child } => {
-                let col = child.compute(state);
+                let col = child.compute(compute_arg);
                 FloatColor {
                     r: UNFloat::new(1.0 - col.r.into_inner()),
                     g: UNFloat::new(1.0 - col.g.into_inner()),
@@ -149,19 +146,21 @@ impl Node for ColorBlendNodes {
                 color_b,
                 value,
             } => {
-                if UNFloat::generate(state).into_inner() < value.compute(state).into_inner() {
-                    color_a.compute(state)
+                if UNFloat::random(&mut rand::thread_rng()).into_inner()
+                    < value.compute(compute_arg).into_inner()
+                {
+                    color_a.compute(compute_arg)
                 } else {
-                    color_b.compute(state)
+                    color_b.compute(compute_arg)
                 }
             }
             Overlay { color_a, color_b } => {
-                let a = color_a.compute(state);
+                let a = color_a.compute(compute_arg);
                 let ar = a.r.into_inner();
                 let ag = a.g.into_inner();
                 let ab = a.b.into_inner();
 
-                let b = color_b.compute(state);
+                let b = color_b.compute(compute_arg);
                 let br = b.r.into_inner();
                 let bg = b.g.into_inner();
                 let bb = b.b.into_inner();
@@ -186,12 +185,12 @@ impl Node for ColorBlendNodes {
                 }
             }
             ScreenDodge { color_a, color_b } => {
-                let a = color_a.compute(state);
+                let a = color_a.compute(compute_arg);
                 let ar = a.r.into_inner();
                 let ag = a.g.into_inner();
                 let ab = a.b.into_inner();
 
-                let b = color_b.compute(state);
+                let b = color_b.compute(compute_arg);
                 let br = b.r.into_inner();
                 let bg = b.g.into_inner();
                 let bb = b.b.into_inner();
@@ -203,29 +202,30 @@ impl Node for ColorBlendNodes {
                     a: UNFloat::ONE,
                 }
             }
-            // ColorDodge {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(state).into_inner() {color_a.compute(state)}else{color_b.compute(state)}},
-            // LinearDodge {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(state).into_inner() {color_a.compute(state)}else{color_b.compute(state)}},
-            // Multiply {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(state).into_inner() {color_a.compute(state)}else{color_b.compute(state)}},
-            // ColorBurn {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(state).into_inner() {color_a.compute(state)}else{color_b.compute(state)}},
-            // LinearBurn {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(state).into_inner() {color_a.compute(state)}else{color_b.compute(state)}},
-            // VividLight {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(state).into_inner() {color_a.compute(state)}else{color_b.compute(state)}},
-            // LinearLight {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(state).into_inner() {color_a.compute(state)}else{color_b.compute(state)}},
-            // Subtract {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(state).into_inner() {color_a.compute(state)}else{color_b.compute(state)}},
-            // Divide {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(state).into_inner() {color_a.compute(state)}else{color_b.compute(state)}},
-            // Lerp {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(state).into_inner() {color_a.compute(state)}else{color_b.compute(state)}},
-            ModifyState { child, child_state } => child.compute(UpdateState {
-                coordinate_set: child_state.compute(state),
-                ..state
-            }),
+            // ColorDodge {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg).into_inner() {color_a.compute(compute_arg)}else{color_b.compute(compute_arg)}},
+            // LinearDodge {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg).into_inner() {color_a.compute(compute_arg)}else{color_b.compute(compute_arg)}},
+            // Multiply {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg).into_inner() {color_a.compute(compute_arg)}else{color_b.compute(compute_arg)}},
+            // ColorBurn {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg).into_inner() {color_a.compute(compute_arg)}else{color_b.compute(compute_arg)}},
+            // LinearBurn {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg).into_inner() {color_a.compute(compute_arg)}else{color_b.compute(compute_arg)}},
+            // VividLight {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg).into_inner() {color_a.compute(compute_arg)}else{color_b.compute(compute_arg)}},
+            // LinearLight {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg).into_inner() {color_a.compute(compute_arg)}else{color_b.compute(compute_arg)}},
+            // Subtract {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg).into_inner() {color_a.compute(compute_arg)}else{color_b.compute(compute_arg)}},
+            // Divide {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg).into_inner() {color_a.compute(compute_arg)}else{color_b.compute(compute_arg)}},
+            // Lerp {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg).into_inner() {color_a.compute(compute_arg)}else{color_b.compute(compute_arg)}},
+            ModifyState { child, child_state } => child.compute(&UpdateState {
+                coordinate_set: child_state.compute(compute_arg),
+                ..*compute_arg
+            },
+            compute_arg),
             IfElse {
                 predicate,
                 child_a,
                 child_b,
             } => {
-                if predicate.compute(state).into_inner() {
-                    child_a.compute(state)
+                if predicate.compute(compute_arg).into_inner() {
+                    child_a.compute(compute_arg)
                 } else {
-                    child_b.compute(state)
+                    child_b.compute(compute_arg)
                 }
             }
         }
@@ -233,7 +233,9 @@ impl Node for ColorBlendNodes {
 }
 
 impl<'a> Updatable<'a> for ColorBlendNodes {
-    fn update(&mut self, _state: mutagen::State, _arg: UpdateState<'a>) {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
         match self {
             _ => {}
         }

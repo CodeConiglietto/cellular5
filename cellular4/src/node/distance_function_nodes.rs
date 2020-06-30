@@ -1,15 +1,14 @@
-use mutagen::{Generatable, Mutagen, Mutatable, Updatable, UpdatableRecursively};
+use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     datatype::{continuous::*, distance_functions::*},
-    node::{
-        point_nodes::*, Node,
-    },
-    updatestate::UpdateState,
+    mutagen_args::*,
+    node::{point_nodes::*, Node},
 };
 
 #[derive(Mutatable, Generatable, Serialize, Deserialize, Debug)]
+#[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum DistanceFunctionNodes {
     Constant {
         value: DistanceFunction,
@@ -18,13 +17,10 @@ pub enum DistanceFunctionNodes {
     },
 }
 
-impl<'a> Mutagen<'a> for DistanceFunctionNodes {
-    type Arg = UpdateState<'a>;
-}
 impl Node for DistanceFunctionNodes {
     type Output = UNFloat;
 
-    fn compute(&self, state: UpdateState) -> Self::Output {
+    fn compute(&self, compute_arg: ComArg) -> Self::Output {
         use DistanceFunctionNodes::*;
 
         match self {
@@ -32,13 +28,15 @@ impl Node for DistanceFunctionNodes {
                 value,
                 child_a,
                 child_b,
-            } => value.calculate(child_a.compute(state), child_b.compute(state)),
+            } => value.calculate(child_a.compute(compute_arg), child_b.compute(compute_arg)),
         }
     }
 }
 
 impl<'a> Updatable<'a> for DistanceFunctionNodes {
-    fn update(&mut self, _state: mutagen::State, _arg: UpdateState<'a>) {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -46,7 +44,7 @@ impl<'a> Updatable<'a> for DistanceFunctionNodes {
 }
 
 impl<'a> UpdatableRecursively<'a> for DistanceFunctionNodes {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdateState<'a>) {
+    fn update_recursively(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
         match self {
             _ => {}
         }

@@ -1,18 +1,18 @@
 use std::sync::Arc;
 
-use mutagen::{Generatable, Mutagen, Mutatable, Updatable, UpdatableRecursively};
+use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
 use nalgebra::*;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     datatype::{continuous::*, point_sets::*, points::*},
+    mutagen_args::*,
     node::{continuous_nodes::*, discrete_nodes::*, mutagen_functions::*, point_nodes::*, Node},
-    updatestate::*,
 };
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]
-#[mutagen(mut_reroll = 0.1)]
+#[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum PointSetNodes {
     //TODO: change mutagen weights to not be a hack
     #[mutagen(gen_weight = leaf_node_weight)]
@@ -35,13 +35,10 @@ pub enum PointSetNodes {
     },
 }
 
-impl<'a> Mutagen<'a> for PointSetNodes {
-    type Arg = UpdateState<'a>;
-}
 impl Node for PointSetNodes {
     type Output = PointSet;
 
-    fn compute(&self, _state: UpdateState) -> Self::Output {
+    fn compute(&self, _state: &UpdateState, compute_arg: ComArg) -> Self::Output {
         use PointSetNodes::*;
 
         match self {
@@ -54,7 +51,9 @@ impl Node for PointSetNodes {
 }
 
 impl<'a> Updatable<'a> for PointSetNodes {
-    fn update(&mut self, _state: mutagen::State, arg: UpdateState<'a>) {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _state: mutagen::State, arg: &'a mut UpdArg<'a>) {
         match self {
             PointSetNodes::Translating {
                 ref mut value,
@@ -68,7 +67,7 @@ impl<'a> Updatable<'a> for PointSetNodes {
                             .map(|p| {
                                 p.sawtooth_add(
                                     child
-                                        .compute(arg.replace_coords(p))
+                                        .compute(&arg.replace_coords(p))
                                         .scale_unfloat(UNFloat::new(0.05)),
                                 )
                             })
@@ -91,7 +90,7 @@ impl<'a> Updatable<'a> for PointSetNodes {
                                     p.subtract_normalised(value.get_random_point())
                                         .scale_unfloat(
                                             child
-                                                .compute(arg.replace_coords(p))
+                                                .compute(&arg.replace_coords(p))
                                                 .multiply(UNFloat::new(0.25)),
                                         ),
                                 )

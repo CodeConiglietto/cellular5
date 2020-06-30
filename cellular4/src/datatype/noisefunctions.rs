@@ -1,4 +1,4 @@
-use mutagen::{Generatable, Mutagen, Mutatable};
+use mutagen::{Generatable, Mutatable};
 use noise::{
     BasicMulti, Billow, Checkerboard, Fbm, HybridMulti, NoiseFn, OpenSimplex, RangeFunction,
     RidgedMulti, Seedable, SuperSimplex, Value, Worley,
@@ -11,10 +11,11 @@ use crate::{
         continuous::UNFloat,
         discrete::{Boolean, Nibble},
     },
-    updatestate::UpdateState,
+    mutagen_args::*,
 };
 
 #[derive(Serialize, Deserialize, Generatable, Mutatable, Debug)]
+#[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum NoiseFunctions {
     BasicMulti(Noise<BasicMulti>),
     Billow(Noise<Billow>),
@@ -43,10 +44,6 @@ impl NoiseFunctions {
             NoiseFunctions::Worley(noise) => noise.noise.get([x, y, t]),
         }
     }
-}
-
-impl<'a> Mutagen<'a> for NoiseFunctions {
-    type Arg = UpdateState<'a>;
 }
 
 #[derive(Debug, Clone)]
@@ -85,20 +82,18 @@ where
     }
 }
 
-impl<'a, T> Mutagen<'a> for Noise<T>
-where
-    T: NoiseFunction,
-    T::Params: Mutagen<'a>,
-{
-    type Arg = <T::Params as Mutagen<'a>>::Arg;
-}
-
 impl<'a, T> Generatable<'a> for Noise<T>
 where
     T: NoiseFunction,
     T::Params: Generatable<'a>,
 {
-    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, state: mutagen::State, arg: Self::Arg) -> Self {
+    type GenArg = <T::Params as Generatable<'a>>::GenArg;
+
+    fn generate_rng<R: Rng + ?Sized>(
+        rng: &mut R,
+        state: mutagen::State,
+        arg: &'a mut Self::GenArg,
+    ) -> Self {
         let params = T::Params::generate_rng(rng, state, arg);
 
         Self {
@@ -113,7 +108,14 @@ where
     T: NoiseFunction,
     T::Params: Mutatable<'a>,
 {
-    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, state: mutagen::State, arg: Self::Arg) {
+    type MutArg = <T::Params as Mutatable<'a>>::MutArg;
+
+    fn mutate_rng<R: Rng + ?Sized>(
+        &mut self,
+        rng: &mut R,
+        state: mutagen::State,
+        arg: &'a mut Self::MutArg,
+    ) {
         self.params.mutate_rng(rng, state, arg);
         self.noise = T::new(&self.params);
     }
@@ -129,28 +131,33 @@ pub struct SeedParams {
     pub seed: u32,
 }
 
-impl<'a> Mutagen<'a> for SeedParams {
-    type Arg = UpdateState<'a>;
-}
-
-impl<'a> Generatable<'a> for SeedParams {
-    fn generate_rng<R: Rng + ?Sized>(
-        rng: &mut R,
-        _state: mutagen::State,
-        _arg: UpdateState<'a>,
-    ) -> Self {
+impl SeedParams {
+    pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
         Self { seed: rng.gen() }
     }
 }
 
+impl<'a> Generatable<'a> for SeedParams {
+    type GenArg = GenArg<'a>;
+
+    fn generate_rng<R: Rng + ?Sized>(
+        rng: &mut R,
+        _state: mutagen::State,
+        _arg: &'a mut GenArg<'a>,
+    ) -> Self {
+        Self::random(rng)
+    }
+}
+
 impl<'a> Mutatable<'a> for SeedParams {
+    type MutArg = MutArg<'a>;
     fn mutate_rng<R: Rng + ?Sized>(
         &mut self,
         rng: &mut R,
-        state: mutagen::State,
-        arg: UpdateState<'a>,
+        _state: mutagen::State,
+        _arg: &'a mut MutArg<'a>,
     ) {
-        *self = Self::generate_rng(rng, state, arg)
+        *self = Self::random(rng);
     }
 }
 
@@ -179,12 +186,9 @@ impl NoiseFunction for Checkerboard {
 }
 
 #[derive(Serialize, Deserialize, Generatable, Mutatable, Debug, Clone, Copy)]
+#[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub struct CheckerboardParams {
     pub size: Nibble,
-}
-
-impl<'a> Mutagen<'a> for CheckerboardParams {
-    type Arg = UpdateState<'a>;
 }
 
 impl NoiseFunction for Fbm {
@@ -222,14 +226,11 @@ impl NoiseFunction for RidgedMulti {
 }
 
 #[derive(Serialize, Deserialize, Generatable, Mutatable, Debug, Clone)]
+#[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub struct RidgedMultiParams {
     pub attenuation: UNFloat,
     #[serde(flatten)]
     pub seed: SeedParams,
-}
-
-impl<'a> Mutagen<'a> for RidgedMultiParams {
-    type Arg = UpdateState<'a>;
 }
 
 impl NoiseFunction for SuperSimplex {
@@ -261,6 +262,7 @@ impl NoiseFunction for Worley {
 }
 
 #[derive(Generatable, Mutatable, Serialize, Deserialize, Debug, Clone)]
+#[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub struct WorleyParams {
     pub range_function: RangeFunctionParam,
     pub enable_range: Boolean,
@@ -269,22 +271,14 @@ pub struct WorleyParams {
     pub seed: SeedParams,
 }
 
-impl<'a> Mutagen<'a> for WorleyParams {
-    type Arg = UpdateState<'a>;
-}
-
 #[derive(Generatable, Mutatable, Serialize, Deserialize, Debug, Clone, Copy)]
-#[mutagen(mut_reroll = 1.0)]
+#[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum RangeFunctionParam {
     Euclidean,
     EuclideanSquared,
     Manhattan,
     Chebyshev,
     Quadratic,
-}
-
-impl<'a> Mutagen<'a> for RangeFunctionParam {
-    type Arg = UpdateState<'a>;
 }
 
 impl From<RangeFunctionParam> for RangeFunction {

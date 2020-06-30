@@ -12,6 +12,7 @@ use syn::{
     spanned::Spanned,
     token::Paren,
     Attribute, Data, DataEnum, DataStruct, Error, Field, Fields, Ident, LitFloat, Result, Token,
+    Type,
 };
 
 mod a {
@@ -20,39 +21,56 @@ mod a {
 
     // Keys
     pub const GEN_WEIGHT: &str = "gen_weight";
+    pub const GEN_ARG: &str = "gen_arg";
     pub const MUT_REROLL: &str = "mut_reroll";
+    pub const MUT_ARG: &str = "mut_arg";
     pub const MUT_WEIGHT: &str = "mut_weight";
     pub const SKIP: &str = "skip";
 
     // Allowed keys for each item
-    pub const ENUM: &[&str] = &[MUT_REROLL];
+    pub const ENUM: &[&str] = &[MUT_REROLL, MUT_ARG, GEN_ARG];
     pub const ENUM_VARIANT: &[&str] = &[GEN_WEIGHT, MUT_REROLL];
     pub const FIELD: &[&str] = &[MUT_WEIGHT, SKIP];
+    pub const TYPE: &[&str] = &[MUT_REROLL, MUT_ARG, GEN_ARG];
 }
 
 #[proc_macro_derive(Generatable, attributes(mutagen))]
 pub fn derive_generatable(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as syn::DeriveInput);
+    let output = generatable_type(input).unwrap_or_else(|e| e.to_compile_error());
+    proc_macro::TokenStream::from(output)
+}
+
+fn generatable_type(input: syn::DeriveInput) -> Result<TokenStream2> {
     let span = input.span();
 
+    let gen_arg = parse_attrs(&input.attrs, a::TYPE)?
+        .get(a::GEN_ARG)
+        .cloned()
+        .ok_or_else(|| Error::new(span.clone(), "Missing gen_arg attribute"))?
+        .to_type()?;
+
     let body = match &input.data {
-        Data::Struct(s) => generatable_struct(&input.ident, s, &input.attrs, span),
-        Data::Enum(e) => generatable_enum(&input.ident, e, &input.attrs, span),
+        Data::Struct(s) => generatable_struct(&input.ident, s, &input.attrs, span)?,
+        Data::Enum(e) => generatable_enum(&input.ident, e, &input.attrs, span)?,
         Data::Union(_) => panic!("#[derive(Generatable)] is not yet implemented for unions"),
-    }
-    .unwrap_or_else(|e| e.to_compile_error());
+    };
 
     let ident = input.ident;
 
-    let output: TokenStream2 = quote! {
+    Ok(quote! {
         impl<'a> ::mutagen::Generatable<'a> for #ident {
-            fn generate_rng<R: ::mutagen::rand::Rng + ?Sized>(rng: &mut R, state: ::mutagen::State, arg: Self::Arg) -> Self {
+            type GenArg = #gen_arg;
+
+            fn generate_rng<R: ::mutagen::rand::Rng + ?Sized>(
+                rng: &mut R,
+                state: ::mutagen::State,
+                arg: &'a mut Self::GenArg,
+            ) -> Self {
                 #body
             }
         }
-    };
-
-    proc_macro::TokenStream::from(output)
+    })
 }
 
 fn generatable_struct(
@@ -90,7 +108,7 @@ fn generatable_enum(
             Ok(parse_attrs(&variant.attrs, a::ENUM_VARIANT)?
                 .get(a::GEN_WEIGHT)
                 .cloned()
-                .unwrap_or(Value::None))
+                .unwrap_or_else(|| Value::None(span.clone())))
         },
         |variant, _| {
             let ident = &variant.ident;
@@ -112,13 +130,13 @@ fn generatable_fields(fields: &Fields) -> Result<TokenStream2> {
                 .map(|f| {
                     let name = &f.ident;
 
-                    if parse_attrs(&f.attrs, a::FIELD)? .contains_key(a::SKIP) {
+                    if parse_attrs(&f.attrs, a::FIELD)?.contains_key(a::SKIP) {
                         Ok(quote! {
                             #name: ::std::default::Default::default()
                         })
                     } else {
                         Ok(quote! {
-                            #name: ::mutagen::Generatable::generate_rng(rng, state.deepen(), Self::Arg::clone(&arg))
+                            #name: ::mutagen::Generatable::generate_rng(rng, state.deepen(), arg)
                         })
                     }
                 })
@@ -137,7 +155,7 @@ fn generatable_fields(fields: &Fields) -> Result<TokenStream2> {
                         })
                     } else {
                         Ok(quote! {
-                            ::mutagen::Generatable::generate_rng(rng, state.deepen(), Self::Arg::clone(&arg))
+                            ::mutagen::Generatable::generate_rng(rng, state.deepen(), arg)
                         })
                     }
                 })
@@ -152,26 +170,41 @@ fn generatable_fields(fields: &Fields) -> Result<TokenStream2> {
 #[proc_macro_derive(Mutatable, attributes(mutagen))]
 pub fn derive_mutatable(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as syn::DeriveInput);
+    let output = mutatable_type(input).unwrap_or_else(|e| e.to_compile_error());
+    proc_macro::TokenStream::from(output)
+}
+
+fn mutatable_type(input: syn::DeriveInput) -> Result<TokenStream2> {
     let span = input.span();
 
+    let mut_arg = parse_attrs(&input.attrs, a::TYPE)?
+        .get(a::MUT_ARG)
+        .cloned()
+        .ok_or_else(|| Error::new(span.clone(), "Missing mut_arg attribute"))?
+        .to_type()?;
+
     let body = match &input.data {
-        Data::Struct(s) => mutatable_struct(&input.ident, s, &input.attrs, span),
-        Data::Enum(e) => mutatable_enum(&input.ident, e, &input.attrs, span),
+        Data::Struct(s) => mutatable_struct(&input.ident, s, &input.attrs, span)?,
+        Data::Enum(e) => mutatable_enum(&input.ident, e, &input.attrs, span)?,
         Data::Union(_) => panic!("#[derive(Mutatable)] is not yet implemented for unions"),
-    }
-    .unwrap_or_else(|e| e.to_compile_error());
+    };
 
     let ident = input.ident;
 
-    let output: TokenStream2 = quote! {
+    Ok(quote! {
         impl<'a> ::mutagen::Mutatable<'a> for #ident {
-            fn mutate_rng<R: ::mutagen::rand::Rng + ?Sized>(&mut self, rng: &mut R, state: ::mutagen::State, arg: Self::Arg) {
+            type MutArg = #mut_arg;
+
+            fn mutate_rng<R: ::mutagen::rand::Rng + ?Sized>(
+                &mut self,
+                rng: &mut R,
+                state: ::mutagen::State,
+                arg: &'a mut Self::MutArg
+            ) {
                 #body
             }
         }
-    };
-
-    proc_macro::TokenStream::from(output)
+    })
 }
 
 fn mutatable_struct(
@@ -197,7 +230,7 @@ fn mutatable_enum(
     enum_ident: &Ident,
     e: &DataEnum,
     attrs: &[Attribute],
-    _span: Span,
+    span: Span,
 ) -> Result<TokenStream2> {
     if e.variants.is_empty() {
         panic!("Cannot derive Mutatable for enum with no variants");
@@ -207,7 +240,7 @@ fn mutatable_enum(
     let mut_reroll_enum = attrs
         .get(a::MUT_REROLL)
         .cloned()
-        .unwrap_or(Value::None)
+        .unwrap_or_else(|| Value::None(span.clone()))
         .to_prob()?;
 
     let variants: Vec<_> = e
@@ -278,7 +311,7 @@ fn fields_bindings(fields: &Fields) -> TokenStream2 {
     }
 }
 
-fn mutatable_fields(fields: &[&Field], path: &str, _span: Span) -> Result<TokenStream2> {
+fn mutatable_fields(fields: &[&Field], path: &str, span: Span) -> Result<TokenStream2> {
     if fields.is_empty() {
         return Ok(TokenStream2::new());
     }
@@ -291,13 +324,16 @@ fn mutatable_fields(fields: &[&Field], path: &str, _span: Span) -> Result<TokenS
             Ok(if attrs.contains_key(a::SKIP) {
                 Value::Val(0.0)
             } else {
-                attrs.get(a::MUT_WEIGHT).cloned().unwrap_or(Value::None)
+                attrs
+                    .get(a::MUT_WEIGHT)
+                    .cloned()
+                    .unwrap_or_else(|| Value::None(span.clone()))
             })
         },
         |field, i| {
             let ident = field_ident(field, i);
             Ok(quote! {
-                ::mutagen::Mutatable::mutate_rng(#ident, rng, state.deepen(), Self::Arg::clone(&arg));
+                ::mutagen::Mutatable::mutate_rng(#ident, rng, state.deepen(), arg);
                 return;
             })
         },
@@ -308,27 +344,29 @@ fn mutatable_fields(fields: &[&Field], path: &str, _span: Span) -> Result<TokenS
 #[proc_macro_derive(UpdatableRecursively, attributes(mutagen))]
 pub fn derive_updatable(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let input = parse_macro_input!(input as syn::DeriveInput);
+    let output = updatable_type(input).unwrap_or_else(|e| e.to_compile_error());
+    proc_macro::TokenStream::from(output)
+}
+
+fn updatable_type(input: syn::DeriveInput) -> Result<TokenStream2> {
     let span = input.span();
 
     let body = match &input.data {
-        Data::Struct(s) => updatable_struct(&input.ident, s, &input.attrs, span),
-        Data::Enum(e) => updatable_enum(&input.ident, e, &input.attrs, span),
+        Data::Struct(s) => updatable_struct(&input.ident, s, &input.attrs, span)?,
+        Data::Enum(e) => updatable_enum(&input.ident, e, &input.attrs, span)?,
         Data::Union(_) => panic!("#[derive(UpdatableRecursively)] is not implemented for unions"),
-    }
-    .unwrap_or_else(|e| e.to_compile_error());
+    };
 
     let ident = input.ident;
 
-    let output: TokenStream2 = quote! {
+    Ok(quote! {
         impl<'a> ::mutagen::UpdatableRecursively<'a> for #ident {
-            fn update_recursively(&mut self, state: ::mutagen::State, arg: Self::Arg) {
+            fn update_recursively(&mut self, state: ::mutagen::State, arg: &'a mut Self::UpdateArg) {
                 ::mutagen::Updatable::update(self, state, arg);
                 #body
             }
         }
-    };
-
-    proc_macro::TokenStream::from(output)
+    })
 }
 
 fn updatable_struct(
@@ -401,7 +439,7 @@ fn updatable_fields(fields: &[&Field], _path: &str, _span: Span) -> Result<Token
            } else {
                let ident = field_ident(field, i);
                Ok(quote! {
-                   ::mutagen::UpdatableRecursively::update_recursively(#ident, state.deepen(), Self::Arg::clone(&arg));
+                   ::mutagen::UpdatableRecursively::update_recursively(#ident, state.deepen(), arg);
                })
            }
        })
@@ -532,7 +570,7 @@ impl Parse for KeyValue {
         let value: Value = if _eq.is_some() {
             input.parse()?
         } else {
-            Value::None
+            Value::None(key.span())
         };
 
         Ok(Self { key, _eq, value })
@@ -544,10 +582,21 @@ enum Value {
     Lit(LitFloat),
     FnIdent(Ident),
     Val(f64),
-    None,
+    Type(Type),
+    None(Span),
 }
 
 impl Value {
+    fn to_type(&self) -> Result<TokenStream2> {
+        match self {
+            Value::Lit(lit) => Err(Error::new(lit.span(), "Expected type, found literal")),
+            Value::FnIdent(ident) => Err(Error::new(ident.span(), "Expected type, found ident")),
+            Value::Val(_) => panic!("Internal error: expected type, found value"),
+            Value::Type(t) => Ok(quote!(#t)),
+            Value::None(span) => Err(Error::new(span.clone(), "Expected type, found nothing")),
+        }
+    }
+
     fn to_weight(&self) -> Result<Option<TokenStream2>> {
         match self {
             Value::Lit(lit) => {
@@ -579,7 +628,8 @@ impl Value {
                     Ok(Some(quote!(#v)))
                 }
             }
-            Value::None => Ok(Some(quote!(1.0))),
+            Value::Type(t) => Err(Error::new(t.span(), "Expected weight, found type")),
+            Value::None(_) => Ok(Some(quote!(1.0))),
         }
     }
 
@@ -613,7 +663,8 @@ impl Value {
                     Ok(Some(quote!(#v)))
                 }
             }
-            Value::None => Ok(Some(quote!(0.5))),
+            Value::Type(t) => Err(Error::new(t.span(), "Expected probability, found type")),
+            Value::None(_) => Ok(None),
         }
     }
 }
@@ -621,7 +672,10 @@ impl Value {
 impl Parse for Value {
     fn parse(input: ParseStream) -> Result<Self> {
         let lookahead = input.lookahead1();
-        if lookahead.peek(LitFloat) {
+        if lookahead.peek(Token![type]) {
+            let _type: Token![type] = input.parse()?;
+            input.parse().map(Value::Type)
+        } else if lookahead.peek(LitFloat) {
             input.parse().map(Value::Lit)
         } else if lookahead.peek(Ident) {
             input.parse().map(Value::FnIdent)

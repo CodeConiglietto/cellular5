@@ -1,15 +1,14 @@
-use mutagen::{Generatable, Mutagen, Mutatable};
+use mutagen::{Generatable, Mutatable};
 use nalgebra::*;
-use rand::prelude::*;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     datatype::{continuous::*, points::*},
-    updatestate::UpdateState,
+    mutagen_args::*,
 };
 
-#[derive(Clone, Copy, Debug, Generatable, Mutatable, Serialize, Deserialize)]
-#[mutagen(mut_reroll = 1.0)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum DistanceFunction {
     Euclidean,
     Manhattan,
@@ -18,7 +17,7 @@ pub enum DistanceFunction {
     //Minkowski,
 }
 
-//wrapped in triangle waves for now, maybe parameterise SN resolution method
+//wrapped in triangle waves for now, maybe parametrise SN resolution method
 impl DistanceFunction {
     pub fn calculate(self, a: SNPoint, b: SNPoint) -> UNFloat {
         let new_point = a.into_inner() - b.into_inner();
@@ -34,8 +33,38 @@ impl DistanceFunction {
             Minimum => UNFloat::new_triangle((x.abs()).min(y.abs())),
         }
     }
+
+    pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
+        match rng.gen_range(0, 4) {
+            0 => DistanceFunction::Euclidean,
+            1 => DistanceFunction::Manhattan,
+            2 => DistanceFunction::Chebyshev,
+            3 => DistanceFunction::Minimum,
+            _ => unreachable!(),
+        }
+    }
 }
 
-impl<'a> Mutagen<'a> for DistanceFunction {
-    type Arg = UpdateState<'a>;
+impl<'a> Generatable<'a> for DistanceFunction {
+    type GenArg = GenArg<'a>;
+
+    fn generate_rng<R: Rng + ?Sized>(
+        rng: &mut R,
+        _state: mutagen::State,
+        _arg: &'a mut GenArg<'a>,
+    ) -> Self {
+        Self::random(rng)
+    }
+}
+
+impl<'a> Mutatable<'a> for DistanceFunction {
+    type MutArg = MutArg<'a>;
+    fn mutate_rng<R: Rng + ?Sized>(
+        &mut self,
+        rng: &mut R,
+        state: mutagen::State,
+        arg: &'a mut MutArg<'a>,
+    ) {
+        *self = Self::random(rng);
+    }
 }

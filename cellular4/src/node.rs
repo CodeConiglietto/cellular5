@@ -10,12 +10,12 @@ pub mod noise_nodes;
 pub mod point_nodes;
 pub mod point_set_nodes;
 
-use crate::updatestate::UpdateState;
+use crate::{mutagen_args::ComArg};
 
 pub trait Node {
     type Output;
 
-    fn compute(&self, state: UpdateState) -> Self::Output;
+    fn compute(&self, compute_arg: ComArg) -> Self::Output;
 }
 
 mod mutagen_functions {

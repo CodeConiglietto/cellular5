@@ -1,27 +1,4 @@
-use crate::{
-    constants::*,
-    datatype::{continuous::*, discrete::*, points::*},
-    History,
-};
-
-#[derive(Clone, Copy, Debug)]
-pub struct UpdateState<'a> {
-    //the set of coordinates for the update
-    pub coordinate_set: CoordinateSet,
-    //cell array to read from
-    pub history: &'a History,
-}
-
-impl UpdateState<'_> {
-    pub fn replace_coords(self, other: &SNPoint) -> Self {
-        let mut new = self.clone();
-
-        new.coordinate_set.x = other.x();
-        new.coordinate_set.y = other.y();
-
-        new
-    }
-}
+use crate::{constants::*, datatype::{continuous::*, discrete::*, points::*}};
 
 #[derive(Clone, Copy, Debug)]
 pub struct CoordinateSet {
@@ -58,7 +35,7 @@ impl CoordinateSet {
         Byte::new((self.t as u64 % CONSTS.byte_possible_values as u64) as u8)
     }
 
-    //todo refactor into constant
+    //todo refactor divisor into constant
     pub fn get_unfloat_t(&self) -> UNFloat {
         UNFloat::new_triangle(self.t / 500.0)
     }

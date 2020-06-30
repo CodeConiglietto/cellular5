@@ -4,7 +4,7 @@ use std::{
 };
 
 use bresenham::Bresenham;
-use mutagen::{Generatable, Mutagen, Mutatable, Updatable, UpdatableRecursively};
+use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
 use nalgebra::*;
 use ndarray::prelude::*;
 use rand::prelude::*;
@@ -117,12 +117,14 @@ where
     }
 }
 
-impl<'a, T: Mutagen<'a>> Mutagen<'a> for Buffer<T> {
-    type Arg = T::Arg;
-}
+impl<'a, T: Default + Generatable<'a>> Generatable<'a> for Buffer<T> {
+    type GenArg = T::GenArg;
 
-impl<'a, T: Default + Mutagen<'a>> Generatable<'a> for Buffer<T> {
-    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, state: mutagen::State, arg: Self::Arg) -> Self {
+    fn generate_rng<R: Rng + ?Sized>(
+        rng: &mut R,
+        state: mutagen::State,
+        arg: &'a mut Self::GenArg,
+    ) -> Self {
         Self::new(Array2::from_shape_fn(
             (CONSTS.cell_array_width, CONSTS.cell_array_height),
             |(_y, _x)| T::default(), //generate_rng(rng, state, arg.clone()),
@@ -131,7 +133,14 @@ impl<'a, T: Default + Mutagen<'a>> Generatable<'a> for Buffer<T> {
 }
 
 impl<'a, T: Mutatable<'a>> Mutatable<'a> for Buffer<T> {
-    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, state: mutagen::State, arg: Self::Arg) {
+    type MutArg = T::MutArg;
+
+    fn mutate_rng<R: Rng + ?Sized>(
+        &mut self,
+        rng: &mut R,
+        state: mutagen::State,
+        arg: &'a mut Self::MutArg,
+    ) {
         //TODO: find a way to mutate this that doesn't look like a rainbow static explosion
         // for inner in self.array.iter_mut() {
         //     inner.mutate_rng(rng, state, arg.clone());
@@ -140,7 +149,9 @@ impl<'a, T: Mutatable<'a>> Mutatable<'a> for Buffer<T> {
 }
 
 impl<'a, T: Updatable<'a>> Updatable<'a> for Buffer<T> {
-    fn update(&mut self, _state: mutagen::State, _arg: Self::Arg) {
+    type UpdateArg = T::UpdateArg;
+
+    fn update(&mut self, _state: mutagen::State, _arg: &'a mut Self::UpdateArg) {
         match self {
             _ => {}
         }
@@ -148,7 +159,7 @@ impl<'a, T: Updatable<'a>> Updatable<'a> for Buffer<T> {
 }
 
 impl<'a, T: UpdatableRecursively<'a>> UpdatableRecursively<'a> for Buffer<T> {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: Self::Arg) {
+    fn update_recursively(&mut self, _state: mutagen::State, _arg: &'a mut Self::UpdateArg) {
         match self {
             _ => {}
         }

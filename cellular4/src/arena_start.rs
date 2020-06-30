@@ -44,7 +44,7 @@ impl Generatable for ArenaBox<T>
 where
     T: Storable<Arenas>,
 {
-    fn generate(arg: &mut Arenas) -> Self {
+    fn generate(arg: &'a mut Arenas) -> Self {
         let t = T::generate(arg);
         Self {
             index: t.store(arg),

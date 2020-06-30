@@ -1,10 +1,10 @@
 use std::num::Wrapping;
 
-use mutagen::{Generatable, Mutagen, Mutatable, Updatable, UpdatableRecursively};
+use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::updatestate::UpdateState;
+use crate::{mutagen_args::*};
 
 #[derive(Deserialize, Serialize, Clone, Copy, Debug, Default)]
 pub struct Boolean {
@@ -19,35 +19,40 @@ impl Boolean {
     pub fn into_inner(self) -> bool {
         self.value
     }
-}
 
-impl<'a> Mutagen<'a> for Boolean {
-    type Arg = UpdateState<'a>;
+    pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
+        Self { value: rng.gen() }
+    }
 }
 
 impl<'a> Generatable<'a> for Boolean {
+    type GenArg = GenArg<'a>;
+
     fn generate_rng<R: Rng + ?Sized>(
         rng: &mut R,
         _state: mutagen::State,
-        arg: UpdateState<'a>,
+        _arg: &'a mut GenArg<'a>,
     ) -> Self {
-        Boolean { value: rng.gen() }
+        Self::random(rng)
     }
 }
 
 impl<'a> Mutatable<'a> for Boolean {
+    type MutArg = MutArg<'a>;
     fn mutate_rng<R: Rng + ?Sized>(
         &mut self,
         rng: &mut R,
         state: mutagen::State,
-        arg: UpdateState<'a>,
+        arg: &'a mut MutArg<'a>,
     ) {
-        *self = Self::generate_rng(rng, state, arg);
+        *self = Self::random(rng);
     }
 }
 
 impl<'a> Updatable<'a> for Boolean {
-    fn update(&mut self, _state: mutagen::State, arg: UpdateState<'a>) {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _state: mutagen::State, arg: &'a mut UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -55,7 +60,7 @@ impl<'a> Updatable<'a> for Boolean {
 }
 
 impl<'a> UpdatableRecursively<'a> for Boolean {
-    fn update_recursively(&mut self, _state: mutagen::State, arg: UpdateState<'a>) {
+    fn update_recursively(&mut self, _state: mutagen::State, arg: &'a mut UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -102,35 +107,41 @@ impl Nibble {
         }
     }
 
+    pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
+        Nibble::new(rng.gen_range(0, Self::MAX_VALUE))
+    }
+
     pub const MAX_VALUE: u8 = 16;
 }
 
-impl<'a> Mutagen<'a> for Nibble {
-    type Arg = UpdateState<'a>;
-}
 impl<'a> Generatable<'a> for Nibble {
+    type GenArg = GenArg<'a>;
+
     fn generate_rng<R: Rng + ?Sized>(
         rng: &mut R,
         _state: mutagen::State,
-        arg: UpdateState<'a>,
+        _arg: &'a mut GenArg<'a>,
     ) -> Self {
-        Nibble::new(rng.gen_range(0, Self::MAX_VALUE))
+        Self::random(rng)
     }
 }
 
 impl<'a> Mutatable<'a> for Nibble {
+    type MutArg = MutArg<'a>;
     fn mutate_rng<R: Rng + ?Sized>(
         &mut self,
         rng: &mut R,
-        state: mutagen::State,
-        arg: UpdateState<'a>,
+        _state: mutagen::State,
+        _arg: &'a mut MutArg<'a>,
     ) {
-        *self = Self::generate_rng(rng, state, arg);
+        *self = Self::random(rng);
     }
 }
 
 impl<'a> Updatable<'a> for Nibble {
-    fn update(&mut self, _state: mutagen::State, arg: UpdateState<'a>) {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _state: mutagen::State, arg: &'a mut UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -138,14 +149,14 @@ impl<'a> Updatable<'a> for Nibble {
 }
 
 impl<'a> UpdatableRecursively<'a> for Nibble {
-    fn update_recursively(&mut self, _state: mutagen::State, arg: UpdateState<'a>) {
+    fn update_recursively(&mut self, _state: mutagen::State, arg: &'a mut UpdArg<'a>) {
         match self {
             _ => {}
         }
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Byte {
     pub value: Wrapping<u8>,
 }
@@ -184,34 +195,40 @@ impl Byte {
             Self::new((self.value % other.value).0)
         }
     }
+
+    pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
+        Self { value: rng.gen() }
+    }
 }
 
-impl<'a> Mutagen<'a> for Byte {
-    type Arg = UpdateState<'a>;
-}
 impl<'a> Generatable<'a> for Byte {
+    type GenArg = GenArg<'a>;
+
     fn generate_rng<R: Rng + ?Sized>(
         rng: &mut R,
         _state: mutagen::State,
-        arg: UpdateState<'a>,
+        _arg: &'a mut GenArg<'a>,
     ) -> Self {
-        Byte { value: rng.gen() }
+        Self::random(rng)
     }
 }
 
 impl<'a> Mutatable<'a> for Byte {
+    type MutArg = MutArg<'a>;
     fn mutate_rng<R: Rng + ?Sized>(
         &mut self,
         rng: &mut R,
-        state: mutagen::State,
-        arg: UpdateState<'a>,
+        _state: mutagen::State,
+        _arg: &'a mut MutArg<'a>,
     ) {
-        *self = Self::generate_rng(rng, state, arg);
+        *self = Self::random(rng);
     }
 }
 
 impl<'a> Updatable<'a> for Byte {
-    fn update(&mut self, _state: mutagen::State, arg: UpdateState<'a>) {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _state: mutagen::State, arg: &'a mut UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -219,7 +236,7 @@ impl<'a> Updatable<'a> for Byte {
 }
 
 impl<'a> UpdatableRecursively<'a> for Byte {
-    fn update_recursively(&mut self, _state: mutagen::State, arg: UpdateState<'a>) {
+    fn update_recursively(&mut self, _state: mutagen::State, arg: &'a mut UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -265,34 +282,40 @@ impl UInt {
             Self::new((self.value % other.value).0)
         }
     }
+
+    pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
+        Self { value: rng.gen() }
+    }
 }
 
-impl<'a> Mutagen<'a> for UInt {
-    type Arg = UpdateState<'a>;
-}
 impl<'a> Generatable<'a> for UInt {
+    type GenArg = GenArg<'a>;
+
     fn generate_rng<R: Rng + ?Sized>(
         rng: &mut R,
         _state: mutagen::State,
-        arg: UpdateState<'a>,
+        _arg: &'a mut GenArg<'a>,
     ) -> Self {
-        UInt { value: rng.gen() }
+        Self::random(rng)
     }
 }
 
 impl<'a> Mutatable<'a> for UInt {
+    type MutArg = MutArg<'a>;
     fn mutate_rng<R: Rng + ?Sized>(
         &mut self,
         rng: &mut R,
-        state: mutagen::State,
-        arg: UpdateState<'a>,
+        _state: mutagen::State,
+        _arg: &'a mut MutArg<'a>,
     ) {
-        *self = Self::generate_rng(rng, state, arg);
+        *self = Self::random(rng);
     }
 }
 
 impl<'a> Updatable<'a> for UInt {
-    fn update(&mut self, _state: mutagen::State, arg: UpdateState<'a>) {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _state: mutagen::State, arg: &'a mut UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -300,7 +323,7 @@ impl<'a> Updatable<'a> for UInt {
 }
 
 impl<'a> UpdatableRecursively<'a> for UInt {
-    fn update_recursively(&mut self, _state: mutagen::State, arg: UpdateState<'a>) {
+    fn update_recursively(&mut self, _state: mutagen::State, arg: &'a mut UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -346,34 +369,40 @@ impl SInt {
             Self::new((self.value % other.value).0)
         }
     }
+
+    pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
+        Self { value: rng.gen() }
+    }
 }
 
-impl<'a> Mutagen<'a> for SInt {
-    type Arg = UpdateState<'a>;
-}
 impl<'a> Generatable<'a> for SInt {
+    type GenArg = GenArg<'a>;
+
     fn generate_rng<R: Rng + ?Sized>(
         rng: &mut R,
         _state: mutagen::State,
-        arg: UpdateState<'a>,
+        _arg: &'a mut GenArg<'a>,
     ) -> Self {
-        SInt { value: rng.gen() }
+        Self::random(rng)
     }
 }
 
 impl<'a> Mutatable<'a> for SInt {
+    type MutArg = MutArg<'a>;
     fn mutate_rng<R: Rng + ?Sized>(
         &mut self,
         rng: &mut R,
         state: mutagen::State,
-        arg: UpdateState<'a>,
+        arg: &'a mut MutArg<'a>,
     ) {
-        *self = Self::generate_rng(rng, state, arg);
+        *self = Self::random(rng);
     }
 }
 
 impl<'a> Updatable<'a> for SInt {
-    fn update(&mut self, _state: mutagen::State, arg: UpdateState<'a>) {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _state: mutagen::State, arg: &'a mut UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -381,7 +410,7 @@ impl<'a> Updatable<'a> for SInt {
 }
 
 impl<'a> UpdatableRecursively<'a> for SInt {
-    fn update_recursively(&mut self, _state: mutagen::State, arg: UpdateState<'a>) {
+    fn update_recursively(&mut self, _state: mutagen::State, arg: &'a mut UpdArg<'a>) {
         match self {
             _ => {}
         }

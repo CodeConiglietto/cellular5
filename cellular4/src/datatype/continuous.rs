@@ -3,11 +3,11 @@ use std::{
     fmt::{self, Display, Formatter},
 };
 
-use mutagen::{Generatable, Mutagen, Mutatable, Updatable, UpdatableRecursively};
+use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::{datatype::discrete::*, updatestate::UpdateState, util::*};
+use crate::{datatype::discrete::*, mutagen_args::*, util::*};
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, PartialOrd, Default)]
 pub struct UNFloat {
@@ -89,34 +89,40 @@ impl UNFloat {
 
     pub const ZERO: Self = Self { value: 0.0 };
     pub const ONE: Self = Self { value: 1.0 };
-}
 
-impl<'a> Mutagen<'a> for UNFloat {
-    type Arg = UpdateState<'a>;
-}
-impl<'a> Generatable<'a> for UNFloat {
-    fn generate_rng<R: Rng + ?Sized>(
-        rng: &mut R,
-        _state: mutagen::State,
-        _arg: UpdateState<'a>,
-    ) -> Self {
+    pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
         Self::new_unchecked(rng.gen_range(0.0, 1.0))
     }
 }
 
+impl<'a> Generatable<'a> for UNFloat {
+    type GenArg = GenArg<'a>;
+
+    fn generate_rng<R: Rng + ?Sized>(
+        rng: &mut R,
+        _state: mutagen::State,
+        _arg: &'a mut GenArg<'a>,
+    ) -> Self {
+        Self::random(rng)
+    }
+}
+
 impl<'a> Mutatable<'a> for UNFloat {
+    type MutArg = MutArg<'a>;
     fn mutate_rng<R: Rng + ?Sized>(
         &mut self,
         rng: &mut R,
         state: mutagen::State,
-        arg: UpdateState<'a>,
+        arg: &'a mut MutArg<'a>,
     ) {
-        *self = Self::generate_rng(rng, state, arg);
+        *self = Self::random(rng);
     }
 }
 
 impl<'a> Updatable<'a> for UNFloat {
-    fn update(&mut self, _state: mutagen::State, _arg: UpdateState<'a>) {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -124,7 +130,7 @@ impl<'a> Updatable<'a> for UNFloat {
 }
 
 impl<'a> UpdatableRecursively<'a> for UNFloat {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdateState<'a>) {
+    fn update_recursively(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -211,6 +217,10 @@ impl SNFloat {
         Self::new(self.into_inner() * other.into_inner())
     }
 
+    pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
+        Self::new_unchecked(rng.gen_range(-1.0, 1.0))
+    }
+
     pub const ZERO: Self = Self { value: 0.0 };
     pub const ONE: Self = Self { value: 1.0 };
     pub const NEG_ONE: Self = Self { value: -1.0 };
@@ -222,32 +232,34 @@ impl Display for SNFloat {
     }
 }
 
-impl<'a> Mutagen<'a> for SNFloat {
-    type Arg = UpdateState<'a>;
-}
 impl<'a> Generatable<'a> for SNFloat {
+    type GenArg = GenArg<'a>;
+
     fn generate_rng<R: Rng + ?Sized>(
         rng: &mut R,
         _state: mutagen::State,
-        _arg: UpdateState<'a>,
+        _arg: &'a mut GenArg<'a>,
     ) -> Self {
-        Self::new_unchecked(rng.gen_range(-1.0, 1.0))
+        Self::random(rng)
     }
 }
 
 impl<'a> Mutatable<'a> for SNFloat {
+    type MutArg = MutArg<'a>;
     fn mutate_rng<R: Rng + ?Sized>(
         &mut self,
         rng: &mut R,
         state: mutagen::State,
-        arg: UpdateState<'a>,
+        arg: &'a mut MutArg<'a>,
     ) {
-        *self = Self::generate_rng(rng, state, arg);
+        *self = Self::random(rng);
     }
 }
 
 impl<'a> Updatable<'a> for SNFloat {
-    fn update(&mut self, _state: mutagen::State, _arg: UpdateState<'a>) {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -255,7 +267,7 @@ impl<'a> Updatable<'a> for SNFloat {
 }
 
 impl<'a> UpdatableRecursively<'a> for SNFloat {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdateState<'a>) {
+    fn update_recursively(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -300,34 +312,40 @@ impl Angle {
     pub fn to_unsigned(self) -> UNFloat {
         UNFloat::new_from_range(self.value, 0.0, 2.0 * PI)
     }
+
+    pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
+        Self::new_unchecked(rng.gen_range(0.0, 2.0 * PI))
+    }
 }
 
-impl<'a> Mutagen<'a> for Angle {
-    type Arg = UpdateState<'a>;
-}
 impl<'a> Generatable<'a> for Angle {
+    type GenArg = GenArg<'a>;
+
     fn generate_rng<R: Rng + ?Sized>(
         rng: &mut R,
         _state: mutagen::State,
-        _arg: UpdateState<'a>,
+        _arg: &'a mut GenArg<'a>,
     ) -> Self {
-        Angle::new_unchecked(rng.gen_range(0.0, 2.0 * PI))
+        Self::random(rng)
     }
 }
 
 impl<'a> Mutatable<'a> for Angle {
+    type MutArg = MutArg<'a>;
     fn mutate_rng<R: Rng + ?Sized>(
         &mut self,
         rng: &mut R,
         state: mutagen::State,
-        arg: UpdateState<'a>,
+        arg: &'a mut MutArg<'a>,
     ) {
-        *self = Self::generate_rng(rng, state, arg);
+        *self = Self::random(rng);
     }
 }
 
 impl<'a> Updatable<'a> for Angle {
-    fn update(&mut self, _state: mutagen::State, _arg: UpdateState<'a>) {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -335,7 +353,7 @@ impl<'a> Updatable<'a> for Angle {
 }
 
 impl<'a> UpdatableRecursively<'a> for Angle {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdateState<'a>) {
+    fn update_recursively(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
         match self {
             _ => {}
         }

@@ -1,14 +1,15 @@
-use mutagen::{Generatable, Mutagen, Mutatable, Updatable, UpdatableRecursively};
+use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
 use palette::rgb::Rgb;
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     datatype::{continuous::*, discrete::*},
-    updatestate::UpdateState,
+    mutagen_args::*,
 };
 
-#[derive(Generatable, Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Generatable, Mutatable, Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub struct NibbleColor {
     pub r: Nibble,
     pub g: Nibble,
@@ -16,12 +17,10 @@ pub struct NibbleColor {
     pub a: Nibble,
 }
 
-impl<'a> Mutagen<'a> for NibbleColor {
-    type Arg = UpdateState<'a>;
-}
-
 impl<'a> Updatable<'a> for NibbleColor {
-    fn update(&mut self, _state: mutagen::State, arg: UpdateState<'a>) {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _state: mutagen::State, arg: &'a mut UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -29,7 +28,7 @@ impl<'a> Updatable<'a> for NibbleColor {
 }
 
 impl<'a> UpdatableRecursively<'a> for NibbleColor {
-    fn update_recursively(&mut self, _state: mutagen::State, arg: UpdateState<'a>) {
+    fn update_recursively(&mut self, _state: mutagen::State, arg: &'a mut UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -47,16 +46,19 @@ impl From<FloatColor> for NibbleColor {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Generatable, Mutatable, Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub struct ByteColor {
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
-    pub a: u8,
+    pub r: Byte,
+    pub g: Byte,
+    pub b: Byte,
+    pub a: Byte,
 }
 
 impl<'a> Updatable<'a> for ByteColor {
-    fn update(&mut self, _state: mutagen::State, arg: UpdateState<'a>) {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _state: mutagen::State, arg: &'a mut UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -64,50 +66,20 @@ impl<'a> Updatable<'a> for ByteColor {
 }
 
 impl<'a> UpdatableRecursively<'a> for ByteColor {
-    fn update_recursively(&mut self, _state: mutagen::State, arg: UpdateState<'a>) {
+    fn update_recursively(&mut self, _state: mutagen::State, arg: &'a mut UpdArg<'a>) {
         match self {
             _ => {}
         }
     }
 }
 
-impl<'a> Mutagen<'a> for ByteColor {
-    type Arg = UpdateState<'a>;
-}
-
-impl<'a> Generatable<'a> for ByteColor {
-    fn generate_rng<R: Rng + ?Sized>(
-        rng: &mut R,
-        _state: mutagen::State,
-        arg: UpdateState<'a>,
-    ) -> Self {
-        Self {
-            r: rng.gen(),
-            g: rng.gen(),
-            b: rng.gen(),
-            a: rng.gen(),
-        }
-    }
-}
-
-impl<'a> Mutatable<'a> for ByteColor {
-    fn mutate_rng<R: Rng + ?Sized>(
-        &mut self,
-        rng: &mut R,
-        state: mutagen::State,
-        arg: UpdateState<'a>,
-    ) {
-        *self = Self::generate_rng(rng, state, arg);
-    }
-}
-
 impl From<image::Rgba<u8>> for ByteColor {
     fn from(c: image::Rgba<u8>) -> Self {
         Self {
-            r: c.0[0],
-            g: c.0[1],
-            b: c.0[2],
-            a: c.0[3],
+            r: Byte::new(c.0[0]),
+            g: Byte::new(c.0[1]),
+            b: Byte::new(c.0[2]),
+            a: Byte::new(c.0[3]),
         }
     }
 }
@@ -115,10 +87,10 @@ impl From<image::Rgba<u8>> for ByteColor {
 impl From<FloatColor> for ByteColor {
     fn from(other: FloatColor) -> Self {
         Self {
-            r: (other.r.into_inner() * 255.0) as u8,
-            g: (other.g.into_inner() * 255.0) as u8,
-            b: (other.b.into_inner() * 255.0) as u8,
-            a: (other.a.into_inner() * 255.0) as u8,
+            r: Byte::new((other.r.into_inner() * 255.0) as u8),
+            g: Byte::new((other.g.into_inner() * 255.0) as u8),
+            b: Byte::new((other.b.into_inner() * 255.0) as u8),
+            a: Byte::new((other.a.into_inner() * 255.0) as u8),
         }
     }
 }
@@ -148,52 +120,52 @@ impl BitColor {
     pub fn get_color(self) -> ByteColor {
         match self {
             BitColor::Black => ByteColor {
-                r: 0,
-                g: 0,
-                b: 0,
-                a: 255,
+                r: Byte::new(0),
+                g: Byte::new(0),
+                b: Byte::new(0),
+                a: Byte::new(255),
             },
             BitColor::Red => ByteColor {
-                r: 255,
-                g: 0,
-                b: 0,
-                a: 255,
+                r: Byte::new(255),
+                g: Byte::new(0),
+                b: Byte::new(0),
+                a: Byte::new(255),
             },
             BitColor::Green => ByteColor {
-                r: 0,
-                g: 255,
-                b: 0,
-                a: 255,
+                r: Byte::new(0),
+                g: Byte::new(255),
+                b: Byte::new(0),
+                a: Byte::new(255),
             },
             BitColor::Blue => ByteColor {
-                r: 0,
-                g: 0,
-                b: 255,
-                a: 255,
+                r: Byte::new(0),
+                g: Byte::new(0),
+                b: Byte::new(255),
+                a: Byte::new(255),
             },
             BitColor::Cyan => ByteColor {
-                r: 0,
-                g: 255,
-                b: 255,
-                a: 255,
+                r: Byte::new(0),
+                g: Byte::new(255),
+                b: Byte::new(255),
+                a: Byte::new(255),
             },
             BitColor::Magenta => ByteColor {
-                r: 255,
-                g: 0,
-                b: 255,
-                a: 255,
+                r: Byte::new(255),
+                g: Byte::new(0),
+                b: Byte::new(255),
+                a: Byte::new(255),
             },
             BitColor::Yellow => ByteColor {
-                r: 255,
-                g: 255,
-                b: 0,
-                a: 255,
+                r: Byte::new(255),
+                g: Byte::new(255),
+                b: Byte::new(0),
+                a: Byte::new(255),
             },
             BitColor::White => ByteColor {
-                r: 255,
-                g: 255,
-                b: 255,
-                a: 255,
+                r: Byte::new(255),
+                g: Byte::new(255),
+                b: Byte::new(255),
+                a: Byte::new(255),
             },
         }
     }
@@ -207,7 +179,11 @@ impl BitColor {
     }
 
     pub fn from_byte_color(c: ByteColor) -> BitColor {
-        BitColor::from_components([c.r >= 127, c.g >= 127, c.b >= 127])
+        BitColor::from_components([
+            c.r.into_inner() >= 127,
+            c.g.into_inner() >= 127,
+            c.b.into_inner() >= 127,
+        ])
     }
 
     pub fn to_index(self) -> usize {
@@ -326,43 +302,49 @@ impl BitColor {
 
         new_color
     }
-}
 
-impl<'a> Mutagen<'a> for BitColor {
-    type Arg = UpdateState<'a>;
-}
-impl<'a> Generatable<'a> for BitColor {
-    fn generate_rng<R: Rng + ?Sized>(
-        rng: &mut R,
-        _state: mutagen::State,
-        arg: UpdateState<'a>,
-    ) -> Self {
+    pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
         Self::from_components([rng.gen(), rng.gen(), rng.gen()])
     }
 }
 
+impl<'a> Generatable<'a> for BitColor {
+    type GenArg = GenArg<'a>;
+
+    fn generate_rng<R: Rng + ?Sized>(
+        rng: &mut R,
+        _state: mutagen::State,
+        _arg: &'a mut GenArg<'a>,
+    ) -> Self {
+        Self::random(rng)
+    }
+}
+
 impl<'a> Mutatable<'a> for BitColor {
+    type MutArg = MutArg<'a>;
+
     fn mutate_rng<R: Rng + ?Sized>(
         &mut self,
         rng: &mut R,
         _state: mutagen::State,
-        arg: UpdateState<'a>,
+        _arg: &'a mut MutArg<'a>,
     ) {
-        let current_color = self.to_components();
-        let mut new_color = [rng.gen(), rng.gen(), rng.gen()];
+        let mut components = self.to_components();
 
-        for i in 0..3 {
+        for component in components.iter_mut() {
             if rng.gen::<bool>() {
-                new_color[i] = current_color[i];
+                *component = rng.gen();
             }
         }
 
-        *self = Self::from_components(new_color);
+        *self = Self::from_components(components);
     }
 }
 
 impl<'a> Updatable<'a> for BitColor {
-    fn update(&mut self, _state: mutagen::State, arg: UpdateState<'a>) {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _state: mutagen::State, arg: &'a mut UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -370,7 +352,7 @@ impl<'a> Updatable<'a> for BitColor {
 }
 
 impl<'a> UpdatableRecursively<'a> for BitColor {
-    fn update_recursively(&mut self, _state: mutagen::State, arg: UpdateState<'a>) {
+    fn update_recursively(&mut self, _state: mutagen::State, arg: &'a mut UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -379,11 +361,15 @@ impl<'a> UpdatableRecursively<'a> for BitColor {
 
 impl From<ByteColor> for BitColor {
     fn from(other: ByteColor) -> Self {
-        Self::from_components([other.r > 127, other.g > 127, other.b > 127])
+        Self::from_components([
+            other.r.into_inner() > 127,
+            other.g.into_inner() > 127,
+            other.b.into_inner() > 127,
+        ])
     }
 }
 
-#[derive(Generatable, Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq)]
 pub struct FloatColor {
     pub r: UNFloat,
     pub g: UNFloat,
@@ -425,15 +411,24 @@ impl FloatColor {
             UNFloat::new(hue / 360.0)
         }
     }
+
+    pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
+        Self {
+            r: UNFloat::random(rng),
+            g: UNFloat::random(rng),
+            b: UNFloat::random(rng),
+            a: UNFloat::random(rng),
+        }
+    }
 }
 
 impl From<ByteColor> for FloatColor {
     fn from(c: ByteColor) -> FloatColor {
         FloatColor {
-            r: UNFloat::new(c.r as f32 / 255.0),
-            g: UNFloat::new(c.g as f32 / 255.0),
-            b: UNFloat::new(c.b as f32 / 255.0),
-            a: UNFloat::new(c.a as f32 / 255.0),
+            r: UNFloat::new(c.r.into_inner() as f32 / 255.0),
+            g: UNFloat::new(c.g.into_inner() as f32 / 255.0),
+            b: UNFloat::new(c.b.into_inner() as f32 / 255.0),
+            a: UNFloat::new(c.a.into_inner() as f32 / 255.0),
         }
     }
 }
@@ -451,23 +446,34 @@ impl From<BitColor> for FloatColor {
     }
 }
 
-impl<'a> Mutagen<'a> for FloatColor {
-    type Arg = UpdateState<'a>;
+impl<'a> Generatable<'a> for FloatColor {
+    type GenArg = GenArg<'a>;
+
+    fn generate_rng<R: Rng + ?Sized>(
+        rng: &mut R,
+        _state: mutagen::State,
+        _arg: &'a mut GenArg<'a>,
+    ) -> Self {
+        Self::random(rng)
+    }
 }
 
 impl<'a> Mutatable<'a> for FloatColor {
+    type MutArg = MutArg<'a>;
     fn mutate_rng<R: Rng + ?Sized>(
         &mut self,
         rng: &mut R,
         state: mutagen::State,
-        arg: UpdateState<'a>,
+        arg: &'a mut MutArg<'a>,
     ) {
-        *self = Self::generate_rng(rng, state, arg);
+        *self = Self::random(rng);
     }
 }
 
 impl<'a> Updatable<'a> for FloatColor {
-    fn update(&mut self, _state: mutagen::State, arg: UpdateState<'a>) {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _state: mutagen::State, arg: &'a mut UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -475,7 +481,7 @@ impl<'a> Updatable<'a> for FloatColor {
 }
 
 impl<'a> UpdatableRecursively<'a> for FloatColor {
-    fn update_recursively(&mut self, _state: mutagen::State, arg: UpdateState<'a>) {
+    fn update_recursively(&mut self, _state: mutagen::State, arg: &'a mut UpdArg<'a>) {
         match self {
             _ => {}
         }

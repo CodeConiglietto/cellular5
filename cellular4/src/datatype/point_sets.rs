@@ -4,7 +4,7 @@ use std::{
 };
 
 use float_ord::FloatOrd;
-use mutagen::{Generatable, Mutagen, Mutatable, Updatable, UpdatableRecursively};
+use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
 use nalgebra::*;
 use ndarray::Array2;
 use rand::prelude::*;
@@ -12,7 +12,7 @@ use serde::{de::Deserializer, ser::Serializer, Deserialize, Serialize};
 
 use crate::{
     datatype::{continuous::*, discrete::*, points::*},
-    updatestate::UpdateState,
+    mutagen_args::*,
 };
 
 #[derive(Clone, Debug)]
@@ -64,6 +64,10 @@ impl PointSet {
     pub fn get_random_point(&self) -> SNPoint {
         self.points.choose(&mut thread_rng()).unwrap().clone()
     }
+
+    pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
+        PointSetGenerator::random(rng).generate_point_set(rng)
+    }
 }
 
 impl Serialize for PointSet {
@@ -84,33 +88,34 @@ impl<'de> Deserialize<'de> for PointSet {
     }
 }
 
-impl<'a> Mutagen<'a> for PointSet {
-    type Arg = UpdateState<'a>;
-}
-
 impl<'a> Generatable<'a> for PointSet {
+    type GenArg = GenArg<'a>;
+
     fn generate_rng<R: Rng + ?Sized>(
         rng: &mut R,
-        state: mutagen::State,
-        arg: UpdateState<'a>,
+        _state: mutagen::State,
+        _arg: &'a mut GenArg<'a>,
     ) -> Self {
-        PointSetGenerator::generate_rng(rng, state, arg).generate_point_set(rng)
+        Self::random(rng)
     }
 }
 
 impl<'a> Mutatable<'a> for PointSet {
+    type MutArg = MutArg<'a>;
     fn mutate_rng<R: Rng + ?Sized>(
         &mut self,
         rng: &mut R,
-        state: mutagen::State,
-        arg: UpdateState<'a>,
+        _state: mutagen::State,
+        _arg: &'a mut MutArg<'a>,
     ) {
-        *self = Self::generate_rng(rng, state, arg);
+        *self = Self::random(rng);
     }
 }
 
 impl<'a> Updatable<'a> for PointSet {
-    fn update(&mut self, _state: mutagen::State, _arg: UpdateState<'a>) {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -118,14 +123,14 @@ impl<'a> Updatable<'a> for PointSet {
 }
 
 impl<'a> UpdatableRecursively<'a> for PointSet {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdateState<'a>) {
+    fn update_recursively(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
         match self {
             _ => {}
         }
     }
 }
 
-#[derive(Serialize, Deserialize, Generatable, Clone, Copy, Debug)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 pub enum PointSetGenerator {
     Moore,
     VonNeumann,
@@ -134,6 +139,21 @@ pub enum PointSetGenerator {
 }
 
 impl PointSetGenerator {
+    pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
+        match rng.gen_range(0, 4) {
+            0 => PointSetGenerator::Moore,
+            1 => PointSetGenerator::VonNeumann,
+            2 => PointSetGenerator::Uniform {
+                count: Byte::random(rng),
+            },
+            3 => PointSetGenerator::Poisson {
+                count: Byte::random(rng),
+                radius: UNFloat::random(rng),
+            },
+            _ => unreachable!(),
+        }
+    }
+
     pub fn generate_point_set<R: Rng + ?Sized>(&self, rng: &mut R) -> PointSet {
         let points = match self {
             PointSetGenerator::Moore => moore(),
@@ -262,8 +282,4 @@ pub fn poisson<R: Rng + ?Sized>(rng: &mut R, count: usize, radius: f32) -> Vec<S
     }
 
     points
-}
-
-impl<'a> Mutagen<'a> for PointSetGenerator {
-    type Arg = UpdateState<'a>;
 }

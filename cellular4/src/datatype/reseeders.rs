@@ -1,6 +1,6 @@
 use crate::colors::*;
 use crate::constants::*;
-use crate::get_random_color;
+use crate::{mutagen_args::*,get_random_color};
 use ndarray::Array2;
 use rand::prelude::*;
 

@@ -36,7 +36,7 @@ impl Node for DistanceFunctionNodes {
 impl<'a> Updatable<'a> for DistanceFunctionNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -44,7 +44,7 @@ impl<'a> Updatable<'a> for DistanceFunctionNodes {
 }
 
 impl<'a> UpdatableRecursively<'a> for DistanceFunctionNodes {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
+    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
         match self {
             _ => {}
         }

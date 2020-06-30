@@ -47,7 +47,7 @@ impl Node for NoiseNodes {
 impl<'a> Updatable<'a> for NoiseNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -55,7 +55,7 @@ impl<'a> Updatable<'a> for NoiseNodes {
 }
 
 impl<'a> UpdatableRecursively<'a> for NoiseNodes {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
+    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
         match self {
             _ => {}
         }

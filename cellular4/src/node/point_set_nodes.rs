@@ -53,7 +53,7 @@ impl Node for PointSetNodes {
 impl<'a> Updatable<'a> for PointSetNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, arg: &'a mut UpdArg<'a>) {
+    fn update(&mut self, _state: mutagen::State, arg: UpdArg<'a>) {
         match self {
             PointSetNodes::Translating {
                 ref mut value,

@@ -212,11 +212,13 @@ impl Node for ColorBlendNodes {
             // Subtract {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg).into_inner() {color_a.compute(compute_arg)}else{color_b.compute(compute_arg)}},
             // Divide {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg).into_inner() {color_a.compute(compute_arg)}else{color_b.compute(compute_arg)}},
             // Lerp {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg).into_inner() {color_a.compute(compute_arg)}else{color_b.compute(compute_arg)}},
-            ModifyState { child, child_state } => child.compute(&UpdateState {
-                coordinate_set: child_state.compute(compute_arg),
-                ..*compute_arg
-            },
-            compute_arg),
+            ModifyState { child, child_state } => child.compute(
+                &UpdateState {
+                    coordinate_set: child_state.compute(compute_arg),
+                    ..*compute_arg
+                },
+                compute_arg,
+            ),
             IfElse {
                 predicate,
                 child_a,
@@ -235,7 +237,7 @@ impl Node for ColorBlendNodes {
 impl<'a> Updatable<'a> for ColorBlendNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
         match self {
             _ => {}
         }

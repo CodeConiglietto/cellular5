@@ -131,7 +131,7 @@ impl Node for FloatColorNodes {
                     ((compute_arg.coordinate_set.y.into_inner() + 1.0)
                         * 0.5
                         * CONSTS.cell_array_height as f32) as usize,
-                        compute_arg.coordinate_set.t as usize,
+                    compute_arg.coordinate_set.t as usize,
                 )
                 .into(),
             Grayscale { child } => {
@@ -161,11 +161,13 @@ impl Node for FloatColorNodes {
             }
             FromBlend { child } => child.compute(compute_arg),
             FromBitColor { child } => FloatColor::from(child.compute(compute_arg)),
-            ModifyState { child, child_state } => child.compute(&UpdateState {
-                coordinate_set: child_state.compute(compute_arg),
-                ..*compute_arg
-            },
-            compute_arg),
+            ModifyState { child, child_state } => child.compute(
+                &UpdateState {
+                    coordinate_set: child_state.compute(compute_arg),
+                    ..*compute_arg
+                },
+                compute_arg,
+            ),
             FromByteColor { child } => FloatColor::from(child.compute(compute_arg)),
             IfElse {
                 predicate,
@@ -196,7 +198,7 @@ impl Node for FloatColorNodes {
 impl<'a> Updatable<'a> for FloatColorNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, arg: &'a mut UpdArg<'a>) {
+    fn update(&mut self, _state: mutagen::State, arg: UpdArg<'a>) {
         use FloatColorNodes::*;
 
         match self {
@@ -359,18 +361,26 @@ impl Node for BitColorNodes {
         use BitColorNodes::*;
         match self {
             Constant { value } => *value,
-            GiveColor { child_a, child_b } => {
-                BitColor::from_components(child_a.compute(compute_arg).give_color(child_b.compute(compute_arg)))
-            }
-            TakeColor { child_a, child_b } => {
-                BitColor::from_components(child_a.compute(compute_arg).take_color(child_b.compute(compute_arg)))
-            }
-            XorColor { child_a, child_b } => {
-                BitColor::from_components(child_a.compute(compute_arg).xor_color(child_b.compute(compute_arg)))
-            }
-            EqColor { child_a, child_b } => {
-                BitColor::from_components(child_a.compute(compute_arg).eq_color(child_b.compute(compute_arg)))
-            }
+            GiveColor { child_a, child_b } => BitColor::from_components(
+                child_a
+                    .compute(compute_arg)
+                    .give_color(child_b.compute(compute_arg)),
+            ),
+            TakeColor { child_a, child_b } => BitColor::from_components(
+                child_a
+                    .compute(compute_arg)
+                    .take_color(child_b.compute(compute_arg)),
+            ),
+            XorColor { child_a, child_b } => BitColor::from_components(
+                child_a
+                    .compute(compute_arg)
+                    .xor_color(child_b.compute(compute_arg)),
+            ),
+            EqColor { child_a, child_b } => BitColor::from_components(
+                child_a
+                    .compute(compute_arg)
+                    .eq_color(child_b.compute(compute_arg)),
+            ),
             FromComponents { r, g, b } => BitColor::from_components([
                 r.compute(compute_arg).into_inner(),
                 g.compute(compute_arg).into_inner(),
@@ -396,7 +406,8 @@ impl Node for BitColorNodes {
                 )
                 .into(),
             FromUNFloat { child } => BitColor::from_index(
-                (child.compute(compute_arg).into_inner() * 0.99 * (CONSTS.max_colors) as f32) as usize,
+                (child.compute(compute_arg).into_inner() * 0.99 * (CONSTS.max_colors) as f32)
+                    as usize,
             ),
             FromFloatColor { child } => BitColor::from_float_color(child.compute(compute_arg)),
             FromByteColor { child } => BitColor::from_byte_color(child.compute(compute_arg)),
@@ -425,7 +436,7 @@ impl Node for BitColorNodes {
 impl<'a> Updatable<'a> for BitColorNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {}
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Serialize, Deserialize, Debug)]
@@ -479,8 +490,9 @@ impl Node for ByteColorNodes {
                 compute_arg.coordinate_set.t,
             ),
             FromCellArray => compute_arg.history.get(
-                ((compute_arg.coordinate_set.x.into_inner() + 1.0) * 0.5 * CONSTS.cell_array_width as f32)
-                    as usize,
+                ((compute_arg.coordinate_set.x.into_inner() + 1.0)
+                    * 0.5
+                    * CONSTS.cell_array_width as f32) as usize,
                 ((compute_arg.coordinate_set.y.into_inner() + 1.0)
                     * 0.5
                     * CONSTS.cell_array_height as f32) as usize,
@@ -516,5 +528,5 @@ impl Node for ByteColorNodes {
 impl<'a> Updatable<'a> for ByteColorNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {}
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }

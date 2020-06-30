@@ -85,31 +85,39 @@ impl Node for BooleanNodes {
 
         match self {
             UNFloatLess { child_a, child_b } => Boolean {
-                value: child_a.compute(compute_arg).into_inner() < child_b.compute(compute_arg).into_inner(),
+                value: child_a.compute(compute_arg).into_inner()
+                    < child_b.compute(compute_arg).into_inner(),
             },
             UNFloatMore { child_a, child_b } => Boolean {
-                value: child_a.compute(compute_arg).into_inner() > child_b.compute(compute_arg).into_inner(),
+                value: child_a.compute(compute_arg).into_inner()
+                    > child_b.compute(compute_arg).into_inner(),
             },
             SNFloatLess { child_a, child_b } => Boolean {
-                value: child_a.compute(compute_arg).into_inner() < child_b.compute(compute_arg).into_inner(),
+                value: child_a.compute(compute_arg).into_inner()
+                    < child_b.compute(compute_arg).into_inner(),
             },
             SNFloatMore { child_a, child_b } => Boolean {
-                value: child_a.compute(compute_arg).into_inner() > child_b.compute(compute_arg).into_inner(),
+                value: child_a.compute(compute_arg).into_inner()
+                    > child_b.compute(compute_arg).into_inner(),
             },
             SNFloatSign { child } => Boolean {
                 value: child.compute(compute_arg).into_inner() >= 0.0,
             },
             And { child_a, child_b } => Boolean {
-                value: child_a.compute(compute_arg).into_inner() && child_b.compute(compute_arg).into_inner(),
+                value: child_a.compute(compute_arg).into_inner()
+                    && child_b.compute(compute_arg).into_inner(),
             },
             Or { child_a, child_b } => Boolean {
-                value: child_a.compute(compute_arg).into_inner() || child_b.compute(compute_arg).into_inner(),
+                value: child_a.compute(compute_arg).into_inner()
+                    || child_b.compute(compute_arg).into_inner(),
             },
             Not { child } => Boolean {
                 value: !child.compute(compute_arg).into_inner(),
             },
             BitColorHas { child_a, child_b } => Boolean {
-                value: child_a.compute(compute_arg).has_color(child_b.compute(compute_arg)),
+                value: child_a
+                    .compute(compute_arg)
+                    .has_color(child_b.compute(compute_arg)),
             },
             Constant { value } => *value,
             // Random => Boolean::generate(state),
@@ -129,7 +137,8 @@ impl Node for BooleanNodes {
                 }
             }
             ByteEquals { child_a, child_b } => Boolean {
-                value: child_a.compute(compute_arg).into_inner() == child_b.compute(compute_arg).into_inner(),
+                value: child_a.compute(compute_arg).into_inner()
+                    == child_b.compute(compute_arg).into_inner(),
             },
             // Majority {
             //     child,
@@ -165,7 +174,7 @@ impl Node for BooleanNodes {
 impl<'a> Updatable<'a> for BooleanNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -234,10 +243,12 @@ impl Node for NibbleNodes {
         match self {
             Constant { value } => *value,
             // Random => Nibble::generate(state),
-            Add { child_a, child_b } => child_a.compute(compute_arg).add(child_b.compute(compute_arg)),
-            Multiply { child_a, child_b } => {
-                child_a.compute(compute_arg).multiply(child_b.compute(compute_arg))
-            }
+            Add { child_a, child_b } => child_a
+                .compute(compute_arg)
+                .add(child_b.compute(compute_arg)),
+            Multiply { child_a, child_b } => child_a
+                .compute(compute_arg)
+                .multiply(child_b.compute(compute_arg)),
             Divide {
                 child_value,
                 child_divisor,
@@ -293,7 +304,7 @@ impl Node for NibbleNodes {
 impl<'a> Updatable<'a> for NibbleNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -351,13 +362,16 @@ impl Node for ByteNodes {
         match self {
             Constant { value } => *value,
             // Random => Byte::generate(state),
-            Add { child_a, child_b } => child_a.compute(compute_arg).add(child_b.compute(compute_arg)),
-            Multiply { child_a, child_b } => {
-                child_a.compute(compute_arg).multiply(child_b.compute(compute_arg))
-            }
-            MultiplyNibbles { child_a, child_b } => {
-                Byte::new(child_a.compute(compute_arg).into_inner() * child_b.compute(compute_arg).into_inner())
-            }
+            Add { child_a, child_b } => child_a
+                .compute(compute_arg)
+                .add(child_b.compute(compute_arg)),
+            Multiply { child_a, child_b } => child_a
+                .compute(compute_arg)
+                .multiply(child_b.compute(compute_arg)),
+            MultiplyNibbles { child_a, child_b } => Byte::new(
+                child_a.compute(compute_arg).into_inner()
+                    * child_b.compute(compute_arg).into_inner(),
+            ),
             Divide {
                 child_value,
                 child_divisor,
@@ -389,7 +403,7 @@ impl Node for ByteNodes {
 impl<'a> Updatable<'a> for ByteNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -442,10 +456,12 @@ impl Node for UIntNodes {
         match self {
             Constant { value } => *value,
             // Random => UInt::generate(state),
-            Add { child_a, child_b } => child_a.compute(compute_arg).add(child_b.compute(compute_arg)),
-            Multiply { child_a, child_b } => {
-                child_a.compute(compute_arg).multiply(child_b.compute(compute_arg))
-            }
+            Add { child_a, child_b } => child_a
+                .compute(compute_arg)
+                .add(child_b.compute(compute_arg)),
+            Multiply { child_a, child_b } => child_a
+                .compute(compute_arg)
+                .multiply(child_b.compute(compute_arg)),
             Divide {
                 child_value,
                 child_divisor,
@@ -477,7 +493,7 @@ impl Node for UIntNodes {
 impl<'a> Updatable<'a> for UIntNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -528,10 +544,12 @@ impl Node for SIntNodes {
         match self {
             Constant { value } => *value,
             // Random => SInt::generate(state),
-            Add { child_a, child_b } => child_a.compute(compute_arg).add(child_b.compute(compute_arg)),
-            Multiply { child_a, child_b } => {
-                child_a.compute(compute_arg).multiply(child_b.compute(compute_arg))
-            }
+            Add { child_a, child_b } => child_a
+                .compute(compute_arg)
+                .add(child_b.compute(compute_arg)),
+            Multiply { child_a, child_b } => child_a
+                .compute(compute_arg)
+                .multiply(child_b.compute(compute_arg)),
             Divide {
                 child_value,
                 child_divisor,
@@ -562,7 +580,7 @@ impl Node for SIntNodes {
 impl<'a> Updatable<'a> for SIntNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
         match self {
             _ => {}
         }

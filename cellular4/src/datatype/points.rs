@@ -192,7 +192,7 @@ impl<'a> Generatable<'a> for SNPoint {
     fn generate_rng<R: Rng + ?Sized>(
         rng: &mut R,
         _state: mutagen::State,
-        _arg: &'a mut GenArg<'a>,
+        _arg: GenArg<'a>,
     ) -> Self {
         Self::random(rng)
     }
@@ -200,12 +200,7 @@ impl<'a> Generatable<'a> for SNPoint {
 
 impl<'a> Mutatable<'a> for SNPoint {
     type MutArg = MutArg<'a>;
-    fn mutate_rng<R: Rng + ?Sized>(
-        &mut self,
-        rng: &mut R,
-        state: mutagen::State,
-        arg: &'a mut MutArg<'a>,
-    ) {
+    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, state: mutagen::State, arg: MutArg<'a>) {
         *self = Self::random(rng);
     }
 }
@@ -213,7 +208,7 @@ impl<'a> Mutatable<'a> for SNPoint {
 impl<'a> Updatable<'a> for SNPoint {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -221,7 +216,7 @@ impl<'a> Updatable<'a> for SNPoint {
 }
 
 impl<'a> UpdatableRecursively<'a> for SNPoint {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
+    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
         match self {
             _ => {}
         }

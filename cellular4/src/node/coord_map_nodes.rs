@@ -3,13 +3,13 @@ use nalgebra::{geometry::Point2, geometry::Rotation2};
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    coordinate_set::*,
     datatype::{continuous::*, points::*},
     mutagen_args::*,
     node::{
         continuous_nodes::*, discrete_nodes::*, matrix_nodes::*, mutagen_functions::*,
         point_nodes::*, point_set_nodes::*, Node,
     },
-    coordinate_set::*,
 };
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Serialize, Deserialize, Debug)]
@@ -72,7 +72,11 @@ impl Node for CoordMapNodes {
         use CoordMapNodes::*;
 
         match self {
-            Replace { child } => compute_arg.replace_coords(&child.compute(compute_arg)).coordinate_set,
+            Replace { child } => {
+                compute_arg
+                    .replace_coords(&child.compute(compute_arg))
+                    .coordinate_set
+            }
             Shift { x, y } => compute_arg.coordinate_set.get_coord_shifted(
                 x.compute(compute_arg),
                 y.compute(compute_arg),
@@ -84,12 +88,11 @@ impl Node for CoordMapNodes {
                 SNFloat::new(1.0),
             ),
             Rotation { angle } => {
-                let new_pos = Rotation2::new(angle.compute(compute_arg).into_inner()).transform_point(
-                    &Point2::new(
+                let new_pos = Rotation2::new(angle.compute(compute_arg).into_inner())
+                    .transform_point(&Point2::new(
                         compute_arg.coordinate_set.x.into_inner(),
                         compute_arg.coordinate_set.y.into_inner(),
-                    ),
-                );
+                    ));
 
                 CoordinateSet {
                     x: SNFloat::new(0.0).sawtooth_add_f32(new_pos.x),
@@ -134,7 +137,8 @@ impl Node for CoordMapNodes {
                 .to_homogeneous();
 
                 let result =
-                    Point2::from_homogeneous(child.compute(compute_arg).into_inner() * point).unwrap();
+                    Point2::from_homogeneous(child.compute(compute_arg).into_inner() * point)
+                        .unwrap();
 
                 CoordinateSet {
                     x: SNFloat::new_triangle(result.coords.x),
@@ -170,15 +174,19 @@ impl Node for CoordMapNodes {
 
                 CoordinateSet {
                     x: SNFloat::new_triangle(
-                        SNFloat::new_triangle(compute_arg.coordinate_set.x.into_inner() * x_scale + xc)
-                            .into_inner()
+                        SNFloat::new_triangle(
+                            compute_arg.coordinate_set.x.into_inner() * x_scale + xc,
+                        )
+                        .into_inner()
                             * 0.5
                             * w
                             - xc,
                     ),
                     y: SNFloat::new_triangle(
-                        SNFloat::new_triangle(compute_arg.coordinate_set.y.into_inner() * y_scale + yc)
-                            .into_inner()
+                        SNFloat::new_triangle(
+                            compute_arg.coordinate_set.y.into_inner() * y_scale + yc,
+                        )
+                        .into_inner()
                             * 0.5
                             * h
                             - yc,
@@ -208,15 +216,19 @@ impl Node for CoordMapNodes {
 
                 CoordinateSet {
                     x: SNFloat::new_triangle(
-                        SNFloat::new_triangle(compute_arg.coordinate_set.x.into_inner() * x_scale + xc)
-                            .into_inner()
+                        SNFloat::new_triangle(
+                            compute_arg.coordinate_set.x.into_inner() * x_scale + xc,
+                        )
+                        .into_inner()
                             * 0.5
                             * w
                             - xc,
                     ),
                     y: SNFloat::new_triangle(
-                        SNFloat::new_triangle(compute_arg.coordinate_set.y.into_inner() * y_scale + yc)
-                            .into_inner()
+                        SNFloat::new_triangle(
+                            compute_arg.coordinate_set.y.into_inner() * y_scale + yc,
+                        )
+                        .into_inner()
                             * 0.5
                             * h
                             - yc,
@@ -278,7 +290,7 @@ impl Node for CoordMapNodes {
 impl<'a> Updatable<'a> for CoordMapNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, arg: &'a mut UpdArg<'a>) {
+    fn update(&mut self, _state: mutagen::State, arg: UpdArg<'a>) {
         match self {
             CoordMapNodes::Tessellate {
                 child_a,

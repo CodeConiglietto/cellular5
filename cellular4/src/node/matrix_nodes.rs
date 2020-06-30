@@ -44,19 +44,22 @@ impl Node for SNFloatMatrix3Nodes {
 
         match self {
             Identity => SNFloatMatrix3::identity(),
-            Translation { child_a, child_b } => {
-                SNFloatMatrix3::new_translation(child_a.compute(compute_arg), child_b.compute(compute_arg))
-            }
+            Translation { child_a, child_b } => SNFloatMatrix3::new_translation(
+                child_a.compute(compute_arg),
+                child_b.compute(compute_arg),
+            ),
             Rotation { child } => SNFloatMatrix3::new_rotation(child.compute(compute_arg)),
-            Scaling { child_a, child_b } => {
-                SNFloatMatrix3::new_scaling(child_a.compute(compute_arg), child_b.compute(compute_arg))
-            }
-            Shear { child_a, child_b } => {
-                SNFloatMatrix3::new_shear(child_a.compute(compute_arg), child_b.compute(compute_arg))
-            }
-            Multiply { child_a, child_b } => {
-                child_a.compute(compute_arg).multiply(child_b.compute(compute_arg))
-            }
+            Scaling { child_a, child_b } => SNFloatMatrix3::new_scaling(
+                child_a.compute(compute_arg),
+                child_b.compute(compute_arg),
+            ),
+            Shear { child_a, child_b } => SNFloatMatrix3::new_shear(
+                child_a.compute(compute_arg),
+                child_b.compute(compute_arg),
+            ),
+            Multiply { child_a, child_b } => child_a
+                .compute(compute_arg)
+                .multiply(child_b.compute(compute_arg)),
         }
     }
 }
@@ -64,7 +67,7 @@ impl Node for SNFloatMatrix3Nodes {
 impl<'a> Updatable<'a> for SNFloatMatrix3Nodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
         match self {
             _ => {}
         }

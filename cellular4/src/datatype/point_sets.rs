@@ -94,7 +94,7 @@ impl<'a> Generatable<'a> for PointSet {
     fn generate_rng<R: Rng + ?Sized>(
         rng: &mut R,
         _state: mutagen::State,
-        _arg: &'a mut GenArg<'a>,
+        _arg: GenArg<'a>,
     ) -> Self {
         Self::random(rng)
     }
@@ -106,7 +106,7 @@ impl<'a> Mutatable<'a> for PointSet {
         &mut self,
         rng: &mut R,
         _state: mutagen::State,
-        _arg: &'a mut MutArg<'a>,
+        _arg: MutArg<'a>,
     ) {
         *self = Self::random(rng);
     }
@@ -115,7 +115,7 @@ impl<'a> Mutatable<'a> for PointSet {
 impl<'a> Updatable<'a> for PointSet {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -123,7 +123,7 @@ impl<'a> Updatable<'a> for PointSet {
 }
 
 impl<'a> UpdatableRecursively<'a> for PointSet {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
+    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
         match self {
             _ => {}
         }

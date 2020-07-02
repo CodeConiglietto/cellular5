@@ -1,4 +1,7 @@
-use crate::{constants::*, datatype::{continuous::*, discrete::*, points::*}};
+use crate::{
+    constants::*,
+    datatype::{continuous::*, discrete::*, points::*},
+};
 
 #[derive(Clone, Copy, Debug)]
 pub struct CoordinateSet {

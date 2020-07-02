@@ -1,6 +1,6 @@
 use std::{
-    ops::{Add, AddAssign, Div},
     iter::Sum,
+    ops::{Add, AddAssign, Div},
 };
 
 #[derive(Default, Clone, Copy)]
@@ -13,10 +13,10 @@ pub struct UpdateStat {
     //-Neighbour similarity
     //--If all neighbours are similar, we have close to a flat color
     //--If all neighbours are distinct, we have visual noise
-    activity_value: f32,
-    alpha_value: f32,
-    local_similarity_value: f32,
-    global_similarity_value: f32,
+    pub activity_value: f32,
+    pub alpha_value: f32,
+    pub local_similarity_value: f32,
+    pub global_similarity_value: f32,
 }
 
 impl Add<UpdateStat> for UpdateStat {

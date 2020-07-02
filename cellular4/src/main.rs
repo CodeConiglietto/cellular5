@@ -1,9 +1,4 @@
-use std::{
-    f32::consts::PI,
-    fs,
-    iter::Sum,
-    path::PathBuf,
-};
+use std::{f32::consts::PI, fs, iter::Sum, path::PathBuf};
 
 use ggez::{
     conf::{FullscreenType, WindowMode, WindowSetup},
@@ -32,18 +27,18 @@ use crate::{
     },
     history::*,
     mutagen_args::*,
-    node::{Node, color_nodes::*},
+    node::{color_nodes::*, Node},
     node_set::*,
     opts::Opts,
     update_stat::UpdateStat,
-    util::{*, DeterministicRng, RNG_SEED},
+    util::{DeterministicRng, RNG_SEED, *},
 };
 
 mod arena_wrappers;
 mod constants;
+mod coordinate_set;
 mod data_set;
 mod datatype;
-mod coordinate_set;
 mod history;
 mod mutagen_args;
 mod node;
@@ -137,7 +132,7 @@ fn setup_logging() {
 // }
 
 // impl<'a> Updatable<'a> for RenderNodes {
-//     fn update(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {}
+//     fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 // }
 
 // #[derive(Serialize, Deserialize, Generatable, Mutatable, UpdatableRecursively, Debug)]
@@ -220,7 +215,7 @@ fn save_slot_path(slot: &str) -> PathBuf {
 // }
 
 // impl<'a> Updatable<'a> for NodeTree {
-//     fn update(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {}
+//     fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 // }
 
 struct MyGame {
@@ -325,7 +320,7 @@ impl MyGame {
             root_node: NodeBox::generate_rng(
                 &mut rng,
                 mutagen::State::default(),
-                &mut GenArg {
+                GenArg {
                     nodes: &mut nodes,
                     data: &mut data,
                 },
@@ -428,7 +423,7 @@ impl EventHandler for MyGame {
 
         let root_node = &self.root_node;
 
-        let compute_arg = ComArg{
+        let compute_arg = ComArg {
             nodes: &self.nodes,
             data: &self.data,
         };
@@ -436,18 +431,20 @@ impl EventHandler for MyGame {
         let update_step = |y, x, mut new: ArrayViewMut1<u8>| {
             let total_cells = CONSTS.cell_array_width * CONSTS.cell_array_height;
 
-            let compute_result = root_node.compute(&UpdateState {
-                coordinate_set: CoordinateSet {
-                    x: UNFloat::new(x as f32 / CONSTS.cell_array_width as f32).to_signed(),
-                    y: UNFloat::new(
-                        (y + slice_y as usize) as f32 / CONSTS.cell_array_height as f32,
-                    )
-                    .to_signed(),
-                    t: current_t as f32,
+            let compute_result = root_node.compute(
+                &UpdateState {
+                    coordinate_set: CoordinateSet {
+                        x: UNFloat::new(x as f32 / CONSTS.cell_array_width as f32).to_signed(),
+                        y: UNFloat::new(
+                            (y + slice_y as usize) as f32 / CONSTS.cell_array_height as f32,
+                        )
+                        .to_signed(),
+                        t: current_t as f32,
+                    },
+                    history,
                 },
-                history,
-            },
-            compute_arg);
+                compute_arg,
+            );
 
             let new_color = ByteColor::from(compute_result);
 

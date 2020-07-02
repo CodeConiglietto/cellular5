@@ -64,12 +64,12 @@ impl Node for SNPointNodes {
                 child_a.compute(compute_arg).into_inner(),
                 child_b.compute(compute_arg).into_inner(),
             )),
-            SawtoothAdd { child_a, child_b } => {
-                child_a.compute(compute_arg).sawtooth_add(child_b.compute(compute_arg))
-            }
-            TriangleAdd { child_a, child_b } => {
-                child_a.compute(compute_arg).triangle_add(child_b.compute(compute_arg))
-            }
+            SawtoothAdd { child_a, child_b } => child_a
+                .compute(compute_arg)
+                .sawtooth_add(child_b.compute(compute_arg)),
+            TriangleAdd { child_a, child_b } => child_a
+                .compute(compute_arg)
+                .triangle_add(child_b.compute(compute_arg)),
             IterativeCircularAdd { value, child } => *value,
             GetClosestPointInSet { child } => child
                 .compute(compute_arg)
@@ -84,7 +84,7 @@ impl Node for SNPointNodes {
 impl<'a> Updatable<'a> for SNPointNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
         use SNPointNodes::*;
 
         match self {

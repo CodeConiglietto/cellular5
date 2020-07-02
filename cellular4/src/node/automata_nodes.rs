@@ -57,7 +57,7 @@ impl Node for BinaryAutomataNodes {
 impl<'a> Updatable<'a> for BinaryAutomataNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
         match self {
             _ => {}
         }

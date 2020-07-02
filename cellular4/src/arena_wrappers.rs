@@ -43,7 +43,10 @@ where
     type Output = T::Output;
 
     fn compute(&self, compute_arg: ComArg) -> Self::Output {
-        compute_arg.nodes[self.depth].get(self.index).unwrap().compute(compute_arg)
+        compute_arg.nodes[self.depth]
+            .get(self.index)
+            .unwrap()
+            .compute(compute_arg)
     }
 }
 
@@ -56,13 +59,13 @@ where
     fn generate_rng<R: Rng + ?Sized>(
         rng: &mut R,
         state: mutagen::State,
-        arg: &'a mut Self::GenArg,
+        arg: Self::GenArg,
     ) -> Self {
         let gen_arg = GenArg {
             nodes: &mut arg.nodes[1..],
             data: arg.data,
         };
-        let t = T::generate_rng(rng, state, &mut gen_arg);
+        let t = T::generate_rng(rng, state, gen_arg.reborrow());
         Self {
             index: t.insert_into(&mut gen_arg.nodes[0]),
             depth: state.depth,

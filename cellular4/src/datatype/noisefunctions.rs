@@ -92,7 +92,7 @@ where
     fn generate_rng<R: Rng + ?Sized>(
         rng: &mut R,
         state: mutagen::State,
-        arg: &'a mut Self::GenArg,
+        arg: Self::GenArg,
     ) -> Self {
         let params = T::Params::generate_rng(rng, state, arg);
 
@@ -114,7 +114,7 @@ where
         &mut self,
         rng: &mut R,
         state: mutagen::State,
-        arg: &'a mut Self::MutArg,
+        arg: Self::MutArg,
     ) {
         self.params.mutate_rng(rng, state, arg);
         self.noise = T::new(&self.params);
@@ -143,7 +143,7 @@ impl<'a> Generatable<'a> for SeedParams {
     fn generate_rng<R: Rng + ?Sized>(
         rng: &mut R,
         _state: mutagen::State,
-        _arg: &'a mut GenArg<'a>,
+        _arg: GenArg<'a>,
     ) -> Self {
         Self::random(rng)
     }
@@ -155,7 +155,7 @@ impl<'a> Mutatable<'a> for SeedParams {
         &mut self,
         rng: &mut R,
         _state: mutagen::State,
-        _arg: &'a mut MutArg<'a>,
+        _arg: MutArg<'a>,
     ) {
         *self = Self::random(rng);
     }

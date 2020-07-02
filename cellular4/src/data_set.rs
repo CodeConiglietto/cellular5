@@ -5,6 +5,7 @@ use crate::{
 
 use generational_arena::*;
 
+#[derive(Debug)]
 pub struct DataSet {
     unfloats: Arena<UNFloat>,
     float_colors: Arena<FloatColor>,

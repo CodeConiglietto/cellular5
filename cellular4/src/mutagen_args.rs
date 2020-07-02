@@ -1,9 +1,12 @@
+use mutagen::Reborrow;
+
 use crate::{
-    data_set::*, 
-    node_set::*, 
+    constants::*,
     coordinate_set::*,
-    datatype::{points::*},
+    data_set::*,
+    datatype::{continuous::*, discrete::*, points::*},
     history::*,
+    node_set::*,
 };
 
 #[derive(Debug)]
@@ -12,18 +15,47 @@ pub struct GenArg<'a> {
     pub data: &'a mut DataSet,
 }
 
+impl<'a, 'b: 'a> Reborrow<'a, 'b, GenArg<'a>> for GenArg<'b> {
+    fn reborrow(&'a mut self) -> GenArg<'a> {
+        GenArg {
+            nodes: &mut self.nodes,
+            data: &mut self.data,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct MutArg<'a> {
     pub nodes: &'a [NodeSet],
     pub data: &'a mut DataSet,
 }
 
-#[derive(Debug)]
+impl<'a, 'b: 'a> Reborrow<'a, 'b, MutArg<'a>> for MutArg<'b> {
+    fn reborrow(&'a mut self) -> MutArg<'a> {
+        MutArg {
+            nodes: &self.nodes,
+            data: &mut self.data,
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
 pub struct ComArg<'a> {
     pub nodes: &'a [NodeSet],
     pub data: &'a DataSet,
     pub coordinate_set: CoordinateSet,
     pub history: &'a History,
+}
+
+impl<'a, 'b: 'a> Reborrow<'a, 'b, ComArg<'a>> for ComArg<'b> {
+    fn reborrow(&'a mut self) -> ComArg<'a> {
+        ComArg {
+            nodes: &self.nodes,
+            data: &self.data,
+            coordinate_set: self.coordinate_set.clone(),
+            history: &self.history,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -34,13 +66,24 @@ pub struct UpdArg<'a> {
     pub history: &'a History,
 }
 
-impl<'a> UpdArg<'a> {
-    pub fn to_com_arg(&'a self) -> ComArg<'a> {
-        ComArg {
+impl<'a, 'b: 'a> Reborrow<'a, 'b, UpdArg<'a>> for UpdArg<'b> {
+    fn reborrow(&'a mut self) -> UpdArg<'a> {
+        UpdArg {
             nodes: &self.nodes,
-            data: &self.data,
-            coordinate_set: self.coordinate_set,
-            history: self.history,
+            data: &mut self.data,
+            coordinate_set: self.coordinate_set.clone(),
+            history: &self.history,
+        }
+    }
+}
+
+impl<'a> From<UpdArg<'a>> for ComArg<'a> {
+    fn from(arg: UpdArg<'a>) -> Self {
+        Self {
+            nodes: &arg.nodes,
+            data: &arg.data,
+            coordinate_set: arg.coordinate_set.clone(),
+            history: arg.history,
         }
     }
 }

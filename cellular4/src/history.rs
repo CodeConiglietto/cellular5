@@ -1,40 +1,41 @@
-use crate::{coordinate_set::*, datatype::{continuous::*, colors::*, discrete::*, points::*}, util::*};
-use ndarray::{s, ArrayView1, Array3};
-
-use ggez::{
-    graphics::{Image as GgImage},
-    Context,
+use crate::{
+    coordinate_set::*,
+    datatype::{colors::*, continuous::*, discrete::*, points::*},
+    util::*,
 };
+use ndarray::{s, Array3, ArrayView1};
+
+use ggez::{graphics::Image as GgImage, Context};
 
 #[derive(Debug)]
 pub struct HistoryStep {
-    cell_array: Array3<u8>,
-    computed_texture: GgImage,
+    pub cell_array: Array3<u8>,
+    pub computed_texture: GgImage,
 
-    update_coordinate: CoordinateSet,
+    pub update_coordinate: CoordinateSet,
 
-    rotation: f32,
-    translation: SNPoint,
-    offset: SNPoint,
-    from_scale: SNPoint,
-    to_scale: SNPoint,
+    pub rotation: f32,
+    pub translation: SNPoint,
+    pub offset: SNPoint,
+    pub from_scale: SNPoint,
+    pub to_scale: SNPoint,
 
-    root_scalar: UNFloat,
-    alpha: UNFloat,
-    rotation_scalar: UNFloat,
-    translation_scalar: UNFloat,
-    offset_scalar: UNFloat,
-    from_scale_scalar: UNFloat,
-    to_scale_scalar: UNFloat,
+    pub root_scalar: UNFloat,
+    pub alpha: UNFloat,
+    pub rotation_scalar: UNFloat,
+    pub translation_scalar: UNFloat,
+    pub offset_scalar: UNFloat,
+    pub from_scale_scalar: UNFloat,
+    pub to_scale_scalar: UNFloat,
 }
 
 #[derive(Debug)]
 pub struct History {
-    history_steps: Vec<HistoryStep>,
+    pub history_steps: Vec<HistoryStep>,
 }
 
 impl History {
-    fn new(ctx: &mut Context, array_width: usize, array_height: usize, size: usize) -> Self {
+    pub fn new(ctx: &mut Context, array_width: usize, array_height: usize, size: usize) -> Self {
         Self {
             history_steps: (0..size)
                 .map(|_| {
@@ -68,12 +69,12 @@ impl History {
         }
     }
 
-    fn get_raw(&self, x: usize, y: usize, t: usize) -> ArrayView1<u8> {
+    pub fn get_raw(&self, x: usize, y: usize, t: usize) -> ArrayView1<u8> {
         let array = &self.history_steps[t % self.history_steps.len()].cell_array;
         array.slice(s![y % array.dim().0, x % array.dim().1, ..])
     }
 
-    fn get(&self, x: usize, y: usize, t: usize) -> ByteColor {
+    pub fn get(&self, x: usize, y: usize, t: usize) -> ByteColor {
         let raw = self.get_raw(x, y, t);
         ByteColor {
             r: Byte::new(raw[0]),

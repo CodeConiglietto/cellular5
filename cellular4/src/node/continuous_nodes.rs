@@ -96,7 +96,7 @@ impl Node for AngleNodes {
 impl<'a> Updatable<'a> for AngleNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -193,29 +193,33 @@ impl Node for SNFloatNodes {
             FromUNFloat { child } => child.compute(compute_arg).to_signed(),
             Constant { value } => *value,
             Multiply { child_a, child_b } => SNFloat::new(
-                child_a.compute(compute_arg).into_inner() * child_b.compute(compute_arg).into_inner(),
+                child_a.compute(compute_arg).into_inner()
+                    * child_b.compute(compute_arg).into_inner(),
             ),
             Abs { child } => SNFloat::new(child.compute(compute_arg).into_inner().abs()),
             Invert { child } => SNFloat::new(child.compute(compute_arg).into_inner() * -1.0),
             XRatio => compute_arg.coordinate_set.x,
             YRatio => compute_arg.coordinate_set.y,
-            FromGametic => {
-                SNFloat::new((compute_arg.coordinate_set.t - compute_arg.coordinate_set.t.floor()) * 2.0 - 1.0)
-            }
-            ModifyState { child, child_compute_arg } => child.compute(&UpdateState {
+            FromGametic => SNFloat::new(
+                (compute_arg.coordinate_set.t - compute_arg.coordinate_set.t.floor()) * 2.0 - 1.0,
+            ),
+            ModifyState {
+                child,
+                child_compute_arg,
+            } => child.compute(&UpdateState {
                 coordinate_set: child_compute_arg.compute(compute_arg),
                 ..*compute_arg
             }),
             NoiseFunction { child } => child.compute(compute_arg),
-            SubDivide { child_a, child_b } => {
-                child_a.compute(compute_arg).subdivide(child_b.compute(compute_arg))
-            }
-            SawtoothAdd { child_a, child_b } => {
-                child_a.compute(compute_arg).sawtooth_add(child_b.compute(compute_arg))
-            }
-            TriangleAdd { child_a, child_b } => {
-                child_a.compute(compute_arg).triangle_add(child_b.compute(compute_arg))
-            }
+            SubDivide { child_a, child_b } => child_a
+                .compute(compute_arg)
+                .subdivide(child_b.compute(compute_arg)),
+            SawtoothAdd { child_a, child_b } => child_a
+                .compute(compute_arg)
+                .sawtooth_add(child_b.compute(compute_arg)),
+            TriangleAdd { child_a, child_b } => child_a
+                .compute(compute_arg)
+                .triangle_add(child_b.compute(compute_arg)),
             IfElse {
                 predicate,
                 child_a,
@@ -234,7 +238,7 @@ impl Node for SNFloatNodes {
 impl<'a> Updatable<'a> for SNFloatNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
         match self {
             _ => {}
         }
@@ -350,16 +354,21 @@ impl Node for UNFloatNodes {
             FromAngle { child } => child.compute(compute_arg).to_unsigned(),
             FromSNFloat { child } => child.compute(compute_arg).to_unsigned(),
             AbsSNFloat { child } => UNFloat::new(child.compute(compute_arg).into_inner().abs()),
-            SquareSNFloat { child } => UNFloat::new(child.compute(compute_arg).into_inner().powf(2.0)),
+            SquareSNFloat { child } => {
+                UNFloat::new(child.compute(compute_arg).into_inner().powf(2.0))
+            }
             Multiply { child_a, child_b } => UNFloat::new(
-                child_a.compute(compute_arg).into_inner() * child_b.compute(compute_arg).into_inner(),
+                child_a.compute(compute_arg).into_inner()
+                    * child_b.compute(compute_arg).into_inner(),
             ),
             CircularAdd { child_a, child_b } => {
-                let value =
-                    child_a.compute(compute_arg).into_inner() + child_b.compute(compute_arg).into_inner();
+                let value = child_a.compute(compute_arg).into_inner()
+                    + child_b.compute(compute_arg).into_inner();
                 UNFloat::new(value - (value.floor()))
             }
-            InvertNormalised { child } => UNFloat::new(1.0 - child.compute(compute_arg).into_inner()),
+            InvertNormalised { child } => {
+                UNFloat::new(1.0 - child.compute(compute_arg).into_inner())
+            }
             ColorAverage {
                 child,
                 child_r,
@@ -462,18 +471,20 @@ impl Node for UNFloatNodes {
                 .subdivide_triangle(child_b.compute(compute_arg)),
             Distance { child_function } => child_function.compute(compute_arg),
             Average { child_a, child_b } => UNFloat::new(
-                (child_a.compute(compute_arg).into_inner() + child_b.compute(compute_arg).into_inner()) / 2.0,
+                (child_a.compute(compute_arg).into_inner()
+                    + child_b.compute(compute_arg).into_inner())
+                    / 2.0,
             ),
             ModifyState { child, child_state } => child.compute(&UpdateState {
                 coordinate_set: child_state.compute(compute_arg),
                 ..*compute_arg
             }),
-            SawtoothAdd { child_a, child_b } => {
-                child_a.compute(compute_arg).sawtooth_add(child_b.compute(compute_arg))
-            }
-            TriangleAdd { child_a, child_b } => {
-                child_a.compute(compute_arg).triangle_add(child_b.compute(compute_arg))
-            }
+            SawtoothAdd { child_a, child_b } => child_a
+                .compute(compute_arg)
+                .sawtooth_add(child_b.compute(compute_arg)),
+            TriangleAdd { child_a, child_b } => child_a
+                .compute(compute_arg)
+                .triangle_add(child_b.compute(compute_arg)),
             IfElse {
                 predicate,
                 child_a,
@@ -492,7 +503,7 @@ impl Node for UNFloatNodes {
 impl<'a> Updatable<'a> for UNFloatNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: &'a mut UpdArg<'a>) {
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
         // use UNFloatNodes::*;
 
         match self {

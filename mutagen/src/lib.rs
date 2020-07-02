@@ -24,7 +24,7 @@
 //! use mutagen::{Generatable, Mutatable};
 //!
 //! #[derive(Generatable, Mutatable)]
-//! #[mutagen(mut_reroll = 0.78)]
+//! #[mutagen(gen_arg = type (), mut_arg = type (), mut_reroll = 0.78)]
 //! enum Foo {
 //!   // Bar is 10 times as likely as Baz or Bax,
 //!   // but it always rerolls into a different one when mutating
@@ -66,6 +66,7 @@
 //! }
 //!
 //! #[derive(Mutatable)]
+//! #[mutagen(mut_arg = type ())]
 //! struct Boz {
 //!   // frob will never mutate, so it doesn't need to implement Mutatable
 //!   #[mutagen(mut_weight = 0.0)]
@@ -75,12 +76,15 @@
 //! }
 //!
 //! #[derive(Mutatable)]
+//! #[mutagen(mut_arg = type ())]
 //! struct NotGeneratable;
 //!
 //! #[derive(Generatable)]
+//! #[mutagen(gen_arg = type ())]
 //! struct NotMutatable;
 //!
 //! #[derive(Generatable, Mutatable)]
+//! #[mutagen(gen_arg = type (), mut_arg = type ())]
 //! struct Baz;
 //! ```
 //!
@@ -142,18 +146,18 @@ pub trait Generatable<'a>: Sized {
     type GenArg: 'a;
 
     /// Convenience shorthand for `Self::generate_rng(&mut rand::thread_rng())`
-    fn generate(arg: &'a mut Self::GenArg) -> Self {
+    fn generate(arg: Self::GenArg) -> Self {
         Self::generate_rng(&mut rand::thread_rng(), State::default(), arg)
     }
 
     /// The main required method for generation
-    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, state: State, arg: &'a mut Self::GenArg) -> Self;
+    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, state: State, arg: Self::GenArg) -> Self;
 }
 
 impl<'a, T: Generatable<'a>> Generatable<'a> for Box<T> {
     type GenArg = T::GenArg;
 
-    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, state: State, arg: &'a mut Self::GenArg) -> Self {
+    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, state: State, arg: Self::GenArg) -> Self {
         Box::new(T::generate_rng(rng, state, arg))
     }
 }
@@ -161,7 +165,7 @@ impl<'a, T: Generatable<'a>> Generatable<'a> for Box<T> {
 impl<'a, T: Generatable<'a>> Generatable<'a> for Rc<T> {
     type GenArg = T::GenArg;
 
-    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, state: State, arg: &'a mut Self::GenArg) -> Self {
+    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, state: State, arg: Self::GenArg) -> Self {
         Rc::new(T::generate_rng(rng, state, arg))
     }
 }
@@ -169,7 +173,7 @@ impl<'a, T: Generatable<'a>> Generatable<'a> for Rc<T> {
 impl<'a, T: Generatable<'a>> Generatable<'a> for Arc<T> {
     type GenArg = T::GenArg;
 
-    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, state: State, arg: &'a mut Self::GenArg) -> Self {
+    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, state: State, arg: Self::GenArg) -> Self {
         Arc::new(T::generate_rng(rng, state, arg))
     }
 }
@@ -188,22 +192,17 @@ impl<'a, T: Generatable<'a>> Generatable<'a> for Arc<T> {
 pub trait Mutatable<'a> {
     type MutArg: 'a;
 
-    fn mutate(&mut self, arg: &'a mut Self::MutArg) {
+    fn mutate(&mut self, arg: Self::MutArg) {
         self.mutate_rng(&mut rand::thread_rng(), State::default(), arg)
     }
 
-    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, state: State, arg: &'a mut Self::MutArg);
+    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, state: State, arg: Self::MutArg);
 }
 
 impl<'a, T: Mutatable<'a>> Mutatable<'a> for Box<T> {
     type MutArg = T::MutArg;
 
-    fn mutate_rng<R: Rng + ?Sized>(
-        &mut self,
-        rng: &mut R,
-        state: State,
-        arg: &'a mut Self::MutArg,
-    ) {
+    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, state: State, arg: Self::MutArg) {
         self.deref_mut().mutate_rng(rng, state, arg)
     }
 }
@@ -217,13 +216,13 @@ impl<'a, T: Mutatable<'a>> Mutatable<'a> for Box<T> {
 pub trait Updatable<'a> {
     type UpdateArg: 'a;
 
-    fn update(&mut self, state: State, arg: &'a mut Self::UpdateArg);
+    fn update(&mut self, state: State, arg: Self::UpdateArg);
 }
 
 impl<'a, T: Updatable<'a>> Updatable<'a> for Box<T> {
     type UpdateArg = T::UpdateArg;
 
-    fn update(&mut self, state: State, arg: &'a mut Self::UpdateArg) {
+    fn update(&mut self, state: State, arg: Self::UpdateArg) {
         self.deref_mut().update(state, arg)
     }
 }
@@ -232,12 +231,62 @@ impl<'a, T: Updatable<'a>> Updatable<'a> for Box<T> {
 /// [`update_recursively()`](crate::UpdatableRecursively::update_recursively)
 /// while recursing down to members
 pub trait UpdatableRecursively<'a>: Updatable<'a> {
-    fn update_recursively(&mut self, state: State, arg: &'a mut Self::UpdateArg);
+    fn update_recursively(&mut self, state: State, arg: Self::UpdateArg);
 }
 
 impl<'a, T: UpdatableRecursively<'a>> UpdatableRecursively<'a> for Box<T> {
-    fn update_recursively(&mut self, state: State, arg: &'a mut Self::UpdateArg) {
+    fn update_recursively(&mut self, state: State, arg: Self::UpdateArg) {
         self.deref_mut().update_recursively(state, arg)
+    }
+}
+
+/// Trait to get around lifetime restrictions with `*Arg` types containing mutable references
+/// In short, your `*Arg` types should either be `Copy` (and therefore `'static`) or manually implement `Reborrow` along these lines:
+///
+/// ```rust
+/// use mutagen::Reborrow;
+///
+/// struct Foo<'a> {
+///   some_mut_ref: &'a mut i32,
+///   some_ref: &'a i32,
+/// }
+///
+/// impl<'a, 'b: 'a> Reborrow<'a, 'b, Foo<'a>> for Foo<'b> {
+///   fn reborrow(&'a mut self) -> Foo<'a> {
+///     // NOTE: You CANNOT use Self in this constructor!
+///     // Self refers to Foo<'b>, while Foo will correctly infer into Foo<'a>
+///     Foo {
+///       some_mut_ref: &mut self.some_mut_ref,
+///       some_ref: &self.some_ref,
+///     }
+///   }
+/// }
+///
+/// // That allows us to do stuff like this
+/// fn bar(_foo: Foo) {}
+///
+/// fn several_bars(mut foo: Foo) {
+///   bar(Reborrow::reborrow(&mut foo));
+///   bar(Reborrow::reborrow(&mut foo));
+///   bar(Reborrow::reborrow(&mut foo));
+/// }
+/// ```
+pub trait Reborrow<'a, 'b, T>
+where
+    'b: 'a,
+    Self: 'b,
+    T: 'a,
+{
+    fn reborrow(&'a mut self) -> T;
+}
+
+impl<'a, 'b, T> Reborrow<'a, 'b, T> for T
+where
+    'b: 'a,
+    T: Copy + 'static,
+{
+    fn reborrow(&'a mut self) -> T {
+        *self
     }
 }
 
@@ -257,10 +306,11 @@ mod test {
     }
 
     #[derive(Generatable, Mutatable, UpdatableRecursively)]
+    #[mutagen(gen_arg = type (), mut_arg = type (), update_arg = type ())]
     struct Bar;
 
     #[derive(Generatable, Mutatable, UpdatableRecursively)]
-    #[mutagen(mut_reroll = 0.123)]
+    #[mutagen(gen_arg = type (), mut_arg = type (), update_arg = type (), mut_reroll = 0.123)]
     enum Baz {
         #[mutagen(gen_weight = 10.0, mut_reroll = 1.0)]
         Boz,
@@ -272,9 +322,11 @@ mod test {
     }
 
     #[derive(Generatable, Mutatable, UpdatableRecursively)]
+    #[mutagen(gen_arg = type (), mut_arg = type (), update_arg = type ())]
     struct Bax(Bar);
 
     #[derive(Generatable, Mutatable, UpdatableRecursively)]
+    #[mutagen(gen_arg = type (), mut_arg = type (), update_arg = type ())]
     struct Bap(Bar, Bar);
 }
 */

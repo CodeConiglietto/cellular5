@@ -1,25 +1,24 @@
 use crate::{
-    constants::*,
     data_set::*, 
     node_set::*, 
     coordinate_set::*,
-    datatype::{continuous::*, discrete::*, points::*},
+    datatype::{points::*},
     history::*,
 };
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct GenArg<'a> {
     pub nodes: &'a mut [NodeSet],
     pub data: &'a mut DataSet,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct MutArg<'a> {
     pub nodes: &'a [NodeSet],
     pub data: &'a mut DataSet,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct ComArg<'a> {
     pub nodes: &'a [NodeSet],
     pub data: &'a DataSet,
@@ -27,7 +26,7 @@ pub struct ComArg<'a> {
     pub history: &'a History,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct UpdArg<'a> {
     pub nodes: &'a [NodeSet],
     pub data: &'a mut DataSet,
@@ -40,7 +39,7 @@ impl<'a> UpdArg<'a> {
         ComArg {
             nodes: &self.nodes,
             data: &self.data,
-            coords: self.coords,
+            coordinate_set: self.coordinate_set,
             history: self.history,
         }
     }

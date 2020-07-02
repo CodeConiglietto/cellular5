@@ -14,7 +14,7 @@ use ggez::{
 };
 use log::{error, info};
 use mutagen::Generatable;
-use ndarray::{s, Array3, ArrayView3, ArrayViewMut1, Axis};
+use ndarray::{s, ArrayViewMut1, Axis};
 use rand::prelude::*;
 use rayon::prelude::*;
 use structopt::StructOpt;
@@ -27,7 +27,6 @@ use crate::{
     datatype::{
         colors::{ByteColor, FloatColor},
         continuous::*,
-        discrete::Byte,
         image::*,
         points::*,
     },

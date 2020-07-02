@@ -38,7 +38,7 @@ pub enum PointSetNodes {
 impl Node for PointSetNodes {
     type Output = PointSet;
 
-    fn compute(&self, _state: &UpdateState, compute_arg: ComArg) -> Self::Output {
+    fn compute(&self, _compute_arg: ComArg) -> Self::Output {
         use PointSetNodes::*;
 
         match self {

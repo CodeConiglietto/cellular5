@@ -80,7 +80,7 @@ pub enum BooleanNodes {
 impl Node for BooleanNodes {
     type Output = Boolean;
 
-    fn compute(&self, compute_arg: ComArg) -> Self::Output {
+    fn compute(&self, mut compute_arg: ComArg) -> Self::Output {
         use BooleanNodes::*;
 
         match self {
@@ -237,7 +237,7 @@ pub enum NibbleNodes {
 impl Node for NibbleNodes {
     type Output = Nibble;
 
-    fn compute(&self, compute_arg: ComArg) -> Self::Output {
+    fn compute(&self, mut compute_arg: ComArg) -> Self::Output {
         use NibbleNodes::*;
 
         match self {
@@ -356,7 +356,7 @@ pub enum ByteNodes {
 impl Node for ByteNodes {
     type Output = Byte;
 
-    fn compute(&self, compute_arg: ComArg) -> Self::Output {
+    fn compute(&self, mut compute_arg: ComArg) -> Self::Output {
         use ByteNodes::*;
 
         match self {
@@ -450,7 +450,7 @@ pub enum UIntNodes {
 impl Node for UIntNodes {
     type Output = UInt;
 
-    fn compute(&self, compute_arg: ComArg) -> Self::Output {
+    fn compute(&self, mut compute_arg: ComArg) -> Self::Output {
         use UIntNodes::*;
 
         match self {
@@ -538,7 +538,7 @@ pub enum SIntNodes {
 impl Node for SIntNodes {
     type Output = SInt;
 
-    fn compute(&self, compute_arg: ComArg) -> Self::Output {
+    fn compute(&self, mut compute_arg: ComArg) -> Self::Output {
         use SIntNodes::*;
 
         match self {

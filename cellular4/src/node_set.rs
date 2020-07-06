@@ -39,130 +39,161 @@ pub struct NodeSet {
 }
 
 impl Storage<ColorBlendNodes> for NodeSet {
-    fn insert(&mut self, t: ColorBlendNodes) -> Index {
-        self.color_blend_nodes.insert(t)
+    fn arena(&self) -> &Arena<ColorBlendNodes> {
+        &self.color_blend_nodes
     }
-    fn get(&self, idx: Index) -> Option<&ColorBlendNodes> {
-        self.color_blend_nodes.get(idx)
+
+    fn arena_mut(&mut self) -> &mut Arena<ColorBlendNodes> {
+        &mut self.color_blend_nodes
     }
 }
+
 impl Storage<BitColorNodes> for NodeSet {
-    fn insert(&mut self, t: BitColorNodes) -> Index {
-        self.bit_color_nodes.insert(t)
+    fn arena(&self) -> &Arena<BitColorNodes> {
+        &self.bit_color_nodes
     }
-    fn get(&self, idx: Index) -> Option<&BitColorNodes> {
-        self.bit_color_nodes.get(idx)
+
+    fn arena_mut(&mut self) -> &mut Arena<BitColorNodes> {
+        &mut self.bit_color_nodes
     }
 }
+
 impl Storage<ByteColorNodes> for NodeSet {
-    fn insert(&mut self, t: ByteColorNodes) -> Index {
-        self.byte_color_nodes.insert(t)
+    fn arena(&self) -> &Arena<ByteColorNodes> {
+        &self.byte_color_nodes
     }
-    fn get(&self, idx: Index) -> Option<&ByteColorNodes> {
-        self.byte_color_nodes.get(idx)
+
+    fn arena_mut(&mut self) -> &mut Arena<ByteColorNodes> {
+        &mut self.byte_color_nodes
     }
 }
+
 impl Storage<FloatColorNodes> for NodeSet {
-    fn insert(&mut self, t: FloatColorNodes) -> Index {
-        self.float_color_nodes.insert(t)
+    fn arena(&self) -> &Arena<FloatColorNodes> {
+        &self.float_color_nodes
     }
-    fn get(&self, idx: Index) -> Option<&FloatColorNodes> {
-        self.float_color_nodes.get(idx)
+
+    fn arena_mut(&mut self) -> &mut Arena<FloatColorNodes> {
+        &mut self.float_color_nodes
     }
 }
+
 impl Storage<AngleNodes> for NodeSet {
-    fn insert(&mut self, t: AngleNodes) -> Index {
-        self.angle_nodes.insert(t)
+    fn arena(&self) -> &Arena<AngleNodes> {
+        &self.angle_nodes
     }
-    fn get(&self, idx: Index) -> Option<&AngleNodes> {
-        self.angle_nodes.get(idx)
+
+    fn arena_mut(&mut self) -> &mut Arena<AngleNodes> {
+        &mut self.angle_nodes
     }
 }
+
 impl Storage<UNFloatNodes> for NodeSet {
-    fn insert(&mut self, t: UNFloatNodes) -> Index {
-        self.unfloat_nodes.insert(t)
+    fn arena(&self) -> &Arena<UNFloatNodes> {
+        &self.unfloat_nodes
     }
-    fn get(&self, idx: Index) -> Option<&UNFloatNodes> {
-        self.unfloat_nodes.get(idx)
+
+    fn arena_mut(&mut self) -> &mut Arena<UNFloatNodes> {
+        &mut self.unfloat_nodes
     }
 }
+
 impl Storage<SNFloatNodes> for NodeSet {
-    fn insert(&mut self, t: SNFloatNodes) -> Index {
-        self.snfloat_nodes.insert(t)
+    fn arena(&self) -> &Arena<SNFloatNodes> {
+        &self.snfloat_nodes
     }
-    fn get(&self, idx: Index) -> Option<&SNFloatNodes> {
-        self.snfloat_nodes.get(idx)
+
+    fn arena_mut(&mut self) -> &mut Arena<SNFloatNodes> {
+        &mut self.snfloat_nodes
     }
 }
+
 impl Storage<CoordMapNodes> for NodeSet {
-    fn insert(&mut self, t: CoordMapNodes) -> Index {
-        self.coord_map_nodes.insert(t)
+    fn arena(&self) -> &Arena<CoordMapNodes> {
+        &self.coord_map_nodes
     }
-    fn get(&self, idx: Index) -> Option<&CoordMapNodes> {
-        self.coord_map_nodes.get(idx)
+
+    fn arena_mut(&mut self) -> &mut Arena<CoordMapNodes> {
+        &mut self.coord_map_nodes
     }
 }
+
 impl Storage<BooleanNodes> for NodeSet {
-    fn insert(&mut self, t: BooleanNodes) -> Index {
-        self.boolean_nodes.insert(t)
+    fn arena(&self) -> &Arena<BooleanNodes> {
+        &self.boolean_nodes
     }
-    fn get(&self, idx: Index) -> Option<&BooleanNodes> {
-        self.boolean_nodes.get(idx)
+
+    fn arena_mut(&mut self) -> &mut Arena<BooleanNodes> {
+        &mut self.boolean_nodes
     }
 }
+
 impl Storage<NibbleNodes> for NodeSet {
-    fn insert(&mut self, t: NibbleNodes) -> Index {
-        self.nibble_nodes.insert(t)
+    fn arena(&self) -> &Arena<NibbleNodes> {
+        &self.nibble_nodes
     }
-    fn get(&self, idx: Index) -> Option<&NibbleNodes> {
-        self.nibble_nodes.get(idx)
+
+    fn arena_mut(&mut self) -> &mut Arena<NibbleNodes> {
+        &mut self.nibble_nodes
     }
 }
+
 impl Storage<ByteNodes> for NodeSet {
-    fn insert(&mut self, t: ByteNodes) -> Index {
-        self.byte_nodes.insert(t)
+    fn arena(&self) -> &Arena<ByteNodes> {
+        &self.byte_nodes
     }
-    fn get(&self, idx: Index) -> Option<&ByteNodes> {
-        self.byte_nodes.get(idx)
+
+    fn arena_mut(&mut self) -> &mut Arena<ByteNodes> {
+        &mut self.byte_nodes
     }
 }
+
 impl Storage<DistanceFunctionNodes> for NodeSet {
-    fn insert(&mut self, t: DistanceFunctionNodes) -> Index {
-        self.distance_function_nodes.insert(t)
+    fn arena(&self) -> &Arena<DistanceFunctionNodes> {
+        &self.distance_function_nodes
     }
-    fn get(&self, idx: Index) -> Option<&DistanceFunctionNodes> {
-        self.distance_function_nodes.get(idx)
+
+    fn arena_mut(&mut self) -> &mut Arena<DistanceFunctionNodes> {
+        &mut self.distance_function_nodes
     }
 }
+
 impl Storage<SNFloatMatrix3Nodes> for NodeSet {
-    fn insert(&mut self, t: SNFloatMatrix3Nodes) -> Index {
-        self.snfloat_matrix3_nodes.insert(t)
+    fn arena(&self) -> &Arena<SNFloatMatrix3Nodes> {
+        &self.snfloat_matrix3_nodes
     }
-    fn get(&self, idx: Index) -> Option<&SNFloatMatrix3Nodes> {
-        self.snfloat_matrix3_nodes.get(idx)
+
+    fn arena_mut(&mut self) -> &mut Arena<SNFloatMatrix3Nodes> {
+        &mut self.snfloat_matrix3_nodes
     }
 }
+
 impl Storage<NoiseNodes> for NodeSet {
-    fn insert(&mut self, t: NoiseNodes) -> Index {
-        self.noise_nodes.insert(t)
+    fn arena(&self) -> &Arena<NoiseNodes> {
+        &self.noise_nodes
     }
-    fn get(&self, idx: Index) -> Option<&NoiseNodes> {
-        self.noise_nodes.get(idx)
+
+    fn arena_mut(&mut self) -> &mut Arena<NoiseNodes> {
+        &mut self.noise_nodes
     }
 }
+
 impl Storage<SNPointNodes> for NodeSet {
-    fn insert(&mut self, t: SNPointNodes) -> Index {
-        self.snpoint_nodes.insert(t)
+    fn arena(&self) -> &Arena<SNPointNodes> {
+        &self.snpoint_nodes
     }
-    fn get(&self, idx: Index) -> Option<&SNPointNodes> {
-        self.snpoint_nodes.get(idx)
+
+    fn arena_mut(&mut self) -> &mut Arena<SNPointNodes> {
+        &mut self.snpoint_nodes
     }
 }
+
 impl Storage<PointSetNodes> for NodeSet {
-    fn insert(&mut self, t: PointSetNodes) -> Index {
-        self.point_set_nodes.insert(t)
+    fn arena(&self) -> &Arena<PointSetNodes> {
+        &self.point_set_nodes
     }
-    fn get(&self, idx: Index) -> Option<&PointSetNodes> {
-        self.point_set_nodes.get(idx)
+
+    fn arena_mut(&mut self) -> &mut Arena<PointSetNodes> {
+        &mut self.point_set_nodes
     }
 }

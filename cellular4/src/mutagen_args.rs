@@ -19,15 +19,24 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, GenArg<'a>> for GenArg<'b> {
 
 #[derive(Debug)]
 pub struct MutArg<'a> {
-    pub nodes: &'a [NodeSet],
+    pub nodes: &'a mut [NodeSet],
     pub data: &'a mut DataSet,
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, MutArg<'a>> for MutArg<'b> {
     fn reborrow(&'a mut self) -> MutArg<'a> {
         MutArg {
-            nodes: &self.nodes,
+            nodes: &mut self.nodes,
             data: &mut self.data,
+        }
+    }
+}
+
+impl<'a> From<MutArg<'a>> for GenArg<'a> {
+    fn from(arg: MutArg<'a>) -> Self {
+        Self {
+            nodes: arg.nodes,
+            data: arg.data,
         }
     }
 }

@@ -73,8 +73,10 @@ impl Node for CoordMapNodes {
 
         match self {
             Replace { child } => {
-                compute_arg.reborrow()
-                    .replace_coords(&child.compute(compute_arg.reborrow()))
+                let coords = child.compute(compute_arg.reborrow());
+                compute_arg
+                    .reborrow()
+                    .replace_coords(&coords)
                     .coordinate_set
             }
             Shift { x, y } => compute_arg.coordinate_set.get_coord_shifted(
@@ -136,9 +138,10 @@ impl Node for CoordMapNodes {
                 )
                 .to_homogeneous();
 
-                let result =
-                    Point2::from_homogeneous(child.compute(compute_arg.reborrow()).into_inner() * point)
-                        .unwrap();
+                let result = Point2::from_homogeneous(
+                    child.compute(compute_arg.reborrow()).into_inner() * point,
+                )
+                .unwrap();
 
                 CoordinateSet {
                     x: SNFloat::new_triangle(result.coords.x),
@@ -147,11 +150,7 @@ impl Node for CoordMapNodes {
                 }
             }
             Tessellate {
-                child_a,
-                child_b,
-                child_scale,
-                point_a,
-                point_b,
+                point_a, point_b, ..
             } => {
                 let a = point_a.into_inner();
                 let b = point_b.into_inner();
@@ -290,7 +289,7 @@ impl Node for CoordMapNodes {
 impl<'a> Updatable<'a> for CoordMapNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, arg: UpdArg<'a>) {
+    fn update(&mut self, _state: mutagen::State, mut arg: UpdArg<'a>) {
         match self {
             CoordMapNodes::Tessellate {
                 child_a,
@@ -299,23 +298,24 @@ impl<'a> Updatable<'a> for CoordMapNodes {
                 ref mut point_a,
                 ref mut point_b,
             } => {
-                let mut state_a = arg.reborrow();
-                state_a.coordinate_set.x = point_a.x();
-                state_a.coordinate_set.y = point_a.y();
-
-                let mut state_b = arg.reborrow();
-                state_b.coordinate_set.x = point_b.x();
-                state_b.coordinate_set.y = point_b.y();
-
                 let translation_scale = child_scale
                     .compute(arg.reborrow().into())
                     .scale_unfloat(UNFloat::new(0.025));
+
+                let mut state_a = arg.reborrow();
+                state_a.coordinate_set.x = point_a.x();
+                state_a.coordinate_set.y = point_a.y();
 
                 *point_a = point_a.sawtooth_add(
                     child_a
                         .compute(state_a.into())
                         .scale_point(translation_scale),
                 );
+
+                let mut state_b = arg.reborrow();
+                state_b.coordinate_set.x = point_b.x();
+                state_b.coordinate_set.y = point_b.y();
+
                 *point_b = point_b.sawtooth_add(
                     child_b
                         .compute(state_b.into())

@@ -1,4 +1,4 @@
-use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively, Reborrow};
+use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -39,7 +39,7 @@ pub enum SNFloatMatrix3Nodes {
 impl Node for SNFloatMatrix3Nodes {
     type Output = SNFloatMatrix3;
 
-    fn compute(&self, compute_arg: ComArg) -> Self::Output {
+    fn compute(&self, mut compute_arg: ComArg) -> Self::Output {
         use SNFloatMatrix3Nodes::*;
 
         match self {
@@ -48,7 +48,9 @@ impl Node for SNFloatMatrix3Nodes {
                 child_a.compute(compute_arg.reborrow()),
                 child_b.compute(compute_arg.reborrow()),
             ),
-            Rotation { child } => SNFloatMatrix3::new_rotation(child.compute(compute_arg.reborrow())),
+            Rotation { child } => {
+                SNFloatMatrix3::new_rotation(child.compute(compute_arg.reborrow()))
+            }
             Scaling { child_a, child_b } => SNFloatMatrix3::new_scaling(
                 child_a.compute(compute_arg.reborrow()),
                 child_b.compute(compute_arg.reborrow()),

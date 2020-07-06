@@ -213,7 +213,7 @@ fn mutatable_struct(
     _attrs: &[Attribute],
     _span: Span,
 ) -> Result<TokenStream2> {
-    let bindings = fields_bindings(&s.fields);
+    let bindings = fields_bindings(&s.fields)?;
     let body = mutatable_fields(
         &flatten_fields(&s.fields),
         &ident.to_string(),
@@ -255,7 +255,7 @@ fn mutatable_enum(
             };
 
             let ident = &variant.ident;
-            let bindings = fields_bindings(&variant.fields);
+            let bindings = fields_bindings(&variant.fields)?;
             let fields_body = mutatable_fields(
                 &flatten_fields(&variant.fields),
                 &format!("{}::{}", &enum_ident, &variant.ident),
@@ -289,25 +289,47 @@ fn mutatable_enum(
     })
 }
 
-fn fields_bindings(fields: &Fields) -> TokenStream2 {
+fn fields_bindings(fields: &Fields) -> Result<TokenStream2> {
     match fields {
         Fields::Named(fields) => {
-            let fields = fields.named.iter().map(|field| &field.ident);
-            quote! {
-                { #(#fields),* }
-            }
+            let bindings: Vec<TokenStream2> = fields
+                .named
+                .iter()
+                .map(|field| {
+                    let ident = &field.ident;
+                    if parse_attrs(&field.attrs, a::FIELD)?.contains_key(a::SKIP) {
+                        Ok(quote! { #ident: _ })
+                    } else {
+                        Ok(ident.to_token_stream())
+                    }
+                })
+                .collect::<Result<_>>()?;
+
+            Ok(quote! {
+                { #(#bindings),* }
+            })
         }
+
         Fields::Unnamed(fields) => {
-            let fields = fields
+            let fields: Vec<TokenStream2> = fields
                 .unnamed
                 .iter()
                 .enumerate()
-                .map(|(i, _)| tuple_field_ident(i));
-            quote! {
+                .map(|(i, field)| {
+                    if parse_attrs(&field.attrs, a::FIELD)?.contains_key(a::SKIP) {
+                        Ok(quote!(_))
+                    } else {
+                        Ok(tuple_field_ident(i).to_token_stream())
+                    }
+                })
+                .collect::<Result<_>>()?;
+
+            Ok(quote! {
                 ( #(#fields),* )
-            }
+            })
         }
-        Fields::Unit => TokenStream2::new(),
+
+        Fields::Unit => Ok(TokenStream2::new()),
     }
 }
 
@@ -375,7 +397,7 @@ fn updatable_struct(
     _attrs: &[Attribute],
     _span: Span,
 ) -> Result<TokenStream2> {
-    let bindings = fields_bindings(&s.fields);
+    let bindings = fields_bindings(&s.fields)?;
     let body = updatable_fields(
         &flatten_fields(&s.fields),
         &ident.to_string(),
@@ -403,7 +425,7 @@ fn updatable_enum(
         .iter()
         .map(|variant| {
             let ident = &variant.ident;
-            let bindings = fields_bindings(&variant.fields);
+            let bindings = fields_bindings(&variant.fields)?;
             let fields_body = updatable_fields(
                 &flatten_fields(&variant.fields),
                 &format!("{}::{}", &enum_ident, &variant.ident),

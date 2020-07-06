@@ -58,13 +58,17 @@ pub enum AngleNodes {
 impl Node for AngleNodes {
     type Output = Angle;
 
-    fn compute(&self, compute_arg: ComArg) -> Self::Output {
+    fn compute(&self, mut compute_arg: ComArg) -> Self::Output {
         use AngleNodes::*;
 
         match self {
             FromGametic => Angle::new(compute_arg.coordinate_set.t * 0.1),
-            ArcSin { theta } => Angle::new(f32::asin(theta.compute(compute_arg.reborrow()).into_inner())),
-            ArcCos { theta } => Angle::new(f32::acos(theta.compute(compute_arg.reborrow()).into_inner())),
+            ArcSin { theta } => Angle::new(f32::asin(
+                theta.compute(compute_arg.reborrow()).into_inner(),
+            )),
+            ArcCos { theta } => Angle::new(f32::acos(
+                theta.compute(compute_arg.reborrow()).into_inner(),
+            )),
             FromCoordinate => Angle::new(f32::atan2(
                 -compute_arg.coordinate_set.x.into_inner(),
                 compute_arg.coordinate_set.y.into_inner(),
@@ -182,12 +186,16 @@ pub enum SNFloatNodes {
 impl Node for SNFloatNodes {
     type Output = SNFloat;
 
-    fn compute(&self, compute_arg: ComArg) -> Self::Output {
+    fn compute(&self, mut compute_arg: ComArg) -> Self::Output {
         use SNFloatNodes::*;
 
         match self {
-            Sin { child } => SNFloat::new(f32::sin(child.compute(compute_arg.reborrow()).into_inner())),
-            Cos { child } => SNFloat::new(f32::cos(child.compute(compute_arg.reborrow()).into_inner())),
+            Sin { child } => {
+                SNFloat::new(f32::sin(child.compute(compute_arg.reborrow()).into_inner()))
+            }
+            Cos { child } => {
+                SNFloat::new(f32::cos(child.compute(compute_arg.reborrow()).into_inner()))
+            }
             // Random => SNFloat::generate(state),
             FromAngle { child } => child.compute(compute_arg.reborrow()).to_signed(),
             FromUNFloat { child } => child.compute(compute_arg.reborrow()).to_signed(),
@@ -197,7 +205,9 @@ impl Node for SNFloatNodes {
                     * child_b.compute(compute_arg.reborrow()).into_inner(),
             ),
             Abs { child } => SNFloat::new(child.compute(compute_arg.reborrow()).into_inner().abs()),
-            Invert { child } => SNFloat::new(child.compute(compute_arg.reborrow()).into_inner() * -1.0),
+            Invert { child } => {
+                SNFloat::new(child.compute(compute_arg.reborrow()).into_inner() * -1.0)
+            }
             XRatio => compute_arg.coordinate_set.x,
             YRatio => compute_arg.coordinate_set.y,
             FromGametic => SNFloat::new(
@@ -342,7 +352,7 @@ pub enum UNFloatNodes {
 impl Node for UNFloatNodes {
     type Output = UNFloat;
 
-    fn compute(&self, compute_arg: ComArg) -> Self::Output {
+    fn compute(&self, mut compute_arg: ComArg) -> Self::Output {
         use UNFloatNodes::*;
 
         match self {
@@ -350,7 +360,9 @@ impl Node for UNFloatNodes {
             Constant { value } => *value,
             FromAngle { child } => child.compute(compute_arg.reborrow()).to_unsigned(),
             FromSNFloat { child } => child.compute(compute_arg.reborrow()).to_unsigned(),
-            AbsSNFloat { child } => UNFloat::new(child.compute(compute_arg.reborrow()).into_inner().abs()),
+            AbsSNFloat { child } => {
+                UNFloat::new(child.compute(compute_arg.reborrow()).into_inner().abs())
+            }
             SquareSNFloat { child } => {
                 UNFloat::new(child.compute(compute_arg.reborrow()).into_inner().powf(2.0))
             }
@@ -418,13 +430,19 @@ impl Node for UNFloatNodes {
                 let power = f64::from(
                     (1 + child_power.compute(compute_arg.reborrow()).into_inner()) as f32
                         * UNFloat::new_triangle(
-                            child_power_ratio.compute(compute_arg.reborrow()).into_inner() * 2.0,
+                            child_power_ratio
+                                .compute(compute_arg.reborrow())
+                                .into_inner()
+                                * 2.0,
                         )
                         .into_inner(),
                 );
                 let offset = child_offset.compute(compute_arg.reborrow()).into_inner();
                 let scale = child_scale.compute(compute_arg.reborrow()).into_inner();
-                let iterations = 1 + child_iterations.compute(compute_arg.reborrow()).into_inner() / 8;
+                let iterations = 1 + child_iterations
+                    .compute(compute_arg.reborrow())
+                    .into_inner()
+                    / 8;
 
                 // x and y are swapped intentionally
                 let c = Complex::new(

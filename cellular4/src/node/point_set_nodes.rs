@@ -53,14 +53,14 @@ impl Node for PointSetNodes {
 impl<'a> Updatable<'a> for PointSetNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, arg: UpdArg<'a>) {
-        let com_arg: ComArg = arg.reborrow().into();
-
+    fn update(&mut self, _state: mutagen::State, mut arg: UpdArg<'a>) {
         match self {
             PointSetNodes::Translating {
                 ref mut value,
                 child,
             } => {
+                let compute_arg = ComArg::from(arg);
+
                 *value = PointSet::new(
                     Arc::new(
                         value
@@ -69,7 +69,7 @@ impl<'a> Updatable<'a> for PointSetNodes {
                             .map(|p| {
                                 p.sawtooth_add(
                                     child
-                                        .compute(com_arg.reborrow().replace_coords(p))
+                                        .compute(compute_arg.clone().replace_coords(p))
                                         .scale_unfloat(UNFloat::new(0.05)),
                                 )
                             })
@@ -78,10 +78,13 @@ impl<'a> Updatable<'a> for PointSetNodes {
                     value.generator,
                 );
             }
+
             PointSetNodes::Spreading {
                 ref mut value,
                 child,
             } => {
+                let compute_arg = ComArg::from(arg);
+
                 *value = PointSet::new(
                     Arc::new(
                         value
@@ -92,7 +95,7 @@ impl<'a> Updatable<'a> for PointSetNodes {
                                     p.subtract_normalised(value.get_random_point())
                                         .scale_unfloat(
                                             child
-                                                .compute(com_arg.reborrow().replace_coords(p))
+                                                .compute(compute_arg.clone().replace_coords(p))
                                                 .multiply(UNFloat::new(0.25)),
                                         ),
                                 )
@@ -102,6 +105,7 @@ impl<'a> Updatable<'a> for PointSetNodes {
                     value.generator,
                 );
             }
+
             PointSetNodes::Polygonal {
                 ref mut value,
                 child_radius,

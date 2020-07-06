@@ -21,11 +21,21 @@ impl DataSet {
 }
 
 impl Storage<UNFloat> for DataSet {
-    fn insert(&mut self, t: UNFloat) -> Index {
-        self.unfloats.insert(t)
+    fn arena(&self) -> &Arena<UNFloat> {
+        &self.unfloats
     }
 
-    fn get(&self, idx: Index) -> Option<&UNFloat> {
-        self.unfloats.get(idx)
+    fn arena_mut(&mut self) -> &mut Arena<UNFloat> {
+        &mut self.unfloats
+    }
+}
+
+impl Storage<FloatColor> for DataSet {
+    fn arena(&self) -> &Arena<FloatColor> {
+        &self.float_colors
+    }
+
+    fn arena_mut(&mut self) -> &mut Arena<FloatColor> {
+        &mut self.float_colors
     }
 }

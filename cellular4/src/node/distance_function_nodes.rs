@@ -1,4 +1,4 @@
-use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively, Reborrow};
+use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -20,7 +20,7 @@ pub enum DistanceFunctionNodes {
 impl Node for DistanceFunctionNodes {
     type Output = UNFloat;
 
-    fn compute(&self, compute_arg: ComArg) -> Self::Output {
+    fn compute(&self, mut compute_arg: ComArg) -> Self::Output {
         use DistanceFunctionNodes::*;
 
         match self {
@@ -28,7 +28,10 @@ impl Node for DistanceFunctionNodes {
                 value,
                 child_a,
                 child_b,
-            } => value.calculate(child_a.compute(compute_arg.reborrow()), child_b.compute(compute_arg.reborrow())),
+            } => value.calculate(
+                child_a.compute(compute_arg.reborrow()),
+                child_b.compute(compute_arg.reborrow()),
+            ),
         }
     }
 }

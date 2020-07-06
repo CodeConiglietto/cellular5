@@ -1,4 +1,4 @@
-use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively, Reborrow};
+use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
 use nalgebra::*;
 use serde::{Deserialize, Serialize};
 
@@ -36,7 +36,7 @@ pub enum SNPointNodes {
         child_b: Box<SNPointNodes>,
     },
     #[mutagen(gen_weight = pipe_node_weight)]
-    IterativeCircularAdd {
+    IterativeSawtoothAdd {
         value: SNPoint,
         child: Box<SNPointNodes>,
     },
@@ -49,7 +49,7 @@ pub enum SNPointNodes {
 impl Node for SNPointNodes {
     type Output = SNPoint;
 
-    fn compute(&self, compute_arg: ComArg) -> Self::Output {
+    fn compute(&self, mut compute_arg: ComArg) -> Self::Output {
         use SNPointNodes::*;
 
         match self {
@@ -70,7 +70,7 @@ impl Node for SNPointNodes {
             TriangleAdd { child_a, child_b } => child_a
                 .compute(compute_arg.reborrow())
                 .triangle_add(child_b.compute(compute_arg.reborrow())),
-            IterativeCircularAdd { value, child } => *value,
+            IterativeSawtoothAdd { value, .. } => *value,
             GetClosestPointInSet { child } => child
                 .compute(compute_arg.reborrow())
                 .get_closest_point(compute_arg.coordinate_set.get_coord_point()),
@@ -84,11 +84,13 @@ impl Node for SNPointNodes {
 impl<'a> Updatable<'a> for SNPointNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
+    fn update(&mut self, _state: mutagen::State, arg: UpdArg<'a>) {
         use SNPointNodes::*;
 
         match self {
-            IterativeCircularAdd { value, child } => {}
+            IterativeSawtoothAdd { value, child } => {
+                *value = value.sawtooth_add(child.compute(arg.into()));
+            }
             _ => {}
         }
     }

@@ -313,7 +313,7 @@ impl MyGame {
                     data: &mut data,
                 },
             ),
-            
+
             nodes: nodes,
             data: data,
 
@@ -414,28 +414,26 @@ impl EventHandler for MyGame {
 
         let root_node = &self.root_node;
         let nodes = &self.nodes;
-        let data= &self.data;
+        let data = &self.data;
 
         let update_step = |y, x, mut new: ArrayViewMut1<u8>| {
             let total_cells = CONSTS.cell_array_width * CONSTS.cell_array_height;
 
-            let compute_arg = ComArg {
-                nodes,
-                data,
-                coordinate_set: CoordinateSet {
-                    x: UNFloat::new(x as f32 / CONSTS.cell_array_width as f32).to_signed(),
-                    y: UNFloat::new(
-                        (y + slice_y as usize) as f32 / CONSTS.cell_array_height as f32,
-                    )
-                    .to_signed(),
-                    t: current_t as f32,
-                },
-                history,
-            };
-
-            let compute_result = root_node.compute(compute_arg.reborrow());
-
-            let new_color = ByteColor::from(compute_result);
+            let new_color = ByteColor::from(
+                root_node.compute(ComArg {
+                    nodes,
+                    data,
+                    coordinate_set: CoordinateSet {
+                        x: UNFloat::new(x as f32 / CONSTS.cell_array_width as f32).to_signed(),
+                        y: UNFloat::new(
+                            (y + slice_y as usize) as f32 / CONSTS.cell_array_height as f32,
+                        )
+                        .to_signed(),
+                        t: current_t as f32,
+                    },
+                    history,
+                }),
+            );
 
             new[0] = new_color.r.into_inner();
             new[1] = new_color.g.into_inner();

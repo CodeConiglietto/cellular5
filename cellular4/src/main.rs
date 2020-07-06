@@ -1,4 +1,4 @@
-use std::{f32::consts::PI, fs, iter::Sum, path::PathBuf};
+use std::{f32::consts::PI, fs, path::PathBuf};
 
 use ggez::{
     conf::{FullscreenType, WindowMode, WindowSetup},
@@ -8,7 +8,7 @@ use ggez::{
     timer, Context, ContextBuilder, GameResult,
 };
 use log::{error, info};
-use mutagen::Generatable;
+use mutagen::{Generatable, Reborrow};
 use ndarray::{s, ArrayViewMut1, Axis};
 use rand::prelude::*;
 use rayon::prelude::*;
@@ -264,17 +264,8 @@ impl MyGame {
             CONSTS.cell_array_history_length,
         );
 
-        let update_state = UpdateState {
-            coordinate_set: CoordinateSet {
-                x: SNFloat::ZERO,
-                y: SNFloat::ZERO,
-                t: 0.0,
-            },
-            history: &history,
-        };
-
-        let nodes = Vec::new();
-        let data = DataSet::new();
+        let mut nodes = Vec::new();
+        let mut data = DataSet::new();
 
         MyGame {
             bounds: Rect::new(0.0, 0.0, pixels_x, pixels_y),
@@ -314,9 +305,6 @@ impl MyGame {
                 global_similarity_value: 0.0,
             },
 
-            nodes: nodes,
-            data: data,
-
             root_node: NodeBox::generate_rng(
                 &mut rng,
                 mutagen::State::default(),
@@ -325,6 +313,9 @@ impl MyGame {
                     data: &mut data,
                 },
             ),
+            
+            nodes: nodes,
+            data: data,
 
             record_tree: false,
             tree_dirty: false,
@@ -346,8 +337,8 @@ impl EventHandler for MyGame {
         &mut self,
         ctx: &mut Context,
         keycode: KeyCode,
-        keymods: KeyMods,
-        repeat: bool,
+        _keymods: KeyMods,
+        _repeat: bool,
     ) {
         if keycode == KeyCode::Escape {
             event::quit(ctx);
@@ -422,29 +413,27 @@ impl EventHandler for MyGame {
         //let rule_sets = self.rule_sets;
 
         let root_node = &self.root_node;
-
-        let compute_arg = ComArg {
-            nodes: &self.nodes,
-            data: &self.data,
-        };
+        let nodes = &self.nodes;
+        let data= &self.data;
 
         let update_step = |y, x, mut new: ArrayViewMut1<u8>| {
             let total_cells = CONSTS.cell_array_width * CONSTS.cell_array_height;
 
-            let compute_result = root_node.compute(
-                &UpdateState {
-                    coordinate_set: CoordinateSet {
-                        x: UNFloat::new(x as f32 / CONSTS.cell_array_width as f32).to_signed(),
-                        y: UNFloat::new(
-                            (y + slice_y as usize) as f32 / CONSTS.cell_array_height as f32,
-                        )
-                        .to_signed(),
-                        t: current_t as f32,
-                    },
-                    history,
+            let compute_arg = ComArg {
+                nodes,
+                data,
+                coordinate_set: CoordinateSet {
+                    x: UNFloat::new(x as f32 / CONSTS.cell_array_width as f32).to_signed(),
+                    y: UNFloat::new(
+                        (y + slice_y as usize) as f32 / CONSTS.cell_array_height as f32,
+                    )
+                    .to_signed(),
+                    t: current_t as f32,
                 },
-                compute_arg,
-            );
+                history,
+            };
+
+            let compute_result = root_node.compute(compute_arg.reborrow());
 
             let new_color = ByteColor::from(compute_result);
 
@@ -515,7 +504,7 @@ impl EventHandler for MyGame {
                 global_similarity_value: 0.0,
             };
 
-            let update_state = UpdateState {
+            let _update_state = UpdateState {
                 coordinate_set: CoordinateSet {
                     x: SNFloat::ZERO,
                     y: SNFloat::ZERO,

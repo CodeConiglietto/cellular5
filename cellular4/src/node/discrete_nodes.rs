@@ -1,4 +1,4 @@
-use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
+use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -85,60 +85,60 @@ impl Node for BooleanNodes {
 
         match self {
             UNFloatLess { child_a, child_b } => Boolean {
-                value: child_a.compute(compute_arg).into_inner()
-                    < child_b.compute(compute_arg).into_inner(),
+                value: child_a.compute(compute_arg.reborrow()).into_inner()
+                    < child_b.compute(compute_arg.reborrow()).into_inner(),
             },
             UNFloatMore { child_a, child_b } => Boolean {
-                value: child_a.compute(compute_arg).into_inner()
-                    > child_b.compute(compute_arg).into_inner(),
+                value: child_a.compute(compute_arg.reborrow()).into_inner()
+                    > child_b.compute(compute_arg.reborrow()).into_inner(),
             },
             SNFloatLess { child_a, child_b } => Boolean {
-                value: child_a.compute(compute_arg).into_inner()
-                    < child_b.compute(compute_arg).into_inner(),
+                value: child_a.compute(compute_arg.reborrow()).into_inner()
+                    < child_b.compute(compute_arg.reborrow()).into_inner(),
             },
             SNFloatMore { child_a, child_b } => Boolean {
-                value: child_a.compute(compute_arg).into_inner()
-                    > child_b.compute(compute_arg).into_inner(),
+                value: child_a.compute(compute_arg.reborrow()).into_inner()
+                    > child_b.compute(compute_arg.reborrow()).into_inner(),
             },
             SNFloatSign { child } => Boolean {
-                value: child.compute(compute_arg).into_inner() >= 0.0,
+                value: child.compute(compute_arg.reborrow()).into_inner() >= 0.0,
             },
             And { child_a, child_b } => Boolean {
-                value: child_a.compute(compute_arg).into_inner()
-                    && child_b.compute(compute_arg).into_inner(),
+                value: child_a.compute(compute_arg.reborrow()).into_inner()
+                    && child_b.compute(compute_arg.reborrow()).into_inner(),
             },
             Or { child_a, child_b } => Boolean {
-                value: child_a.compute(compute_arg).into_inner()
-                    || child_b.compute(compute_arg).into_inner(),
+                value: child_a.compute(compute_arg.reborrow()).into_inner()
+                    || child_b.compute(compute_arg.reborrow()).into_inner(),
             },
             Not { child } => Boolean {
-                value: !child.compute(compute_arg).into_inner(),
+                value: !child.compute(compute_arg.reborrow()).into_inner(),
             },
             BitColorHas { child_a, child_b } => Boolean {
                 value: child_a
-                    .compute(compute_arg)
-                    .has_color(child_b.compute(compute_arg)),
+                    .compute(compute_arg.reborrow())
+                    .has_color(child_b.compute(compute_arg.reborrow())),
             },
             Constant { value } => *value,
             // Random => Boolean::generate(state),
-            ModifyState { child, child_state } => child.compute(&UpdateState {
-                coordinate_set: child_state.compute(compute_arg),
-                ..*compute_arg
+            ModifyState { child, child_state } => child.compute(ComArg {
+                coordinate_set: child_state.compute(compute_arg.reborrow()),
+                ..compute_arg.reborrow()
             }),
             IfElse {
                 predicate,
                 child_a,
                 child_b,
             } => {
-                if predicate.compute(compute_arg).into_inner() {
-                    child_a.compute(compute_arg)
+                if predicate.compute(compute_arg.reborrow()).into_inner() {
+                    child_a.compute(compute_arg.reborrow())
                 } else {
-                    child_b.compute(compute_arg)
+                    child_b.compute(compute_arg.reborrow())
                 }
             }
             ByteEquals { child_a, child_b } => Boolean {
-                value: child_a.compute(compute_arg).into_inner()
-                    == child_b.compute(compute_arg).into_inner(),
+                value: child_a.compute(compute_arg.reborrow()).into_inner()
+                    == child_b.compute(compute_arg.reborrow()).into_inner(),
             },
             // Majority {
             //     child,
@@ -244,46 +244,46 @@ impl Node for NibbleNodes {
             Constant { value } => *value,
             // Random => Nibble::generate(state),
             Add { child_a, child_b } => child_a
-                .compute(compute_arg)
-                .add(child_b.compute(compute_arg)),
+                .compute(compute_arg.reborrow())
+                .add(child_b.compute(compute_arg.reborrow())),
             Multiply { child_a, child_b } => child_a
-                .compute(compute_arg)
-                .multiply(child_b.compute(compute_arg)),
+                .compute(compute_arg.reborrow())
+                .multiply(child_b.compute(compute_arg.reborrow())),
             Divide {
                 child_value,
                 child_divisor,
             } => child_value
-                .compute(compute_arg)
-                .divide(child_divisor.compute(compute_arg)),
+                .compute(compute_arg.reborrow())
+                .divide(child_divisor.compute(compute_arg.reborrow())),
             Modulus {
                 child_value,
                 child_divisor,
             } => child_value
-                .compute(compute_arg)
-                .modulus(child_divisor.compute(compute_arg)),
+                .compute(compute_arg.reborrow())
+                .modulus(child_divisor.compute(compute_arg.reborrow())),
             FromBooleans { a, b, c, d } => {
                 let mut value = 0;
 
-                if a.compute(compute_arg).into_inner() {
+                if a.compute(compute_arg.reborrow()).into_inner() {
                     value += 1;
                 }
-                if b.compute(compute_arg).into_inner() {
+                if b.compute(compute_arg.reborrow()).into_inner() {
                     value += 2;
                 }
-                if c.compute(compute_arg).into_inner() {
+                if c.compute(compute_arg.reborrow()).into_inner() {
                     value += 4;
                 }
-                if d.compute(compute_arg).into_inner() {
+                if d.compute(compute_arg.reborrow()).into_inner() {
                     value += 8;
                 }
 
                 Nibble::new(value)
             }
             FromByteModulo { child } => {
-                Nibble::new(child.compute(compute_arg).into_inner() % Nibble::MAX_VALUE)
+                Nibble::new(child.compute(compute_arg.reborrow()).into_inner() % Nibble::MAX_VALUE)
             }
             FromByteDivide { child } => {
-                Nibble::new(child.compute(compute_arg).into_inner() / Nibble::MAX_VALUE)
+                Nibble::new(child.compute(compute_arg.reborrow()).into_inner() / Nibble::MAX_VALUE)
             }
             FromGametic => Nibble::new(compute_arg.coordinate_set.get_byte_t().into_inner()),
             IfElse {
@@ -291,10 +291,10 @@ impl Node for NibbleNodes {
                 child_a,
                 child_b,
             } => {
-                if predicate.compute(compute_arg).into_inner() {
-                    child_a.compute(compute_arg)
+                if predicate.compute(compute_arg.reborrow()).into_inner() {
+                    child_a.compute(compute_arg.reborrow())
                 } else {
-                    child_b.compute(compute_arg)
+                    child_b.compute(compute_arg.reborrow())
                 }
             }
         }
@@ -363,37 +363,37 @@ impl Node for ByteNodes {
             Constant { value } => *value,
             // Random => Byte::generate(state),
             Add { child_a, child_b } => child_a
-                .compute(compute_arg)
-                .add(child_b.compute(compute_arg)),
+                .compute(compute_arg.reborrow())
+                .add(child_b.compute(compute_arg.reborrow())),
             Multiply { child_a, child_b } => child_a
-                .compute(compute_arg)
-                .multiply(child_b.compute(compute_arg)),
+                .compute(compute_arg.reborrow())
+                .multiply(child_b.compute(compute_arg.reborrow())),
             MultiplyNibbles { child_a, child_b } => Byte::new(
-                child_a.compute(compute_arg).into_inner()
-                    * child_b.compute(compute_arg).into_inner(),
+                child_a.compute(compute_arg.reborrow()).into_inner()
+                    * child_b.compute(compute_arg.reborrow()).into_inner(),
             ),
             Divide {
                 child_value,
                 child_divisor,
             } => child_value
-                .compute(compute_arg)
-                .divide(child_divisor.compute(compute_arg)),
+                .compute(compute_arg.reborrow())
+                .divide(child_divisor.compute(compute_arg.reborrow())),
             Modulus {
                 child_value,
                 child_divisor,
             } => child_value
-                .compute(compute_arg)
-                .modulus(child_divisor.compute(compute_arg)),
+                .compute(compute_arg.reborrow())
+                .modulus(child_divisor.compute(compute_arg.reborrow())),
             FromGametic => compute_arg.coordinate_set.get_byte_t(),
             IfElse {
                 predicate,
                 child_a,
                 child_b,
             } => {
-                if predicate.compute(compute_arg).into_inner() {
-                    child_a.compute(compute_arg)
+                if predicate.compute(compute_arg.reborrow()).into_inner() {
+                    child_a.compute(compute_arg.reborrow())
                 } else {
-                    child_b.compute(compute_arg)
+                    child_b.compute(compute_arg.reborrow())
                 }
             }
         }
@@ -457,33 +457,33 @@ impl Node for UIntNodes {
             Constant { value } => *value,
             // Random => UInt::generate(state),
             Add { child_a, child_b } => child_a
-                .compute(compute_arg)
-                .add(child_b.compute(compute_arg)),
+                .compute(compute_arg.reborrow())
+                .add(child_b.compute(compute_arg.reborrow())),
             Multiply { child_a, child_b } => child_a
-                .compute(compute_arg)
-                .multiply(child_b.compute(compute_arg)),
+                .compute(compute_arg.reborrow())
+                .multiply(child_b.compute(compute_arg.reborrow())),
             Divide {
                 child_value,
                 child_divisor,
             } => child_value
-                .compute(compute_arg)
-                .divide(child_divisor.compute(compute_arg)),
+                .compute(compute_arg.reborrow())
+                .divide(child_divisor.compute(compute_arg.reborrow())),
             Modulus {
                 child_value,
                 child_divisor,
             } => child_value
-                .compute(compute_arg)
-                .modulus(child_divisor.compute(compute_arg)),
+                .compute(compute_arg.reborrow())
+                .modulus(child_divisor.compute(compute_arg.reborrow())),
             FromGametic => UInt::new(compute_arg.coordinate_set.t as u32),
             IfElse {
                 predicate,
                 child_a,
                 child_b,
             } => {
-                if predicate.compute(compute_arg).into_inner() {
-                    child_a.compute(compute_arg)
+                if predicate.compute(compute_arg.reborrow()).into_inner() {
+                    child_a.compute(compute_arg.reborrow())
                 } else {
-                    child_b.compute(compute_arg)
+                    child_b.compute(compute_arg.reborrow())
                 }
             }
         }
@@ -545,32 +545,32 @@ impl Node for SIntNodes {
             Constant { value } => *value,
             // Random => SInt::generate(state),
             Add { child_a, child_b } => child_a
-                .compute(compute_arg)
-                .add(child_b.compute(compute_arg)),
+                .compute(compute_arg.reborrow())
+                .add(child_b.compute(compute_arg.reborrow())),
             Multiply { child_a, child_b } => child_a
-                .compute(compute_arg)
-                .multiply(child_b.compute(compute_arg)),
+                .compute(compute_arg.reborrow())
+                .multiply(child_b.compute(compute_arg.reborrow())),
             Divide {
                 child_value,
                 child_divisor,
             } => child_value
-                .compute(compute_arg)
-                .divide(child_divisor.compute(compute_arg)),
+                .compute(compute_arg.reborrow())
+                .divide(child_divisor.compute(compute_arg.reborrow())),
             Modulus {
                 child_value,
                 child_divisor,
             } => child_value
-                .compute(compute_arg)
-                .modulus(child_divisor.compute(compute_arg)),
+                .compute(compute_arg.reborrow())
+                .modulus(child_divisor.compute(compute_arg.reborrow())),
             IfElse {
                 predicate,
                 child_a,
                 child_b,
             } => {
-                if predicate.compute(compute_arg).into_inner() {
-                    child_a.compute(compute_arg)
+                if predicate.compute(compute_arg.reborrow()).into_inner() {
+                    child_a.compute(compute_arg.reborrow())
                 } else {
-                    child_b.compute(compute_arg)
+                    child_b.compute(compute_arg.reborrow())
                 }
             }
         }

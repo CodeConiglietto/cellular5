@@ -42,11 +42,11 @@ where
 {
     type Output = T::Output;
 
-    fn compute(&self, compute_arg: ComArg) -> Self::Output {
+    fn compute(&self, mut compute_arg: ComArg) -> Self::Output {
         compute_arg.nodes[self.depth]
             .get(self.index)
             .unwrap()
-            .compute(compute_arg)
+            .compute(compute_arg.reborrow())
     }
 }
 
@@ -59,15 +59,15 @@ where
     fn generate_rng<R: Rng + ?Sized>(
         rng: &mut R,
         state: mutagen::State,
-        arg: Self::GenArg,
+        mut arg: Self::GenArg,
     ) -> Self {
-        let gen_arg = GenArg {
+        let mut gen_arg = GenArg {
             nodes: &mut arg.nodes[1..],
-            data: arg.data,
+            data: &mut arg.data,
         };
-        let t = T::generate_rng(rng, state, gen_arg.reborrow());
+        let t = T::generate_rng(rng, state, gen_arg);
         Self {
-            index: t.insert_into(&mut gen_arg.nodes[0]),
+            index: t.insert_into(&mut arg.nodes[0]),
             depth: state.depth,
             _marker: PhantomData,
         }

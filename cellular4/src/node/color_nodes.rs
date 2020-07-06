@@ -135,7 +135,7 @@ impl Node for FloatColorNodes {
                 )
                 .into(),
             Grayscale { child } => {
-                let value = child.compute(compute_arg);
+                let value = child.compute(compute_arg.reborrow());
                 FloatColor {
                     r: value,
                     g: value,
@@ -144,46 +144,43 @@ impl Node for FloatColorNodes {
                 }
             }
             RGB { r, g, b, a } => FloatColor {
-                r: r.compute(compute_arg),
-                g: g.compute(compute_arg),
-                b: b.compute(compute_arg),
-                a: a.compute(compute_arg),
+                r: r.compute(compute_arg.reborrow()),
+                g: g.compute(compute_arg.reborrow()),
+                b: b.compute(compute_arg.reborrow()),
+                a: a.compute(compute_arg.reborrow()),
             },
             HSV { h, s, v, a } => {
                 let rgb: Rgb = Hsv::<Srgb, _>::from_components((
-                    RgbHue::from_degrees(h.compute(compute_arg).into_inner() as f32 * 360.0),
-                    s.compute(compute_arg).into_inner() as f32,
-                    v.compute(compute_arg).into_inner() as f32,
+                    RgbHue::from_degrees(h.compute(compute_arg.reborrow()).into_inner() as f32 * 360.0),
+                    s.compute(compute_arg.reborrow()).into_inner() as f32,
+                    v.compute(compute_arg.reborrow()).into_inner() as f32,
                 ))
                 .into();
 
-                float_color_from_pallette_rgb(rgb, a.compute(compute_arg).into_inner())
+                float_color_from_pallette_rgb(rgb, a.compute(compute_arg.reborrow()).into_inner())
             }
-            FromBlend { child } => child.compute(compute_arg),
-            FromBitColor { child } => FloatColor::from(child.compute(compute_arg)),
-            ModifyState { child, child_state } => child.compute(
-                &UpdateState {
-                    coordinate_set: child_state.compute(compute_arg),
-                    ..*compute_arg
-                },
-                compute_arg,
-            ),
-            FromByteColor { child } => FloatColor::from(child.compute(compute_arg)),
+            FromBlend { child } => child.compute(compute_arg.reborrow()),
+            FromBitColor { child } => FloatColor::from(child.compute(compute_arg.reborrow())),
+            ModifyState { child, child_state } => child.compute(ComArg {
+                coordinate_set: child_state.compute(compute_arg.reborrow()),
+                ..compute_arg.reborrow()
+            }),
+            FromByteColor { child } => FloatColor::from(child.compute(compute_arg.reborrow())),
             IfElse {
                 predicate,
                 child_a,
                 child_b,
             } => {
-                if predicate.compute(compute_arg).into_inner() {
-                    child_a.compute(compute_arg)
+                if predicate.compute(compute_arg.reborrow()).into_inner() {
+                    child_a.compute(compute_arg.reborrow())
                 } else {
-                    child_b.compute(compute_arg)
+                    child_b.compute(compute_arg.reborrow())
                 }
             }
             SetAlpha { child_a, child_b } => {
-                let mut color = child_a.compute(compute_arg);
+                let mut color = child_a.compute(compute_arg.reborrow());
 
-                color.a = child_b.compute(compute_arg);
+                color.a = child_b.compute(compute_arg.reborrow());
 
                 color
             }
@@ -364,28 +361,28 @@ impl Node for BitColorNodes {
             Constant { value } => *value,
             GiveColor { child_a, child_b } => BitColor::from_components(
                 child_a
-                    .compute(compute_arg)
-                    .give_color(child_b.compute(compute_arg)),
+                    .compute(compute_arg.reborrow())
+                    .give_color(child_b.compute(compute_arg.reborrow())),
             ),
             TakeColor { child_a, child_b } => BitColor::from_components(
                 child_a
-                    .compute(compute_arg)
-                    .take_color(child_b.compute(compute_arg)),
+                    .compute(compute_arg.reborrow())
+                    .take_color(child_b.compute(compute_arg.reborrow())),
             ),
             XorColor { child_a, child_b } => BitColor::from_components(
                 child_a
-                    .compute(compute_arg)
-                    .xor_color(child_b.compute(compute_arg)),
+                    .compute(compute_arg.reborrow())
+                    .xor_color(child_b.compute(compute_arg.reborrow())),
             ),
             EqColor { child_a, child_b } => BitColor::from_components(
                 child_a
-                    .compute(compute_arg)
-                    .eq_color(child_b.compute(compute_arg)),
+                    .compute(compute_arg.reborrow())
+                    .eq_color(child_b.compute(compute_arg.reborrow())),
             ),
             FromComponents { r, g, b } => BitColor::from_components([
-                r.compute(compute_arg).into_inner(),
-                g.compute(compute_arg).into_inner(),
-                b.compute(compute_arg).into_inner(),
+                r.compute(compute_arg.reborrow()).into_inner(),
+                g.compute(compute_arg.reborrow()).into_inner(),
+                b.compute(compute_arg.reborrow()).into_inner(),
             ]),
             FromImage { image } => image
                 .get_pixel_normalised(
@@ -407,27 +404,27 @@ impl Node for BitColorNodes {
                 )
                 .into(),
             FromUNFloat { child } => BitColor::from_index(
-                (child.compute(compute_arg).into_inner() * 0.99 * (CONSTS.max_colors) as f32)
+                (child.compute(compute_arg.reborrow()).into_inner() * 0.99 * (CONSTS.max_colors) as f32)
                     as usize,
             ),
-            FromFloatColor { child } => BitColor::from_float_color(child.compute(compute_arg)),
-            FromByteColor { child } => BitColor::from_byte_color(child.compute(compute_arg)),
+            FromFloatColor { child } => BitColor::from_float_color(child.compute(compute_arg.reborrow())),
+            FromByteColor { child } => BitColor::from_byte_color(child.compute(compute_arg.reborrow())),
             FromNibbleIndex { child } => {
-                BitColor::from_index(child.compute(compute_arg).into_inner() as usize % 8)
+                BitColor::from_index(child.compute(compute_arg.reborrow()).into_inner() as usize % 8)
             }
-            ModifyState { child, child_state } => child.compute(&UpdateState {
-                coordinate_set: child_state.compute(compute_arg),
-                ..*compute_arg
+            ModifyState { child, child_state } => child.compute(ComArg {
+                coordinate_set: child_state.compute(compute_arg.reborrow()),
+                ..compute_arg.reborrow()
             }),
             IfElse {
                 predicate,
                 child_a,
                 child_b,
             } => {
-                if predicate.compute(compute_arg).into_inner() {
-                    child_a.compute(compute_arg)
+                if predicate.compute(compute_arg.reborrow()).into_inner() {
+                    child_a.compute(compute_arg.reborrow())
                 } else {
-                    child_b.compute(compute_arg)
+                    child_b.compute(compute_arg.reborrow())
                 }
             }
         }
@@ -500,26 +497,26 @@ impl Node for ByteColorNodes {
                 compute_arg.coordinate_set.t as usize,
             ),
             Decompose { r, g, b, a } => ByteColor {
-                r: r.compute(compute_arg),
-                g: g.compute(compute_arg),
-                b: b.compute(compute_arg),
-                a: a.compute(compute_arg),
+                r: r.compute(compute_arg.reborrow()),
+                g: g.compute(compute_arg.reborrow()),
+                b: b.compute(compute_arg.reborrow()),
+                a: a.compute(compute_arg.reborrow()),
             },
-            FromFloatColor { child } => child.compute(compute_arg).into(),
-            FromBitColor { child } => child.compute(compute_arg).into(),
-            ModifyState { child, child_state } => child.compute(&UpdateState {
-                coordinate_set: child_state.compute(compute_arg),
-                ..*compute_arg
+            FromFloatColor { child } => child.compute(compute_arg.reborrow()).into(),
+            FromBitColor { child } => child.compute(compute_arg.reborrow()).into(),
+            ModifyState { child, child_state } => child.compute(ComArg {
+                coordinate_set: child_state.compute(compute_arg.reborrow()),
+                ..compute_arg.reborrow()
             }),
             IfElse {
                 predicate,
                 child_a,
                 child_b,
             } => {
-                if predicate.compute(compute_arg).into_inner() {
-                    child_a.compute(compute_arg)
+                if predicate.compute(compute_arg.reborrow()).into_inner() {
+                    child_a.compute(compute_arg.reborrow())
                 } else {
-                    child_b.compute(compute_arg)
+                    child_b.compute(compute_arg.reborrow())
                 }
             }
         }

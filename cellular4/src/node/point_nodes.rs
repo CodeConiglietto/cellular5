@@ -1,4 +1,4 @@
-use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
+use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively, Reborrow};
 use nalgebra::*;
 use serde::{Deserialize, Serialize};
 
@@ -57,25 +57,25 @@ impl Node for SNPointNodes {
             Coordinate => compute_arg.coordinate_set.get_coord_point(),
             Constant { value } => *value,
             Invert { child } => {
-                let point = child.compute(compute_arg).into_inner();
+                let point = child.compute(compute_arg.reborrow()).into_inner();
                 SNPoint::new(Point2::new(point.x * -1.0, point.y * -1.0))
             }
             FromSNFloats { child_a, child_b } => SNPoint::new(Point2::new(
-                child_a.compute(compute_arg).into_inner(),
-                child_b.compute(compute_arg).into_inner(),
+                child_a.compute(compute_arg.reborrow()).into_inner(),
+                child_b.compute(compute_arg.reborrow()).into_inner(),
             )),
             SawtoothAdd { child_a, child_b } => child_a
-                .compute(compute_arg)
-                .sawtooth_add(child_b.compute(compute_arg)),
+                .compute(compute_arg.reborrow())
+                .sawtooth_add(child_b.compute(compute_arg.reborrow())),
             TriangleAdd { child_a, child_b } => child_a
-                .compute(compute_arg)
-                .triangle_add(child_b.compute(compute_arg)),
+                .compute(compute_arg.reborrow())
+                .triangle_add(child_b.compute(compute_arg.reborrow())),
             IterativeCircularAdd { value, child } => *value,
             GetClosestPointInSet { child } => child
-                .compute(compute_arg)
+                .compute(compute_arg.reborrow())
                 .get_closest_point(compute_arg.coordinate_set.get_coord_point()),
             GetFurthestPointInSet { child } => child
-                .compute(compute_arg)
+                .compute(compute_arg.reborrow())
                 .get_furthest_point(compute_arg.coordinate_set.get_coord_point()),
         }
     }

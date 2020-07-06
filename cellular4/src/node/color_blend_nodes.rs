@@ -1,4 +1,4 @@
-use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
+use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -122,7 +122,7 @@ pub enum ColorBlendNodes {
 impl Node for ColorBlendNodes {
     type Output = FloatColor;
 
-    fn compute(&self, compute_arg: ComArg) -> Self::Output {
+    fn compute(&self, mut compute_arg: ComArg) -> Self::Output {
         use ColorBlendNodes::*;
 
         match self {
@@ -133,7 +133,7 @@ impl Node for ColorBlendNodes {
                 a: UNFloat::ONE,
             },
             Invert { child } => {
-                let col = child.compute(compute_arg);
+                let col = child.compute(compute_arg.reborrow());
                 FloatColor {
                     r: UNFloat::new(1.0 - col.r.into_inner()),
                     g: UNFloat::new(1.0 - col.g.into_inner()),
@@ -147,20 +147,20 @@ impl Node for ColorBlendNodes {
                 value,
             } => {
                 if UNFloat::random(&mut rand::thread_rng()).into_inner()
-                    < value.compute(compute_arg).into_inner()
+                    < value.compute(compute_arg.reborrow()).into_inner()
                 {
-                    color_a.compute(compute_arg)
+                    color_a.compute(compute_arg.reborrow())
                 } else {
-                    color_b.compute(compute_arg)
+                    color_b.compute(compute_arg.reborrow())
                 }
             }
             Overlay { color_a, color_b } => {
-                let a = color_a.compute(compute_arg);
+                let a = color_a.compute(compute_arg.reborrow());
                 let ar = a.r.into_inner();
                 let ag = a.g.into_inner();
                 let ab = a.b.into_inner();
 
-                let b = color_b.compute(compute_arg);
+                let b = color_b.compute(compute_arg.reborrow());
                 let br = b.r.into_inner();
                 let bg = b.g.into_inner();
                 let bb = b.b.into_inner();
@@ -185,12 +185,12 @@ impl Node for ColorBlendNodes {
                 }
             }
             ScreenDodge { color_a, color_b } => {
-                let a = color_a.compute(compute_arg);
+                let a = color_a.compute(compute_arg.reborrow());
                 let ar = a.r.into_inner();
                 let ag = a.g.into_inner();
                 let ab = a.b.into_inner();
 
-                let b = color_b.compute(compute_arg);
+                let b = color_b.compute(compute_arg.reborrow());
                 let br = b.r.into_inner();
                 let bg = b.g.into_inner();
                 let bb = b.b.into_inner();
@@ -202,32 +202,29 @@ impl Node for ColorBlendNodes {
                     a: UNFloat::ONE,
                 }
             }
-            // ColorDodge {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg).into_inner() {color_a.compute(compute_arg)}else{color_b.compute(compute_arg)}},
-            // LinearDodge {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg).into_inner() {color_a.compute(compute_arg)}else{color_b.compute(compute_arg)}},
-            // Multiply {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg).into_inner() {color_a.compute(compute_arg)}else{color_b.compute(compute_arg)}},
-            // ColorBurn {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg).into_inner() {color_a.compute(compute_arg)}else{color_b.compute(compute_arg)}},
-            // LinearBurn {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg).into_inner() {color_a.compute(compute_arg)}else{color_b.compute(compute_arg)}},
-            // VividLight {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg).into_inner() {color_a.compute(compute_arg)}else{color_b.compute(compute_arg)}},
-            // LinearLight {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg).into_inner() {color_a.compute(compute_arg)}else{color_b.compute(compute_arg)}},
-            // Subtract {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg).into_inner() {color_a.compute(compute_arg)}else{color_b.compute(compute_arg)}},
-            // Divide {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg).into_inner() {color_a.compute(compute_arg)}else{color_b.compute(compute_arg)}},
-            // Lerp {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg).into_inner() {color_a.compute(compute_arg)}else{color_b.compute(compute_arg)}},
-            ModifyState { child, child_state } => child.compute(
-                &UpdateState {
-                    coordinate_set: child_state.compute(compute_arg),
-                    ..*compute_arg
-                },
-                compute_arg,
-            ),
+            // ColorDodge {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg.reborrow()).into_inner() {color_a.compute(compute_arg.reborrow())}else{color_b.compute(compute_arg.reborrow())}},
+            // LinearDodge {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg.reborrow()).into_inner() {color_a.compute(compute_arg.reborrow())}else{color_b.compute(compute_arg.reborrow())}},
+            // Multiply {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg.reborrow()).into_inner() {color_a.compute(compute_arg.reborrow())}else{color_b.compute(compute_arg.reborrow())}},
+            // ColorBurn {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg.reborrow()).into_inner() {color_a.compute(compute_arg.reborrow())}else{color_b.compute(compute_arg.reborrow())}},
+            // LinearBurn {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg.reborrow()).into_inner() {color_a.compute(compute_arg.reborrow())}else{color_b.compute(compute_arg.reborrow())}},
+            // VividLight {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg.reborrow()).into_inner() {color_a.compute(compute_arg.reborrow())}else{color_b.compute(compute_arg.reborrow())}},
+            // LinearLight {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg.reborrow()).into_inner() {color_a.compute(compute_arg.reborrow())}else{color_b.compute(compute_arg.reborrow())}},
+            // Subtract {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg.reborrow()).into_inner() {color_a.compute(compute_arg.reborrow())}else{color_b.compute(compute_arg.reborrow())}},
+            // Divide {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg.reborrow()).into_inner() {color_a.compute(compute_arg.reborrow())}else{color_b.compute(compute_arg.reborrow())}},
+            // Lerp {color_a, color_b, value} => {if UNFloat::generate().into_inner() < value.compute(compute_arg.reborrow()).into_inner() {color_a.compute(compute_arg.reborrow())}else{color_b.compute(compute_arg.reborrow())}},
+            ModifyState { child, child_state } => child.compute(ComArg {
+                coordinate_set: child_state.compute(compute_arg.reborrow()),
+                ..compute_arg.reborrow()
+            }),
             IfElse {
                 predicate,
                 child_a,
                 child_b,
             } => {
-                if predicate.compute(compute_arg).into_inner() {
-                    child_a.compute(compute_arg)
+                if predicate.compute(compute_arg.reborrow()).into_inner() {
+                    child_a.compute(compute_arg.reborrow())
                 } else {
-                    child_b.compute(compute_arg)
+                    child_b.compute(compute_arg.reborrow())
                 }
             }
         }

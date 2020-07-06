@@ -1,4 +1,4 @@
-use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
+use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -20,28 +20,28 @@ pub enum BinaryAutomataNodes {
 impl Node for BinaryAutomataNodes {
     type Output = Boolean;
 
-    fn compute(&self, compute_arg: ComArg) -> Self::Output {
+    fn compute(&self, mut compute_arg: ComArg) -> Self::Output {
         use BinaryAutomataNodes::*;
 
         match self {
             Majority { child, point_set } => {
                 let mut true_count = 0;
                 let offsets = point_set
-                    .compute(compute_arg)
+                    .compute(compute_arg.reborrow())
                     .get_offsets(CONSTS.cell_array_width, CONSTS.cell_array_height);
 
                 //this might blow up
                 for point in &offsets {
-                    let offset_state = UpdateState {
+                    let offset_arg = ComArg {
                         coordinate_set: compute_arg.coordinate_set.get_coord_shifted(
                             point.x(),
                             point.y(),
                             SNFloat::new(0.0),
                         ),
-                        history: compute_arg.history,
+                        ..compute_arg.reborrow()
                     };
 
-                    if child.compute(&offset_state, compute_arg).into_inner() {
+                    if child.compute(offset_arg).into_inner() {
                         true_count += 1;
                     }
                 }

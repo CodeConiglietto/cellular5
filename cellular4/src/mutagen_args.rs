@@ -1,13 +1,6 @@
 use mutagen::Reborrow;
 
-use crate::{
-    constants::*,
-    coordinate_set::*,
-    data_set::*,
-    datatype::{continuous::*, discrete::*, points::*},
-    history::*,
-    node_set::*,
-};
+use crate::{coordinate_set::*, data_set::*, datatype::points::*, history::*, node_set::*};
 
 #[derive(Debug)]
 pub struct GenArg<'a> {
@@ -47,6 +40,17 @@ pub struct ComArg<'a> {
     pub history: &'a History,
 }
 
+impl<'a> ComArg<'a> {
+    pub fn replace_coords(self, other: &SNPoint) -> Self {
+        let mut new = self.clone();
+
+        new.coordinate_set.x = other.x();
+        new.coordinate_set.y = other.y();
+
+        new
+    }
+}
+
 impl<'a, 'b: 'a> Reborrow<'a, 'b, ComArg<'a>> for ComArg<'b> {
     fn reborrow(&'a mut self) -> ComArg<'a> {
         ComArg {
@@ -80,9 +84,9 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, UpdArg<'a>> for UpdArg<'b> {
 impl<'a> From<UpdArg<'a>> for ComArg<'a> {
     fn from(arg: UpdArg<'a>) -> Self {
         Self {
-            nodes: &arg.nodes,
-            data: &arg.data,
-            coordinate_set: arg.coordinate_set.clone(),
+            nodes: arg.nodes,
+            data: arg.data,
+            coordinate_set: arg.coordinate_set,
             history: arg.history,
         }
     }
@@ -94,15 +98,4 @@ pub struct UpdateState<'a> {
     pub coordinate_set: CoordinateSet,
     //cell array to read from
     pub history: &'a History,
-}
-
-impl UpdateState<'_> {
-    pub fn replace_coords(self, other: &SNPoint) -> Self {
-        let mut new = self.clone();
-
-        new.coordinate_set.x = other.x();
-        new.coordinate_set.y = other.y();
-
-        new
-    }
 }

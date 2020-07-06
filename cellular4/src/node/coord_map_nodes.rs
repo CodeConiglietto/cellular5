@@ -1,4 +1,4 @@
-use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
+use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
 use nalgebra::{geometry::Point2, geometry::Rotation2};
 use serde::{Deserialize, Serialize};
 
@@ -68,27 +68,27 @@ pub enum CoordMapNodes {
 impl Node for CoordMapNodes {
     type Output = CoordinateSet;
 
-    fn compute(&self, compute_arg: ComArg) -> Self::Output {
+    fn compute(&self, mut compute_arg: ComArg) -> Self::Output {
         use CoordMapNodes::*;
 
         match self {
             Replace { child } => {
-                compute_arg
-                    .replace_coords(&child.compute(compute_arg))
+                compute_arg.reborrow()
+                    .replace_coords(&child.compute(compute_arg.reborrow()))
                     .coordinate_set
             }
             Shift { x, y } => compute_arg.coordinate_set.get_coord_shifted(
-                x.compute(compute_arg),
-                y.compute(compute_arg),
+                x.compute(compute_arg.reborrow()),
+                y.compute(compute_arg.reborrow()),
                 SNFloat::new(0.0),
             ),
             Scale { x, y } => compute_arg.coordinate_set.get_coord_scaled(
-                x.compute(compute_arg),
-                y.compute(compute_arg),
+                x.compute(compute_arg.reborrow()),
+                y.compute(compute_arg.reborrow()),
                 SNFloat::new(1.0),
             ),
             Rotation { angle } => {
-                let new_pos = Rotation2::new(angle.compute(compute_arg).into_inner())
+                let new_pos = Rotation2::new(angle.compute(compute_arg.reborrow()).into_inner())
                     .transform_point(&Point2::new(
                         compute_arg.coordinate_set.x.into_inner(),
                         compute_arg.coordinate_set.y.into_inner(),
@@ -123,10 +123,10 @@ impl Node for CoordMapNodes {
                 child_a,
                 child_b,
             } => {
-                if predicate.compute(compute_arg).into_inner() {
-                    child_a.compute(compute_arg)
+                if predicate.compute(compute_arg.reborrow()).into_inner() {
+                    child_a.compute(compute_arg.reborrow())
                 } else {
-                    child_b.compute(compute_arg)
+                    child_b.compute(compute_arg.reborrow())
                 }
             }
             ApplyMatrix { child } => {
@@ -137,7 +137,7 @@ impl Node for CoordMapNodes {
                 .to_homogeneous();
 
                 let result =
-                    Point2::from_homogeneous(child.compute(compute_arg).into_inner() * point)
+                    Point2::from_homogeneous(child.compute(compute_arg.reborrow()).into_inner() * point)
                         .unwrap();
 
                 CoordinateSet {
@@ -195,8 +195,8 @@ impl Node for CoordMapNodes {
                 }
             }
             TessellatePerPoint { child_a, child_b } => {
-                let a = child_a.compute(compute_arg).into_inner();
-                let b = child_b.compute(compute_arg).into_inner();
+                let a = child_a.compute(compute_arg.reborrow()).into_inner();
+                let b = child_b.compute(compute_arg.reborrow()).into_inner();
 
                 let w = b.x - a.x;
                 let h = b.y - a.y;
@@ -239,7 +239,7 @@ impl Node for CoordMapNodes {
 
             TesellateClosestPointSet { child } => {
                 let p = compute_arg.coordinate_set.get_coord_point();
-                let closest = child.compute(compute_arg).get_closest_point(p);
+                let closest = child.compute(compute_arg.reborrow()).get_closest_point(p);
 
                 let offset =
                     SNPoint::new(Point2::from(p.into_inner() - closest.into_inner()) * 0.5);
@@ -253,7 +253,7 @@ impl Node for CoordMapNodes {
 
             TesellatePolarTwoClosestPointSet { child } => {
                 let p = compute_arg.coordinate_set.get_coord_point();
-                let mut point_set = child.compute(compute_arg);
+                let mut point_set = child.compute(compute_arg.reborrow());
                 let closest = point_set.get_n_closest_points(p, 2);
 
                 let polar_1 = SNPoint::new(
@@ -299,20 +299,28 @@ impl<'a> Updatable<'a> for CoordMapNodes {
                 ref mut point_a,
                 ref mut point_b,
             } => {
-                let mut state_a = arg.clone();
+                let mut state_a = arg.reborrow();
                 state_a.coordinate_set.x = point_a.x();
                 state_a.coordinate_set.y = point_a.y();
 
-                let mut state_b = arg.clone();
+                let mut state_b = arg.reborrow();
                 state_b.coordinate_set.x = point_b.x();
                 state_b.coordinate_set.y = point_b.y();
 
-                let translation_scale = child_scale.compute(arg).scale_unfloat(UNFloat::new(0.025));
+                let translation_scale = child_scale
+                    .compute(arg.reborrow().into())
+                    .scale_unfloat(UNFloat::new(0.025));
 
-                *point_a =
-                    point_a.sawtooth_add(child_a.compute(&state_a).scale_point(translation_scale));
-                *point_b =
-                    point_b.sawtooth_add(child_b.compute(&state_b).scale_point(translation_scale));
+                *point_a = point_a.sawtooth_add(
+                    child_a
+                        .compute(state_a.into())
+                        .scale_point(translation_scale),
+                );
+                *point_b = point_b.sawtooth_add(
+                    child_b
+                        .compute(state_b.into())
+                        .scale_point(translation_scale),
+                );
             }
             _ => (),
         }

@@ -1,6 +1,6 @@
 use std::f64::consts::PI;
 
-use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
+use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
 use nalgebra::*;
 use serde::{Deserialize, Serialize};
 
@@ -63,30 +63,30 @@ impl Node for AngleNodes {
 
         match self {
             FromGametic => Angle::new(compute_arg.coordinate_set.t * 0.1),
-            ArcSin { theta } => Angle::new(f32::asin(theta.compute(compute_arg).into_inner())),
-            ArcCos { theta } => Angle::new(f32::acos(theta.compute(compute_arg).into_inner())),
+            ArcSin { theta } => Angle::new(f32::asin(theta.compute(compute_arg.reborrow()).into_inner())),
+            ArcCos { theta } => Angle::new(f32::acos(theta.compute(compute_arg.reborrow()).into_inner())),
             FromCoordinate => Angle::new(f32::atan2(
                 -compute_arg.coordinate_set.x.into_inner(),
                 compute_arg.coordinate_set.y.into_inner(),
             )),
             // Random => Angle::generate(state),
             Constant { value } => *value,
-            FromSNPoint { child } => child.compute(compute_arg).to_angle(),
-            FromSNFloat { child } => child.compute(compute_arg).to_angle(),
-            FromUNFloat { child } => child.compute(compute_arg).to_angle(),
-            ModifyState { child, child_state } => child.compute(&UpdateState {
-                coordinate_set: child_state.compute(compute_arg),
-                ..*compute_arg
+            FromSNPoint { child } => child.compute(compute_arg.reborrow()).to_angle(),
+            FromSNFloat { child } => child.compute(compute_arg.reborrow()).to_angle(),
+            FromUNFloat { child } => child.compute(compute_arg.reborrow()).to_angle(),
+            ModifyState { child, child_state } => child.compute(ComArg {
+                coordinate_set: child_state.compute(compute_arg.reborrow()),
+                ..compute_arg.reborrow()
             }),
             IfElse {
                 predicate,
                 child_a,
                 child_b,
             } => {
-                if predicate.compute(compute_arg).into_inner() {
-                    child_a.compute(compute_arg)
+                if predicate.compute(compute_arg.reborrow()).into_inner() {
+                    child_a.compute(compute_arg.reborrow())
                 } else {
-                    child_b.compute(compute_arg)
+                    child_b.compute(compute_arg.reborrow())
                 }
             }
         }
@@ -186,49 +186,46 @@ impl Node for SNFloatNodes {
         use SNFloatNodes::*;
 
         match self {
-            Sin { child } => SNFloat::new(f32::sin(child.compute(compute_arg).into_inner())),
-            Cos { child } => SNFloat::new(f32::cos(child.compute(compute_arg).into_inner())),
+            Sin { child } => SNFloat::new(f32::sin(child.compute(compute_arg.reborrow()).into_inner())),
+            Cos { child } => SNFloat::new(f32::cos(child.compute(compute_arg.reborrow()).into_inner())),
             // Random => SNFloat::generate(state),
-            FromAngle { child } => child.compute(compute_arg).to_signed(),
-            FromUNFloat { child } => child.compute(compute_arg).to_signed(),
+            FromAngle { child } => child.compute(compute_arg.reborrow()).to_signed(),
+            FromUNFloat { child } => child.compute(compute_arg.reborrow()).to_signed(),
             Constant { value } => *value,
             Multiply { child_a, child_b } => SNFloat::new(
-                child_a.compute(compute_arg).into_inner()
-                    * child_b.compute(compute_arg).into_inner(),
+                child_a.compute(compute_arg.reborrow()).into_inner()
+                    * child_b.compute(compute_arg.reborrow()).into_inner(),
             ),
-            Abs { child } => SNFloat::new(child.compute(compute_arg).into_inner().abs()),
-            Invert { child } => SNFloat::new(child.compute(compute_arg).into_inner() * -1.0),
+            Abs { child } => SNFloat::new(child.compute(compute_arg.reborrow()).into_inner().abs()),
+            Invert { child } => SNFloat::new(child.compute(compute_arg.reborrow()).into_inner() * -1.0),
             XRatio => compute_arg.coordinate_set.x,
             YRatio => compute_arg.coordinate_set.y,
             FromGametic => SNFloat::new(
                 (compute_arg.coordinate_set.t - compute_arg.coordinate_set.t.floor()) * 2.0 - 1.0,
             ),
-            ModifyState {
-                child,
-                child_compute_arg,
-            } => child.compute(&UpdateState {
-                coordinate_set: child_compute_arg.compute(compute_arg),
-                ..*compute_arg
+            ModifyState { child, child_state } => child.compute(ComArg {
+                coordinate_set: child_state.compute(compute_arg.reborrow()),
+                ..compute_arg.reborrow()
             }),
-            NoiseFunction { child } => child.compute(compute_arg),
+            NoiseFunction { child } => child.compute(compute_arg.reborrow()),
             SubDivide { child_a, child_b } => child_a
-                .compute(compute_arg)
-                .subdivide(child_b.compute(compute_arg)),
+                .compute(compute_arg.reborrow())
+                .subdivide(child_b.compute(compute_arg.reborrow())),
             SawtoothAdd { child_a, child_b } => child_a
-                .compute(compute_arg)
-                .sawtooth_add(child_b.compute(compute_arg)),
+                .compute(compute_arg.reborrow())
+                .sawtooth_add(child_b.compute(compute_arg.reborrow())),
             TriangleAdd { child_a, child_b } => child_a
-                .compute(compute_arg)
-                .triangle_add(child_b.compute(compute_arg)),
+                .compute(compute_arg.reborrow())
+                .triangle_add(child_b.compute(compute_arg.reborrow())),
             IfElse {
                 predicate,
                 child_a,
                 child_b,
             } => {
-                if predicate.compute(compute_arg).into_inner() {
-                    child_a.compute(compute_arg)
+                if predicate.compute(compute_arg.reborrow()).into_inner() {
+                    child_a.compute(compute_arg.reborrow())
                 } else {
-                    child_b.compute(compute_arg)
+                    child_b.compute(compute_arg.reborrow())
                 }
             }
         }
@@ -351,23 +348,23 @@ impl Node for UNFloatNodes {
         match self {
             // Random => UNFloat::generate(state),
             Constant { value } => *value,
-            FromAngle { child } => child.compute(compute_arg).to_unsigned(),
-            FromSNFloat { child } => child.compute(compute_arg).to_unsigned(),
-            AbsSNFloat { child } => UNFloat::new(child.compute(compute_arg).into_inner().abs()),
+            FromAngle { child } => child.compute(compute_arg.reborrow()).to_unsigned(),
+            FromSNFloat { child } => child.compute(compute_arg.reborrow()).to_unsigned(),
+            AbsSNFloat { child } => UNFloat::new(child.compute(compute_arg.reborrow()).into_inner().abs()),
             SquareSNFloat { child } => {
-                UNFloat::new(child.compute(compute_arg).into_inner().powf(2.0))
+                UNFloat::new(child.compute(compute_arg.reborrow()).into_inner().powf(2.0))
             }
             Multiply { child_a, child_b } => UNFloat::new(
-                child_a.compute(compute_arg).into_inner()
-                    * child_b.compute(compute_arg).into_inner(),
+                child_a.compute(compute_arg.reborrow()).into_inner()
+                    * child_b.compute(compute_arg.reborrow()).into_inner(),
             ),
             CircularAdd { child_a, child_b } => {
-                let value = child_a.compute(compute_arg).into_inner()
-                    + child_b.compute(compute_arg).into_inner();
+                let value = child_a.compute(compute_arg.reborrow()).into_inner()
+                    + child_b.compute(compute_arg.reborrow()).into_inner();
                 UNFloat::new(value - (value.floor()))
             }
             InvertNormalised { child } => {
-                UNFloat::new(1.0 - child.compute(compute_arg).into_inner())
+                UNFloat::new(1.0 - child.compute(compute_arg.reborrow()).into_inner())
             }
             ColorAverage {
                 child,
@@ -376,11 +373,11 @@ impl Node for UNFloatNodes {
                 child_b,
                 child_a,
             } => {
-                let color = child.compute(compute_arg);
-                let r = child_r.compute(compute_arg).into_inner();
-                let g = child_g.compute(compute_arg).into_inner();
-                let b = child_b.compute(compute_arg).into_inner();
-                let a = child_a.compute(compute_arg).into_inner();
+                let color = child.compute(compute_arg.reborrow());
+                let r = child_r.compute(compute_arg.reborrow()).into_inner();
+                let g = child_g.compute(compute_arg.reborrow()).into_inner();
+                let b = child_b.compute(compute_arg.reborrow()).into_inner();
+                let a = child_a.compute(compute_arg.reborrow()).into_inner();
 
                 let mut components_total = 0;
                 let mut value_total = 0.0;
@@ -407,7 +404,7 @@ impl Node for UNFloatNodes {
                     UNFloat::new(value_total / components_total as f32)
                 }
             }
-            ColorComponentH { child } => child.compute(compute_arg).get_hue_unfloat(),
+            ColorComponentH { child } => child.compute(compute_arg.reborrow()).get_hue_unfloat(),
             FromGametic => compute_arg.coordinate_set.get_unfloat_t(),
             FromGameticTriangle => UNFloat::new_triangle(compute_arg.coordinate_set.t * 0.1),
             EscapeTimeSystem {
@@ -419,15 +416,15 @@ impl Node for UNFloatNodes {
                 child_exponentiate,
             } => {
                 let power = f64::from(
-                    (1 + child_power.compute(compute_arg).into_inner()) as f32
+                    (1 + child_power.compute(compute_arg.reborrow()).into_inner()) as f32
                         * UNFloat::new_triangle(
-                            child_power_ratio.compute(compute_arg).into_inner() * 2.0,
+                            child_power_ratio.compute(compute_arg.reborrow()).into_inner() * 2.0,
                         )
                         .into_inner(),
                 );
-                let offset = child_offset.compute(compute_arg).into_inner();
-                let scale = child_scale.compute(compute_arg).into_inner();
-                let iterations = 1 + child_iterations.compute(compute_arg).into_inner() / 8;
+                let offset = child_offset.compute(compute_arg.reborrow()).into_inner();
+                let scale = child_scale.compute(compute_arg.reborrow()).into_inner();
+                let iterations = 1 + child_iterations.compute(compute_arg.reborrow()).into_inner() / 8;
 
                 // x and y are swapped intentionally
                 let c = Complex::new(
@@ -437,7 +434,7 @@ impl Node for UNFloatNodes {
 
                 let z_offset =
                     // Complex::new(0.0, 0.0);
-                    if child_exponentiate.compute(compute_arg).into_inner()
+                    if child_exponentiate.compute(compute_arg.reborrow()).into_inner()
                     {
                         Complex::new(
                             f64::from(2.0 * scale.y) *
@@ -464,36 +461,36 @@ impl Node for UNFloatNodes {
                 UNFloat::new(((escape as f32 / iterations as f32) * 4.0).fract())
             }
             SubDivideSawtooth { child_a, child_b } => child_a
-                .compute(compute_arg)
-                .subdivide_sawtooth(child_b.compute(compute_arg)),
+                .compute(compute_arg.reborrow())
+                .subdivide_sawtooth(child_b.compute(compute_arg.reborrow())),
             SubDivideTriangle { child_a, child_b } => child_a
-                .compute(compute_arg)
-                .subdivide_triangle(child_b.compute(compute_arg)),
-            Distance { child_function } => child_function.compute(compute_arg),
+                .compute(compute_arg.reborrow())
+                .subdivide_triangle(child_b.compute(compute_arg.reborrow())),
+            Distance { child_function } => child_function.compute(compute_arg.reborrow()),
             Average { child_a, child_b } => UNFloat::new(
-                (child_a.compute(compute_arg).into_inner()
-                    + child_b.compute(compute_arg).into_inner())
+                (child_a.compute(compute_arg.reborrow()).into_inner()
+                    + child_b.compute(compute_arg.reborrow()).into_inner())
                     / 2.0,
             ),
-            ModifyState { child, child_state } => child.compute(&UpdateState {
-                coordinate_set: child_state.compute(compute_arg),
-                ..*compute_arg
+            ModifyState { child, child_state } => child.compute(ComArg {
+                coordinate_set: child_state.compute(compute_arg.reborrow()),
+                ..compute_arg.reborrow()
             }),
             SawtoothAdd { child_a, child_b } => child_a
-                .compute(compute_arg)
-                .sawtooth_add(child_b.compute(compute_arg)),
+                .compute(compute_arg.reborrow())
+                .sawtooth_add(child_b.compute(compute_arg.reborrow())),
             TriangleAdd { child_a, child_b } => child_a
-                .compute(compute_arg)
-                .triangle_add(child_b.compute(compute_arg)),
+                .compute(compute_arg.reborrow())
+                .triangle_add(child_b.compute(compute_arg.reborrow())),
             IfElse {
                 predicate,
                 child_a,
                 child_b,
             } => {
-                if predicate.compute(compute_arg).into_inner() {
-                    child_a.compute(compute_arg)
+                if predicate.compute(compute_arg.reborrow()).into_inner() {
+                    child_a.compute(compute_arg.reborrow())
                 } else {
-                    child_b.compute(compute_arg)
+                    child_b.compute(compute_arg.reborrow())
                 }
             }
         }

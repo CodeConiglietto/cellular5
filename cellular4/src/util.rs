@@ -1,10 +1,4 @@
-use ggez::{
-    conf::{FullscreenType, WindowMode, WindowSetup},
-    event::{self, EventHandler, KeyCode, KeyMods},
-    graphics::{self, Color as GgColor, DrawParam, Image as GgImage, Rect, WHITE},
-    input::keyboard,
-    timer, Context, ContextBuilder, GameResult,
-};
+use ggez::{graphics::Image as GgImage, Context};
 
 use std::{
     path::{Path, PathBuf},

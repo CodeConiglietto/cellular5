@@ -1,4 +1,4 @@
-use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
+use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively, Reborrow};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -28,7 +28,7 @@ impl Node for DistanceFunctionNodes {
                 value,
                 child_a,
                 child_b,
-            } => value.calculate(child_a.compute(compute_arg), child_b.compute(compute_arg)),
+            } => value.calculate(child_a.compute(compute_arg.reborrow()), child_b.compute(compute_arg.reborrow())),
         }
     }
 }

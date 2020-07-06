@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
+use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
 use nalgebra::*;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -54,6 +54,8 @@ impl<'a> Updatable<'a> for PointSetNodes {
     type UpdateArg = UpdArg<'a>;
 
     fn update(&mut self, _state: mutagen::State, arg: UpdArg<'a>) {
+        let com_arg: ComArg = arg.reborrow().into();
+
         match self {
             PointSetNodes::Translating {
                 ref mut value,
@@ -67,7 +69,7 @@ impl<'a> Updatable<'a> for PointSetNodes {
                             .map(|p| {
                                 p.sawtooth_add(
                                     child
-                                        .compute(&arg.replace_coords(p))
+                                        .compute(com_arg.reborrow().replace_coords(p))
                                         .scale_unfloat(UNFloat::new(0.05)),
                                 )
                             })
@@ -90,7 +92,7 @@ impl<'a> Updatable<'a> for PointSetNodes {
                                     p.subtract_normalised(value.get_random_point())
                                         .scale_unfloat(
                                             child
-                                                .compute(&arg.replace_coords(p))
+                                                .compute(com_arg.reborrow().replace_coords(p))
                                                 .multiply(UNFloat::new(0.25)),
                                         ),
                                 )
@@ -105,8 +107,8 @@ impl<'a> Updatable<'a> for PointSetNodes {
                 child_radius,
                 child_edges,
             } => {
-                let edges = child_edges.compute(arg).into_inner() + 2;
-                let radius = child_radius.compute(arg).into_inner();
+                let edges = child_edges.compute(arg.reborrow().into()).into_inner() + 2;
+                let radius = child_radius.compute(arg.reborrow().into()).into_inner();
                 let mut edge_vec = Vec::new();
 
                 for i in 0..=edges {

@@ -1,4 +1,4 @@
-use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
+use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively, Reborrow};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -45,21 +45,21 @@ impl Node for SNFloatMatrix3Nodes {
         match self {
             Identity => SNFloatMatrix3::identity(),
             Translation { child_a, child_b } => SNFloatMatrix3::new_translation(
-                child_a.compute(compute_arg),
-                child_b.compute(compute_arg),
+                child_a.compute(compute_arg.reborrow()),
+                child_b.compute(compute_arg.reborrow()),
             ),
-            Rotation { child } => SNFloatMatrix3::new_rotation(child.compute(compute_arg)),
+            Rotation { child } => SNFloatMatrix3::new_rotation(child.compute(compute_arg.reborrow())),
             Scaling { child_a, child_b } => SNFloatMatrix3::new_scaling(
-                child_a.compute(compute_arg),
-                child_b.compute(compute_arg),
+                child_a.compute(compute_arg.reborrow()),
+                child_b.compute(compute_arg.reborrow()),
             ),
             Shear { child_a, child_b } => SNFloatMatrix3::new_shear(
-                child_a.compute(compute_arg),
-                child_b.compute(compute_arg),
+                child_a.compute(compute_arg.reborrow()),
+                child_b.compute(compute_arg.reborrow()),
             ),
             Multiply { child_a, child_b } => child_a
-                .compute(compute_arg)
-                .multiply(child_b.compute(compute_arg)),
+                .compute(compute_arg.reborrow())
+                .multiply(child_b.compute(compute_arg.reborrow())),
         }
     }
 }

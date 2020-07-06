@@ -49,6 +49,7 @@
         "parametrise",
         "permutationtable",
         "powf",
+        "reborrow",
         "reqwest",
         "reseeder",
         "reseeders",

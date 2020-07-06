@@ -1,4 +1,4 @@
-use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
+use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively, Reborrow};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -31,13 +31,13 @@ impl Node for NoiseNodes {
                 scale_t_child,
             } => SNFloat::new_clamped(noise_function.compute(
                 compute_arg.coordinate_set.x.into_inner() as f64
-                    * scale_x_child.compute(compute_arg).into_inner().powf(2.0) as f64
+                    * scale_x_child.compute(compute_arg.reborrow()).into_inner().powf(2.0) as f64
                     * CONSTS.noise_x_scale_factor,
                 compute_arg.coordinate_set.y.into_inner() as f64
-                    * scale_y_child.compute(compute_arg).into_inner().powf(2.0) as f64
+                    * scale_y_child.compute(compute_arg.reborrow()).into_inner().powf(2.0) as f64
                     * CONSTS.noise_y_scale_factor,
                 compute_arg.coordinate_set.t as f64
-                    * scale_t_child.compute(compute_arg).into_inner() as f64
+                    * scale_t_child.compute(compute_arg.reborrow()).into_inner() as f64
                     * CONSTS.noise_t_scale_factor,
             ) as f32),
         }

@@ -8,7 +8,7 @@ use ggez::{
     timer, Context, ContextBuilder, GameResult,
 };
 use log::{error, info};
-use mutagen::{Generatable, Reborrow};
+use mutagen::{Mutatable, Generatable, Reborrow};
 use ndarray::{s, ArrayViewMut1, Axis};
 use rand::prelude::*;
 use rayon::prelude::*;
@@ -529,6 +529,7 @@ impl EventHandler for MyGame {
                             >= CONSTS.global_similarity_upper_bound))
             {
                 info!("====TIC: {} MUTATING TREE====", self.current_t);
+                self.root_node.mutate_rng(&mut self.rng, mutagen::State::default(), MutArg{nodes: &mut self.nodes, data: &mut self.data});
                 // self.node_tree.root_node.mutate_rng(
                 //     &mut self.rng,
                 //     mutagen::State::default(),
@@ -745,29 +746,29 @@ impl EventHandler for MyGame {
                     ctx,
                     &history_step.computed_texture,
                     base_params
-                        .color(GgColor::new(
-                            1.0,
-                            1.0,
-                            1.0,
-                            ((1.0 - ((alpha * 2.0) - 1.0).abs())
-                                / CONSTS.cell_array_lerp_length as f32)
-                                * lerp(1.0, history_step.alpha.into_inner(), root_scalar),
-                        ))
-                        .dest([
-                            ((CONSTS.initial_window_width * 0.5)
-                                + dest_offset_x * scale_x * translation_scalar * root_scalar),
-                            ((CONSTS.initial_window_height * 0.5)
-                                + dest_offset_y * scale_y * translation_scalar * root_scalar),
-                        ])
-                        .offset([
-                            0.5 + offset_offset_x * scale_x * offset_scalar * root_scalar,
-                            0.5 + offset_offset_y * scale_y * offset_scalar * root_scalar,
-                        ])
-                        .scale([
-                            lerp(1.0, 1.0 + scale_x, root_scalar) * x_scale_ratio,
-                            lerp(1.0, 1.0 + scale_y, root_scalar) * y_scale_ratio,
-                        ])
-                        .rotation(rotation * rotation_scalar * root_scalar),
+                        // .color(GgColor::new(
+                        //     1.0,
+                        //     1.0,
+                        //     1.0,
+                        //     ((1.0 - ((alpha * 2.0) - 1.0).abs())
+                        //         / CONSTS.cell_array_lerp_length as f32)
+                        //         * lerp(1.0, history_step.alpha.into_inner(), root_scalar),
+                        // ))
+                        // .dest([
+                        //     ((CONSTS.initial_window_width * 0.5)
+                        //         + dest_offset_x * scale_x * translation_scalar * root_scalar),
+                        //     ((CONSTS.initial_window_height * 0.5)
+                        //         + dest_offset_y * scale_y * translation_scalar * root_scalar),
+                        // ])
+                        // .offset([
+                        //     0.5 + offset_offset_x * scale_x * offset_scalar * root_scalar,
+                        //     0.5 + offset_offset_y * scale_y * offset_scalar * root_scalar,
+                        // ])
+                        // .scale([
+                        //     lerp(1.0, 1.0 + scale_x, root_scalar) * x_scale_ratio,
+                        //     lerp(1.0, 1.0 + scale_y, root_scalar) * y_scale_ratio,
+                        // ])
+                        // .rotation(rotation * rotation_scalar * root_scalar),
                 )?;
 
                 // alphas.push(alpha);

@@ -746,14 +746,14 @@ impl EventHandler for MyGame {
                     ctx,
                     &history_step.computed_texture,
                     base_params
-                        // .color(GgColor::new(
-                        //     1.0,
-                        //     1.0,
-                        //     1.0,
-                        //     ((1.0 - ((alpha * 2.0) - 1.0).abs())
-                        //         / CONSTS.cell_array_lerp_length as f32)
-                        //         * lerp(1.0, history_step.alpha.into_inner(), root_scalar),
-                        // ))
+                        .color(GgColor::new(
+                            1.0,
+                            1.0,
+                            1.0,
+                            ((1.0 - ((alpha * 2.0) - 1.0).abs())
+                                / CONSTS.cell_array_lerp_length as f32)
+                                // * lerp(1.0, history_step.alpha.into_inner(), root_scalar),
+                        ))
                         // .dest([
                         //     ((CONSTS.initial_window_width * 0.5)
                         //         + dest_offset_x * scale_x * translation_scalar * root_scalar),

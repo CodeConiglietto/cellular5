@@ -1,10 +1,11 @@
 use rand::prelude::*;
 use std::marker::PhantomData;
 
-use crate::{mutagen_args::*, node::*, node_set::*};
+use crate::{constants::*, mutagen_args::*, node::*, node_set::*};
 
 use generational_arena::*;
 use mutagen::*;
+use rand::seq::IteratorRandom;
 
 pub trait Storage<T> {
     fn arena(&self) -> &Arena<T>;
@@ -43,19 +44,34 @@ where
     ) -> Self {
         let (current, children) = arg.nodes.split_at_mut(1);
         let current = &mut current[0];
+        let data = arg.data;
 
-        let t = T::generate_rng(
-            rng,
-            state,
-            GenArg {
-                nodes: children,
-                data: arg.data,
-            },
-        );
+        let (depth, index) = if rng.gen_bool(CONSTS.graph_convergence) {
+            children
+                .iter()
+                .enumerate()
+                .flat_map(|(d, c)| c.arena().iter().map(move |(idx, _)| (state.depth + d, idx)))
+                .choose(rng)
+        } else {
+            None
+        }
+        .unwrap_or_else(move || {
+            (
+                state.depth,
+                current.arena_mut().insert(T::generate_rng(
+                    rng,
+                    state,
+                    GenArg {
+                        nodes: children,
+                        data,
+                    },
+                )),
+            )
+        });
 
         Self {
-            index: current.arena_mut().insert(t),
-            depth: state.depth,
+            index,
+            depth,
             _marker: PhantomData,
         }
     }
@@ -64,26 +80,32 @@ where
 impl<'a, T> Mutatable<'a> for NodeBox<T>
 where
     NodeSet: Storage<T>,
-    T: Mutatable<'a, MutArg = MutArg<'a>>,
+    T: Mutatable<'a, MutArg = MutArg<'a>> + Generatable<'a, GenArg = GenArg<'a>>,
 {
     type MutArg = MutArg<'a>;
 
     fn mutate_rng<R: Rng + ?Sized>(
         &mut self,
         rng: &mut R,
-        state: mutagen::State,
+        mut state: mutagen::State,
         arg: Self::MutArg,
     ) {
-        let (current, children) = arg.nodes.split_at_mut(1);
-        let current = &mut current[0];
+        state.depth = self.depth;
 
-        current.arena_mut()[self.index].mutate_rng(
-            rng,
-            state,
-            MutArg {
-                nodes: children,
-                data: arg.data,
-            },
-        );
+        if rng.gen_bool(CONSTS.node_regenerate_chance) {
+            *self = Self::generate_rng(rng, state, arg.into());
+        } else {
+            let (current, children) = arg.nodes.split_at_mut(1);
+            let current = &mut current[0];
+
+            current.arena_mut()[self.index].mutate_rng(
+                rng,
+                state,
+                MutArg {
+                    nodes: children,
+                    data: arg.data,
+                },
+            );
+        }
     }
 }

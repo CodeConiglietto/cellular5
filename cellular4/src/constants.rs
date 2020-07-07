@@ -62,7 +62,8 @@ pub struct Constants {
 
     pub parallelize: bool,
 
-    pub graph_convergence: f32,
+    pub graph_convergence: f64,
+    pub node_regenerate_chance: f64,
 
     pub min_leaf_depth: usize,
     pub max_leaf_depth: usize,

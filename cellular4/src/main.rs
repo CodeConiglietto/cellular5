@@ -264,7 +264,12 @@ impl MyGame {
             CONSTS.cell_array_history_length,
         );
 
-        let mut nodes = Vec::new();
+        let mut nodes: Vec<_> = (0..CONSTS
+            .max_branch_depth
+            .max(CONSTS.max_pipe_depth.max(CONSTS.max_leaf_depth))
+            + 1)
+            .map(|_| NodeSet::new())
+            .collect();
         let mut data = DataSet::new();
 
         MyGame {

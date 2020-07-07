@@ -38,6 +38,39 @@ pub struct NodeSet {
     point_set_nodes: Arena<PointSetNodes>,
 }
 
+impl NodeSet {
+    pub fn new() -> NodeSet {
+        NodeSet {
+            //color_blend
+            color_blend_nodes: Arena::new(),
+            //color
+            bit_color_nodes: Arena::new(),
+            byte_color_nodes: Arena::new(),
+            float_color_nodes: Arena::new(),
+            //continuous
+            angle_nodes: Arena::new(),
+            unfloat_nodes: Arena::new(),
+            snfloat_nodes: Arena::new(),
+            //coord_map
+            coord_map_nodes: Arena::new(),
+            //discrete
+            boolean_nodes: Arena::new(),
+            nibble_nodes: Arena::new(),
+            byte_nodes: Arena::new(),
+            //distance_function
+            distance_function_nodes: Arena::new(),
+            //matrix
+            snfloat_matrix3_nodes: Arena::new(),
+            //noise
+            noise_nodes: Arena::new(),
+            //point
+            snpoint_nodes: Arena::new(),
+            //point_set
+            point_set_nodes: Arena::new(),
+        }
+    }
+}
+
 impl Storage<ColorBlendNodes> for NodeSet {
     fn arena(&self) -> &Arena<ColorBlendNodes> {
         &self.color_blend_nodes

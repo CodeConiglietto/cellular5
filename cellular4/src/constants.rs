@@ -31,6 +31,8 @@ pub struct Constants {
 
     pub lerp_aggressiveness: f32,
 
+    pub time_scale_divisor: f32,
+
     pub noise_x_scale_factor: f64,
     pub noise_y_scale_factor: f64,
     pub noise_t_scale_factor: f64,

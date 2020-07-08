@@ -434,7 +434,7 @@ impl EventHandler for MyGame {
                             (y + slice_y as usize) as f32 / CONSTS.cell_array_height as f32,
                         )
                         .to_signed(),
-                        t: current_t as f32,
+                        t: current_t as f32 / CONSTS.time_scale_divisor,
                     },
                     history,
                 }),

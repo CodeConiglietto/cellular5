@@ -8,7 +8,7 @@ use ggez::{
     timer, Context, ContextBuilder, GameResult,
 };
 use log::{error, info};
-use mutagen::{Mutatable, Generatable, Reborrow};
+use mutagen::{Generatable, Mutatable, Reborrow};
 use ndarray::{s, ArrayViewMut1, Axis};
 use rand::prelude::*;
 use rayon::prelude::*;
@@ -27,7 +27,7 @@ use crate::{
     },
     history::*,
     mutagen_args::*,
-    node::{color_nodes::*, continuous_nodes::*, coord_map_nodes::*, point_nodes::*,  Node},
+    node::{color_nodes::*, continuous_nodes::*, coord_map_nodes::*, point_nodes::*, Node},
     node_set::*,
     opts::Opts,
     update_stat::UpdateStat,
@@ -318,6 +318,7 @@ impl MyGame {
                 GenArg {
                     nodes: &mut nodes,
                     data: &mut data,
+                    depth: 0,
                 },
             ),
 
@@ -327,6 +328,7 @@ impl MyGame {
                 GenArg {
                     nodes: &mut nodes,
                     data: &mut data,
+                    depth: 0,
                 },
             ),
 
@@ -448,6 +450,7 @@ impl EventHandler for MyGame {
                         t: current_t as f32 / CONSTS.time_scale_divisor,
                     },
                     history,
+                    depth: 0,
                 }),
             );
 
@@ -540,7 +543,15 @@ impl EventHandler for MyGame {
                             >= CONSTS.global_similarity_upper_bound))
             {
                 info!("====TIC: {} MUTATING TREE====", self.current_t);
-                self.root_node.mutate_rng(&mut self.rng, mutagen::State::default(), MutArg{nodes: &mut self.nodes, data: &mut self.data});
+                self.root_node.mutate_rng(
+                    &mut self.rng,
+                    mutagen::State::default(),
+                    MutArg {
+                        nodes: &mut self.nodes,
+                        data: &mut self.data,
+                        depth: 0,
+                    },
+                );
                 // self.node_tree.root_node.mutate_rng(
                 //     &mut self.rng,
                 //     mutagen::State::default(),
@@ -567,11 +578,12 @@ impl EventHandler for MyGame {
             //     history: &self.history,
             // };
 
-            let last_update_arg = UpdArg{
+            let last_update_arg = UpdArg {
                 coordinate_set: history_step.update_coordinate,
                 history: &self.history,
                 nodes: &self.nodes,
                 data: &mut self.data,
+                depth: 0,
             };
 
             self.next_history_step.update_coordinate = self
@@ -579,12 +591,13 @@ impl EventHandler for MyGame {
                 .compute_offset_node
                 .compute(last_update_arg.into());
 
-            let mut step_com_arg: ComArg = UpdArg {
+            let mut step_com_arg = ComArg {
                 coordinate_set: self.next_history_step.update_coordinate,
                 history: &self.history,
                 nodes: &self.nodes,
                 data: &mut self.data,
-            }.into();
+                depth: 0,
+            };
 
             self.next_history_step.rotation = self
                 .render_nodes
@@ -758,7 +771,7 @@ impl EventHandler for MyGame {
                             1.0,
                             ((1.0 - ((alpha * 2.0) - 1.0).abs())
                                 / CONSTS.cell_array_lerp_length as f32)
-                                 * lerp(1.0, history_step.alpha.into_inner(), root_scalar),
+                                * lerp(1.0, history_step.alpha.into_inner(), root_scalar),
                         ))
                         .dest([
                             ((CONSTS.initial_window_width * 0.5)

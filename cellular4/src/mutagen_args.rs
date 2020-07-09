@@ -6,6 +6,7 @@ use crate::{coordinate_set::*, data_set::*, datatype::points::*, history::*, nod
 pub struct GenArg<'a> {
     pub nodes: &'a mut [NodeSet],
     pub data: &'a mut DataSet,
+    pub depth: usize,
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, GenArg<'a>> for GenArg<'b> {
@@ -13,6 +14,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, GenArg<'a>> for GenArg<'b> {
         GenArg {
             nodes: &mut self.nodes,
             data: &mut self.data,
+            depth: self.depth,
         }
     }
 }
@@ -21,6 +23,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, GenArg<'a>> for GenArg<'b> {
 pub struct MutArg<'a> {
     pub nodes: &'a mut [NodeSet],
     pub data: &'a mut DataSet,
+    pub depth: usize,
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, MutArg<'a>> for MutArg<'b> {
@@ -28,6 +31,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, MutArg<'a>> for MutArg<'b> {
         MutArg {
             nodes: &mut self.nodes,
             data: &mut self.data,
+            depth: self.depth,
         }
     }
 }
@@ -37,6 +41,7 @@ impl<'a> From<MutArg<'a>> for GenArg<'a> {
         Self {
             nodes: arg.nodes,
             data: arg.data,
+            depth: arg.depth,
         }
     }
 }
@@ -47,6 +52,7 @@ pub struct ComArg<'a> {
     pub data: &'a DataSet,
     pub coordinate_set: CoordinateSet,
     pub history: &'a History,
+    pub depth: usize,
 }
 
 impl<'a> ComArg<'a> {
@@ -67,6 +73,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, ComArg<'a>> for ComArg<'b> {
             data: &self.data,
             coordinate_set: self.coordinate_set.clone(),
             history: &self.history,
+            depth: self.depth,
         }
     }
 }
@@ -77,6 +84,7 @@ pub struct UpdArg<'a> {
     pub data: &'a mut DataSet,
     pub coordinate_set: CoordinateSet,
     pub history: &'a History,
+    pub depth: usize,
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, UpdArg<'a>> for UpdArg<'b> {
@@ -86,6 +94,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, UpdArg<'a>> for UpdArg<'b> {
             data: &mut self.data,
             coordinate_set: self.coordinate_set.clone(),
             history: &self.history,
+            depth: self.depth,
         }
     }
 }
@@ -97,6 +106,7 @@ impl<'a> From<UpdArg<'a>> for ComArg<'a> {
             data: arg.data,
             coordinate_set: arg.coordinate_set,
             history: arg.history,
+            depth: arg.depth,
         }
     }
 }

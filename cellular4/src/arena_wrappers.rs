@@ -45,25 +45,27 @@ where
         let (current, children) = arg.nodes.split_at_mut(1);
         let current = &mut current[0];
         let data = arg.data;
+        let depth = arg.depth;
 
         let (depth, index) = if rng.gen_bool(CONSTS.graph_convergence) {
             children
                 .iter()
                 .enumerate()
-                .flat_map(|(d, c)| c.arena().iter().map(move |(idx, _)| (state.depth + d, idx)))
+                .flat_map(|(d, c)| c.arena().iter().map(move |(idx, _)| (depth + d, idx)))
                 .choose(rng)
         } else {
             None
         }
         .unwrap_or_else(move || {
             (
-                state.depth,
+                depth,
                 current.arena_mut().insert(T::generate_rng(
                     rng,
                     state,
                     GenArg {
                         nodes: children,
                         data,
+                        depth: depth + 1,
                     },
                 )),
             )
@@ -87,11 +89,9 @@ where
     fn mutate_rng<R: Rng + ?Sized>(
         &mut self,
         rng: &mut R,
-        mut state: mutagen::State,
+        state: mutagen::State,
         arg: Self::MutArg,
     ) {
-        state.depth = self.depth;
-
         if rng.gen_bool(CONSTS.node_regenerate_chance) {
             *self = Self::generate_rng(rng, state, arg.into());
         } else {
@@ -104,6 +104,7 @@ where
                 MutArg {
                     nodes: children,
                     data: arg.data,
+                    depth: arg.depth + 1,
                 },
             );
         }

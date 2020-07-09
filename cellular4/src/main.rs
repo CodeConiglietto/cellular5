@@ -557,11 +557,15 @@ impl EventHandler for MyGame {
                 //     mutagen::State::default(),
                 //     update_state,
                 // );
-                // self.node_tree.render_nodes.mutate_rng(
-                //     &mut self.rng,
-                //     mutagen::State::default(),
-                //     update_state,
-                // );
+                self.render_nodes.mutate_rng(
+                    &mut self.rng,
+                    mutagen::State::default(),
+                    MutArg {
+                        nodes: &mut self.nodes,
+                        data: &mut self.data,
+                        depth: 0,
+                    },
+                );
                 // // info!("{:#?}", &self.root_node);
                 // if self.record_tree {
                 //     self.node_tree.save("latest");

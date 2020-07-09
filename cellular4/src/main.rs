@@ -27,7 +27,7 @@ use crate::{
     },
     history::*,
     mutagen_args::*,
-    node::{color_nodes::*, Node},
+    node::{color_nodes::*, continuous_nodes::*, coord_map_nodes::*, point_nodes::*,  Node},
     node_set::*,
     opts::Opts,
     update_stat::UpdateStat,
@@ -107,25 +107,26 @@ fn setup_logging() {
         .unwrap();
 }
 
-// #[derive(Serialize, Deserialize, Generatable, Mutatable, UpdatableRecursively, Debug)]
-// struct RenderNodes {
-//     compute_offset_node: Box<CoordMapNodes>,
+#[derive(Generatable, Mutatable)]
+#[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
+struct RenderNodes {
+    compute_offset_node: NodeBox<CoordMapNodes>,
 
-//     root_rotation_node: Box<SNFloatNodes>,
-//     root_translation_node: Box<SNPointNodes>,
-//     root_offset_node: Box<SNPointNodes>,
-//     root_from_scale_node: Box<SNPointNodes>,
-//     root_to_scale_node: Box<SNPointNodes>,
+    root_rotation_node: NodeBox<SNFloatNodes>,
+    root_translation_node: NodeBox<SNPointNodes>,
+    root_offset_node: NodeBox<SNPointNodes>,
+    root_from_scale_node: NodeBox<SNPointNodes>,
+    root_to_scale_node: NodeBox<SNPointNodes>,
 
-//     root_scalar_node: Box<UNFloatNodes>,
-//     root_alpha_node: Box<UNFloatNodes>,
+    root_scalar_node: NodeBox<UNFloatNodes>,
+    root_alpha_node: NodeBox<UNFloatNodes>,
 
-//     rotation_scalar_node: Box<UNFloatNodes>,
-//     translation_scalar_node: Box<UNFloatNodes>,
-//     offset_scalar_node: Box<UNFloatNodes>,
-//     from_scale_scalar_node: Box<UNFloatNodes>,
-//     to_scale_scalar_node: Box<UNFloatNodes>,
-// }
+    rotation_scalar_node: NodeBox<UNFloatNodes>,
+    translation_scalar_node: NodeBox<UNFloatNodes>,
+    offset_scalar_node: NodeBox<UNFloatNodes>,
+    from_scale_scalar_node: NodeBox<UNFloatNodes>,
+    to_scale_scalar_node: NodeBox<UNFloatNodes>,
+}
 
 // impl<'a> Mutagen<'a> for RenderNodes {
 //     type Arg = UpdateState<'a>;
@@ -234,6 +235,7 @@ struct MyGame {
     data: DataSet,
 
     root_node: NodeBox<FloatColorNodes>,
+    render_nodes: RenderNodes,
 
     record_tree: bool,
     tree_dirty: bool,
@@ -311,6 +313,15 @@ impl MyGame {
             },
 
             root_node: NodeBox::generate_rng(
+                &mut rng,
+                mutagen::State::default(),
+                GenArg {
+                    nodes: &mut nodes,
+                    data: &mut data,
+                },
+            ),
+
+            render_nodes: RenderNodes::generate_rng(
                 &mut rng,
                 mutagen::State::default(),
                 GenArg {
@@ -556,91 +567,86 @@ impl EventHandler for MyGame {
             //     history: &self.history,
             // };
 
-            // self.next_history_step.update_coordinate = self
-            //     .node_tree
-            //     .render_nodes
-            //     .compute_offset_node
-            //     .compute(last_update_state);
+            let last_update_arg = UpdArg{
+                coordinate_set: history_step.update_coordinate,
+                history: &self.history,
+                nodes: &self.nodes,
+                data: &mut self.data,
+            };
 
-            // let step_update_state = UpdateState {
-            //     coordinate_set: self.next_history_step.update_coordinate,
-            //     history: &self.history,
-            // };
+            self.next_history_step.update_coordinate = self
+                .render_nodes
+                .compute_offset_node
+                .compute(last_update_arg.into());
 
-            // self.next_history_step.rotation = self
-            //     .node_tree
-            //     .render_nodes
-            //     .root_rotation_node
-            //     .compute(step_update_state)
-            //     .into_inner();
-            // self.next_history_step.translation = self
-            //     .node_tree
-            //     .render_nodes
-            //     .root_translation_node
-            //     .compute(step_update_state);
-            // self.next_history_step.offset = self
-            //     .node_tree
-            //     .render_nodes
-            //     .root_offset_node
-            //     .compute(step_update_state);
-            // self.next_history_step.from_scale = self
-            //     .node_tree
-            //     .render_nodes
-            //     .root_from_scale_node
-            //     .compute(step_update_state);
-            // self.next_history_step.to_scale = self
-            //     .node_tree
-            //     .render_nodes
-            //     .root_to_scale_node
-            //     .compute(step_update_state);
+            let mut step_com_arg: ComArg = UpdArg {
+                coordinate_set: self.next_history_step.update_coordinate,
+                history: &self.history,
+                nodes: &self.nodes,
+                data: &mut self.data,
+            }.into();
 
-            // self.next_history_step.root_scalar = self
-            //     .node_tree
-            //     .render_nodes
-            //     .root_scalar_node
-            //     .compute(step_update_state);
+            self.next_history_step.rotation = self
+                .render_nodes
+                .root_rotation_node
+                .compute(step_com_arg.reborrow())
+                .into_inner();
+            self.next_history_step.translation = self
+                .render_nodes
+                .root_translation_node
+                .compute(step_com_arg.reborrow());
+            self.next_history_step.offset = self
+                .render_nodes
+                .root_offset_node
+                .compute(step_com_arg.reborrow());
+            self.next_history_step.from_scale = self
+                .render_nodes
+                .root_from_scale_node
+                .compute(step_com_arg.reborrow());
+            self.next_history_step.to_scale = self
+                .render_nodes
+                .root_to_scale_node
+                .compute(step_com_arg.reborrow());
 
-            // self.next_history_step.alpha = self
-            //     .node_tree
-            //     .render_nodes
-            //     .root_alpha_node
-            //     .compute(step_update_state);
+            self.next_history_step.root_scalar = self
+                .render_nodes
+                .root_scalar_node
+                .compute(step_com_arg.reborrow());
 
-            // self.next_history_step.rotation_scalar = self
-            //     .node_tree
-            //     .render_nodes
-            //     .rotation_scalar_node
-            //     .compute(step_update_state);
+            self.next_history_step.alpha = self
+                .render_nodes
+                .root_alpha_node
+                .compute(step_com_arg.reborrow());
 
-            // self.next_history_step.translation_scalar = self
-            //     .node_tree
-            //     .render_nodes
-            //     .translation_scalar_node
-            //     .compute(step_update_state);
+            self.next_history_step.rotation_scalar = self
+                .render_nodes
+                .rotation_scalar_node
+                .compute(step_com_arg.reborrow());
 
-            // self.next_history_step.offset_scalar = self
-            //     .node_tree
-            //     .render_nodes
-            //     .offset_scalar_node
-            //     .compute(step_update_state);
+            self.next_history_step.translation_scalar = self
+                .render_nodes
+                .translation_scalar_node
+                .compute(step_com_arg.reborrow());
 
-            // self.next_history_step.to_scale_scalar = self
-            //     .node_tree
-            //     .render_nodes
-            //     .to_scale_scalar_node
-            //     .compute(step_update_state);
+            self.next_history_step.offset_scalar = self
+                .render_nodes
+                .offset_scalar_node
+                .compute(step_com_arg.reborrow());
 
-            // self.next_history_step.from_scale_scalar = self
-            //     .node_tree
-            //     .render_nodes
-            //     .from_scale_scalar_node
-            //     .compute(step_update_state);
+            self.next_history_step.to_scale_scalar = self
+                .render_nodes
+                .to_scale_scalar_node
+                .compute(step_com_arg.reborrow());
 
-            // self.next_history_step.root_scalar = self
-            //     .node_tree
-            //     .render_nodes
-            //     .root_scalar_node
-            //     .compute(step_update_state);
+            self.next_history_step.from_scale_scalar = self
+                .render_nodes
+                .from_scale_scalar_node
+                .compute(step_com_arg.reborrow());
+
+            self.next_history_step.root_scalar = self
+                .render_nodes
+                .root_scalar_node
+                .compute(step_com_arg.reborrow());
 
             self.next_history_step.computed_texture =
                 compute_texture(ctx, self.next_history_step.cell_array.view());
@@ -752,23 +758,23 @@ impl EventHandler for MyGame {
                             1.0,
                             ((1.0 - ((alpha * 2.0) - 1.0).abs())
                                 / CONSTS.cell_array_lerp_length as f32)
-                                // * lerp(1.0, history_step.alpha.into_inner(), root_scalar),
+                                 * lerp(1.0, history_step.alpha.into_inner(), root_scalar),
                         ))
-                        // .dest([
-                        //     ((CONSTS.initial_window_width * 0.5)
-                        //         + dest_offset_x * scale_x * translation_scalar * root_scalar),
-                        //     ((CONSTS.initial_window_height * 0.5)
-                        //         + dest_offset_y * scale_y * translation_scalar * root_scalar),
-                        // ])
-                        // .offset([
-                        //     0.5 + offset_offset_x * scale_x * offset_scalar * root_scalar,
-                        //     0.5 + offset_offset_y * scale_y * offset_scalar * root_scalar,
-                        // ])
-                        // .scale([
-                        //     lerp(1.0, 1.0 + scale_x, root_scalar) * x_scale_ratio,
-                        //     lerp(1.0, 1.0 + scale_y, root_scalar) * y_scale_ratio,
-                        // ])
-                        // .rotation(rotation * rotation_scalar * root_scalar),
+                        .dest([
+                            ((CONSTS.initial_window_width * 0.5)
+                                + dest_offset_x * scale_x * translation_scalar * root_scalar),
+                            ((CONSTS.initial_window_height * 0.5)
+                                + dest_offset_y * scale_y * translation_scalar * root_scalar),
+                        ])
+                        .offset([
+                            0.5 + offset_offset_x * scale_x * offset_scalar * root_scalar,
+                            0.5 + offset_offset_y * scale_y * offset_scalar * root_scalar,
+                        ])
+                        .scale([
+                            lerp(1.0, 1.0 + scale_x, root_scalar) * x_scale_ratio,
+                            lerp(1.0, 1.0 + scale_y, root_scalar) * y_scale_ratio,
+                        ])
+                        .rotation(rotation * rotation_scalar * root_scalar),
                 )?;
 
                 // alphas.push(alpha);

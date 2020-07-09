@@ -581,24 +581,6 @@ impl EventHandler for MyGame {
                 .compute_offset_node
                 .compute(last_update_arg.into());
 
-            let max_node_depth = self.nodes.len();
-
-            for i in 0..max_node_depth {
-                let (nodes_a, children) = self.nodes.split_at_mut(i + 1);
-                let current = &mut nodes_a[i];
-
-                let mut step_upd_arg = UpdArg {
-                    coordinate_set: self.next_history_step.update_coordinate,
-                    history: &self.history,
-                    nodes: children,
-                    data: &mut self.data,
-                    depth: 0,
-                    current_t,
-                };
-
-                current.update_recursively(mutagen::State::default(), step_upd_arg.reborrow());
-            }
-
             let mut step_upd_arg = UpdArg {
                 coordinate_set: self.next_history_step.update_coordinate,
                 history: &self.history,
@@ -690,6 +672,24 @@ impl EventHandler for MyGame {
 
             self.node_tree
                 .update_recursively(mutagen::State::default(), step_upd_arg.reborrow());
+
+                let max_node_depth = self.nodes.len();
+
+            for i in 0..max_node_depth {
+                let (nodes_a, children) = self.nodes.split_at_mut(i + 1);
+                let current = &mut nodes_a[i];
+
+                let mut step_upd_arg = UpdArg {
+                    coordinate_set: self.next_history_step.update_coordinate,
+                    history: &self.history,
+                    nodes: children,
+                    data: &mut self.data,
+                    depth: 0,
+                    current_t,
+                };
+
+                current.update_recursively(mutagen::State::default(), step_upd_arg.reborrow());
+            }
 
             // Rotate the buffers by swapping
             let h_len = self.history.history_steps.len();

@@ -8,7 +8,7 @@ use ggez::{
     timer, Context, ContextBuilder, GameResult,
 };
 use log::{error, info};
-use mutagen::{Generatable, Mutatable, Reborrow};
+use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
 use ndarray::{s, ArrayViewMut1, Axis};
 use rand::prelude::*;
 use rayon::prelude::*;
@@ -107,7 +107,7 @@ fn setup_logging() {
         .unwrap();
 }
 
-#[derive(Generatable, Mutatable)]
+#[derive(Debug, Generatable, Mutatable, UpdatableRecursively)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 struct RenderNodes {
     compute_offset_node: NodeBox<CoordMapNodes>,
@@ -128,21 +128,20 @@ struct RenderNodes {
     to_scale_scalar_node: NodeBox<UNFloatNodes>,
 }
 
-// impl<'a> Mutagen<'a> for RenderNodes {
-//     type Arg = UpdateState<'a>;
-// }
+impl<'a> Updatable<'a> for RenderNodes {
+    type UpdateArg = UpdArg<'a>;
 
-// impl<'a> Updatable<'a> for RenderNodes {
-//     fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
-// }
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+}
 
-// #[derive(Serialize, Deserialize, Generatable, Mutatable, UpdatableRecursively, Debug)]
-// struct NodeTree {
-//     //The root node for the tree that computes the next screen state
-//     root_node: Box<FloatColorNodes>,
-//     //Nodes for computing parameters for the next draw param
-//     render_nodes: RenderNodes,
-// }
+#[derive(Debug, Generatable, Mutatable, UpdatableRecursively)]
+#[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
+struct NodeTree {
+    //The root node for the tree that computes the next screen state
+    root_node: NodeBox<FloatColorNodes>,
+    //Nodes for computing parameters for the next draw param
+    render_nodes: RenderNodes,
+}
 
 // impl NodeTree {
 //     fn try_save(&self, slot: &str) -> Fallible<()> {
@@ -204,20 +203,18 @@ struct RenderNodes {
 //     }
 // }
 
-fn save_slot_path(slot: &str) -> PathBuf {
-    std::env::current_dir()
-        .unwrap()
-        .join("saves")
-        .join(&format!("{}.yml", slot))
+//fn save_slot_path(slot: &str) -> PathBuf {
+//    std::env::current_dir()
+//        .unwrap()
+//        .join("saves")
+//        .join(&format!("{}.yml", slot))
+//}
+
+impl<'a> Updatable<'a> for NodeTree {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
-
-// impl<'a> Mutagen<'a> for NodeTree {
-//     type Arg = UpdateState<'a>;
-// }
-
-// impl<'a> Updatable<'a> for NodeTree {
-//     fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
-// }
 
 struct MyGame {
     //Screen bounds
@@ -234,8 +231,7 @@ struct MyGame {
     nodes: Vec<NodeSet>,
     data: DataSet,
 
-    root_node: NodeBox<FloatColorNodes>,
-    render_nodes: RenderNodes,
+    node_tree: NodeTree,
 
     record_tree: bool,
     tree_dirty: bool,
@@ -312,23 +308,14 @@ impl MyGame {
                 global_similarity_value: 0.0,
             },
 
-            root_node: NodeBox::generate_rng(
+            node_tree: Generatable::generate_rng(
                 &mut rng,
                 mutagen::State::default(),
                 GenArg {
                     nodes: &mut nodes,
                     data: &mut data,
                     depth: 0,
-                },
-            ),
-
-            render_nodes: RenderNodes::generate_rng(
-                &mut rng,
-                mutagen::State::default(),
-                GenArg {
-                    nodes: &mut nodes,
-                    data: &mut data,
-                    depth: 0,
+                    current_t: 0,
                 },
             ),
 
@@ -430,7 +417,7 @@ impl EventHandler for MyGame {
 
         //let rule_sets = self.rule_sets;
 
-        let root_node = &self.root_node;
+        let root_node = &self.node_tree.root_node;
         let nodes = &self.nodes;
         let data = &self.data;
 
@@ -543,29 +530,26 @@ impl EventHandler for MyGame {
                             >= CONSTS.global_similarity_upper_bound))
             {
                 info!("====TIC: {} MUTATING TREE====", self.current_t);
-                self.root_node.mutate_rng(
+                self.node_tree.root_node.mutate_rng(
                     &mut self.rng,
                     mutagen::State::default(),
                     MutArg {
                         nodes: &mut self.nodes,
                         data: &mut self.data,
                         depth: 0,
+                        current_t,
                     },
                 );
-                // self.node_tree.root_node.mutate_rng(
-                //     &mut self.rng,
-                //     mutagen::State::default(),
-                //     update_state,
-                // );
-                self.render_nodes.mutate_rng(
-                    &mut self.rng,
-                    mutagen::State::default(),
-                    MutArg {
-                        nodes: &mut self.nodes,
-                        data: &mut self.data,
-                        depth: 0,
-                    },
-                );
+                 self.node_tree.render_nodes.mutate_rng(
+                     &mut self.rng,
+                     mutagen::State::default(),
+                     MutArg {
+                         nodes: &mut self.nodes,
+                         data: &mut self.data,
+                         depth: 0,
+                         current_t,
+                     },
+                 );
                 // // info!("{:#?}", &self.root_node);
                 // if self.record_tree {
                 //     self.node_tree.save("latest");
@@ -585,82 +569,118 @@ impl EventHandler for MyGame {
             let last_update_arg = UpdArg {
                 coordinate_set: history_step.update_coordinate,
                 history: &self.history,
-                nodes: &self.nodes,
+                nodes: &mut self.nodes,
                 data: &mut self.data,
                 depth: 0,
+                current_t,
             };
 
             self.next_history_step.update_coordinate = self
+                .node_tree
                 .render_nodes
                 .compute_offset_node
                 .compute(last_update_arg.into());
 
-            let mut step_com_arg = ComArg {
+            let max_node_depth = self.nodes.len();
+
+            for i in 0..max_node_depth {
+                let (nodes_a, children) = self.nodes.split_at_mut(i + 1);
+                let current = &mut nodes_a[i];
+
+                let mut step_upd_arg = UpdArg {
+                    coordinate_set: self.next_history_step.update_coordinate,
+                    history: &self.history,
+                    nodes: children,
+                    data: &mut self.data,
+                    depth: 0,
+                    current_t,
+                };
+
+                current.update_recursively(mutagen::State::default(), step_upd_arg.reborrow());
+            }
+
+            let mut step_upd_arg = UpdArg {
                 coordinate_set: self.next_history_step.update_coordinate,
                 history: &self.history,
-                nodes: &self.nodes,
+                nodes: &mut self.nodes,
                 data: &mut self.data,
                 depth: 0,
+                current_t,
             };
 
+            let mut step_com_arg: ComArg = step_upd_arg.reborrow().into();
+
             self.next_history_step.rotation = self
+                .node_tree
                 .render_nodes
                 .root_rotation_node
                 .compute(step_com_arg.reborrow())
                 .into_inner();
             self.next_history_step.translation = self
+                .node_tree
                 .render_nodes
                 .root_translation_node
                 .compute(step_com_arg.reborrow());
             self.next_history_step.offset = self
+                .node_tree
                 .render_nodes
                 .root_offset_node
                 .compute(step_com_arg.reborrow());
             self.next_history_step.from_scale = self
+                .node_tree
                 .render_nodes
                 .root_from_scale_node
                 .compute(step_com_arg.reborrow());
             self.next_history_step.to_scale = self
+                .node_tree
                 .render_nodes
                 .root_to_scale_node
                 .compute(step_com_arg.reborrow());
 
             self.next_history_step.root_scalar = self
+                .node_tree
                 .render_nodes
                 .root_scalar_node
                 .compute(step_com_arg.reborrow());
 
             self.next_history_step.alpha = self
+                .node_tree
                 .render_nodes
                 .root_alpha_node
                 .compute(step_com_arg.reborrow());
 
             self.next_history_step.rotation_scalar = self
+                .node_tree
                 .render_nodes
                 .rotation_scalar_node
                 .compute(step_com_arg.reborrow());
 
             self.next_history_step.translation_scalar = self
+                .node_tree
                 .render_nodes
                 .translation_scalar_node
                 .compute(step_com_arg.reborrow());
 
             self.next_history_step.offset_scalar = self
+                .node_tree
                 .render_nodes
                 .offset_scalar_node
                 .compute(step_com_arg.reborrow());
 
             self.next_history_step.to_scale_scalar = self
+                .node_tree
                 .render_nodes
                 .to_scale_scalar_node
                 .compute(step_com_arg.reborrow());
 
             self.next_history_step.from_scale_scalar = self
+                .node_tree
                 .render_nodes
                 .from_scale_scalar_node
                 .compute(step_com_arg.reborrow());
 
             self.next_history_step.root_scalar = self
+                .node_tree
                 .render_nodes
                 .root_scalar_node
                 .compute(step_com_arg.reborrow());
@@ -668,8 +688,8 @@ impl EventHandler for MyGame {
             self.next_history_step.computed_texture =
                 compute_texture(ctx, self.next_history_step.cell_array.view());
 
-            // self.node_tree
-            //     .update_recursively(mutagen::State::default(), update_state);
+            self.node_tree
+                .update_recursively(mutagen::State::default(), step_upd_arg.reborrow());
 
             // Rotate the buffers by swapping
             let h_len = self.history.history_steps.len();

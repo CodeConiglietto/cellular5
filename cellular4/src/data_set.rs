@@ -1,7 +1,10 @@
 use crate::{
     arena_wrappers::*,
     coordinate_set::*,
-    datatype::{buffers::*, colors::*, continuous::*, discrete::*, distance_functions::*, image::*, matrices::*, noisefunctions::*, point_sets::*, points::*},
+    datatype::{
+        colors::*, continuous::*, discrete::*, distance_functions::*, matrices::*,
+        noisefunctions::*, point_sets::*, points::*,
+    },
 };
 
 use generational_arena::*;
@@ -9,29 +12,29 @@ use generational_arena::*;
 #[derive(Debug)]
 pub struct DataSet {
     //color
-    bit_colors: Arena<BitColor>,
-    byte_colors: Arena<ByteColor>,
-    float_colors: Arena<FloatColor>,
+    bit_colors: Arena<ArenaSlot<BitColor>>,
+    byte_colors: Arena<ArenaSlot<ByteColor>>,
+    float_colors: Arena<ArenaSlot<FloatColor>>,
     //continuous
-    angles: Arena<Angle>,
-    unfloats: Arena<UNFloat>,
-    snfloats: Arena<SNFloat>,
+    angles: Arena<ArenaSlot<Angle>>,
+    unfloats: Arena<ArenaSlot<UNFloat>>,
+    snfloats: Arena<ArenaSlot<SNFloat>>,
     //coord_set
-    coordinate_sets: Arena<CoordinateSet>,
+    coordinate_sets: Arena<ArenaSlot<CoordinateSet>>,
     //discrete
-    booleans: Arena<Boolean>,
-    nibbles: Arena<Nibble>,
-    bytes: Arena<Byte>,
+    booleans: Arena<ArenaSlot<Boolean>>,
+    nibbles: Arena<ArenaSlot<Nibble>>,
+    bytes: Arena<ArenaSlot<Byte>>,
     //distance_function
-    distance_functions: Arena<DistanceFunction>,
+    distance_functions: Arena<ArenaSlot<DistanceFunction>>,
     //matrix
-    snfloat_matrix3s: Arena<SNFloatMatrix3>,
+    snfloat_matrix3s: Arena<ArenaSlot<SNFloatMatrix3>>,
     //noise
-    noise_functions: Arena<NoiseFunctions>,
+    noise_functions: Arena<ArenaSlot<NoiseFunctions>>,
     //point
-    snpoints: Arena<SNPoint>,
+    snpoints: Arena<ArenaSlot<SNPoint>>,
     //point_set
-    point_sets: Arena<PointSet>,
+    point_sets: Arena<ArenaSlot<PointSet>>,
 }
 
 impl DataSet {
@@ -67,133 +70,133 @@ impl DataSet {
 
 //example
 // impl Storage<FloatColor> for DataSet {
-//     fn arena(&self) -> &Arena<FloatColor> {
+//     fn arena(&self) -> &Arena<ArenaSlot<FloatColor>> {
 //         &self.float_colors
 //     }
 
-//     fn arena_mut(&mut self) -> &mut Arena<FloatColor> {
+//     fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<FloatColor>> {
 //         &mut self.float_colors
 //     }
 // }
 
 impl Storage<BitColor> for DataSet {
-    fn arena(&self) -> &Arena<BitColor> {
+    fn arena(&self) -> &Arena<ArenaSlot<BitColor>> {
         &self.bit_colors
     }
-    fn arena_mut(&mut self) -> &mut Arena<BitColor> {
+    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<BitColor>> {
         &mut self.bit_colors
     }
 }
 impl Storage<ByteColor> for DataSet {
-    fn arena(&self) -> &Arena<ByteColor> {
+    fn arena(&self) -> &Arena<ArenaSlot<ByteColor>> {
         &self.byte_colors
     }
-    fn arena_mut(&mut self) -> &mut Arena<ByteColor> {
+    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<ByteColor>> {
         &mut self.byte_colors
     }
 }
 impl Storage<FloatColor> for DataSet {
-    fn arena(&self) -> &Arena<FloatColor> {
+    fn arena(&self) -> &Arena<ArenaSlot<FloatColor>> {
         &self.float_colors
     }
-    fn arena_mut(&mut self) -> &mut Arena<FloatColor> {
+    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<FloatColor>> {
         &mut self.float_colors
     }
 }
 impl Storage<Angle> for DataSet {
-    fn arena(&self) -> &Arena<Angle> {
+    fn arena(&self) -> &Arena<ArenaSlot<Angle>> {
         &self.angles
     }
-    fn arena_mut(&mut self) -> &mut Arena<Angle> {
+    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<Angle>> {
         &mut self.angles
     }
 }
 impl Storage<UNFloat> for DataSet {
-    fn arena(&self) -> &Arena<UNFloat> {
+    fn arena(&self) -> &Arena<ArenaSlot<UNFloat>> {
         &self.unfloats
     }
 
-    fn arena_mut(&mut self) -> &mut Arena<UNFloat> {
+    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<UNFloat>> {
         &mut self.unfloats
     }
 }
 impl Storage<SNFloat> for DataSet {
-    fn arena(&self) -> &Arena<SNFloat> {
+    fn arena(&self) -> &Arena<ArenaSlot<SNFloat>> {
         &self.snfloats
     }
-    fn arena_mut(&mut self) -> &mut Arena<SNFloat> {
+    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<SNFloat>> {
         &mut self.snfloats
     }
 }
 impl Storage<CoordinateSet> for DataSet {
-    fn arena(&self) -> &Arena<CoordinateSet> {
+    fn arena(&self) -> &Arena<ArenaSlot<CoordinateSet>> {
         &self.coordinate_sets
     }
-    fn arena_mut(&mut self) -> &mut Arena<CoordinateSet> {
+    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<CoordinateSet>> {
         &mut self.coordinate_sets
     }
 }
 impl Storage<Boolean> for DataSet {
-    fn arena(&self) -> &Arena<Boolean> {
+    fn arena(&self) -> &Arena<ArenaSlot<Boolean>> {
         &self.booleans
     }
-    fn arena_mut(&mut self) -> &mut Arena<Boolean> {
+    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<Boolean>> {
         &mut self.booleans
     }
 }
 impl Storage<Nibble> for DataSet {
-    fn arena(&self) -> &Arena<Nibble> {
+    fn arena(&self) -> &Arena<ArenaSlot<Nibble>> {
         &self.nibbles
     }
-    fn arena_mut(&mut self) -> &mut Arena<Nibble> {
+    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<Nibble>> {
         &mut self.nibbles
     }
 }
 impl Storage<Byte> for DataSet {
-    fn arena(&self) -> &Arena<Byte> {
+    fn arena(&self) -> &Arena<ArenaSlot<Byte>> {
         &self.bytes
     }
-    fn arena_mut(&mut self) -> &mut Arena<Byte> {
+    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<Byte>> {
         &mut self.bytes
     }
 }
 impl Storage<DistanceFunction> for DataSet {
-    fn arena(&self) -> &Arena<DistanceFunction> {
+    fn arena(&self) -> &Arena<ArenaSlot<DistanceFunction>> {
         &self.distance_functions
     }
-    fn arena_mut(&mut self) -> &mut Arena<DistanceFunction> {
+    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<DistanceFunction>> {
         &mut self.distance_functions
     }
 }
 impl Storage<SNFloatMatrix3> for DataSet {
-    fn arena(&self) -> &Arena<SNFloatMatrix3> {
+    fn arena(&self) -> &Arena<ArenaSlot<SNFloatMatrix3>> {
         &self.snfloat_matrix3s
     }
-    fn arena_mut(&mut self) -> &mut Arena<SNFloatMatrix3> {
+    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<SNFloatMatrix3>> {
         &mut self.snfloat_matrix3s
     }
 }
 impl Storage<NoiseFunctions> for DataSet {
-    fn arena(&self) -> &Arena<NoiseFunctions> {
+    fn arena(&self) -> &Arena<ArenaSlot<NoiseFunctions>> {
         &self.noise_functions
     }
-    fn arena_mut(&mut self) -> &mut Arena<NoiseFunctions> {
+    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<NoiseFunctions>> {
         &mut self.noise_functions
     }
 }
 impl Storage<SNPoint> for DataSet {
-    fn arena(&self) -> &Arena<SNPoint> {
+    fn arena(&self) -> &Arena<ArenaSlot<SNPoint>> {
         &self.snpoints
     }
-    fn arena_mut(&mut self) -> &mut Arena<SNPoint> {
+    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<SNPoint>> {
         &mut self.snpoints
     }
 }
 impl Storage<PointSet> for DataSet {
-    fn arena(&self) -> &Arena<PointSet> {
+    fn arena(&self) -> &Arena<ArenaSlot<PointSet>> {
         &self.point_sets
     }
-    fn arena_mut(&mut self) -> &mut Arena<PointSet> {
+    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<PointSet>> {
         &mut self.point_sets
     }
 }

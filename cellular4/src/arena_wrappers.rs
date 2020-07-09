@@ -8,10 +8,48 @@ use mutagen::*;
 use rand::seq::IteratorRandom;
 
 pub trait Storage<T> {
-    fn arena(&self) -> &Arena<T>;
-    fn arena_mut(&mut self) -> &mut Arena<T>;
+    fn arena(&self) -> &Arena<ArenaSlot<T>>;
+    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<T>>;
 }
 
+#[derive(Debug)]
+pub struct Metarena<T> {
+    pub value: Arena<ArenaSlot<T>>,
+}
+
+impl<T> Metarena<T> {
+    pub fn new() -> Metarena<T> {
+        Metarena {
+            value: Arena::new(),
+        }
+    }
+}
+
+impl<'a, T> Updatable<'a> for Metarena<T>
+where
+    T: Updatable<'a, UpdateArg = UpdArg<'a>>,
+{
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _state: State, arg: Self::UpdateArg) {
+        self.value
+            .retain(|_index, value| value.last_accessed == arg.current_t);
+    }
+}
+impl<'a, T> UpdatableRecursively<'a> for Metarena<T>
+where
+    T: Updatable<'a, UpdateArg = UpdArg<'a>>,
+{
+    fn update_recursively(&mut self, _state: State, _arg: Self::UpdateArg) {}
+}
+
+#[derive(Debug)]
+pub struct ArenaSlot<T> {
+    value: T,
+    last_accessed: usize,
+}
+
+#[derive(Debug)]
 pub struct NodeBox<T> {
     index: Index,
     depth: usize,
@@ -26,7 +64,9 @@ where
     type Output = T::Output;
 
     fn compute(&self, mut compute_arg: ComArg) -> Self::Output {
-        compute_arg.nodes[self.depth].arena()[self.index].compute(compute_arg.reborrow())
+        compute_arg.nodes[self.depth].arena()[self.index]
+            .value
+            .compute(compute_arg.reborrow())
     }
 }
 
@@ -42,10 +82,15 @@ where
         state: mutagen::State,
         arg: Self::GenArg,
     ) -> Self {
-        let (current, children) = arg.nodes.split_at_mut(1);
+        let GenArg {
+            nodes,
+            data,
+            depth,
+            current_t,
+        } = arg;
+
+        let (current, children) = nodes.split_at_mut(1);
         let current = &mut current[0];
-        let data = arg.data;
-        let depth = arg.depth;
 
         let (depth, index) = if rng.gen_bool(CONSTS.graph_convergence) {
             children
@@ -59,15 +104,19 @@ where
         .unwrap_or_else(move || {
             (
                 depth,
-                current.arena_mut().insert(T::generate_rng(
-                    rng,
-                    state,
-                    GenArg {
-                        nodes: children,
-                        data,
-                        depth: depth + 1,
-                    },
-                )),
+                current.arena_mut().insert(ArenaSlot {
+                    value: T::generate_rng(
+                        rng,
+                        state,
+                        GenArg {
+                            nodes: children,
+                            data,
+                            depth: depth + 1,
+                            current_t,
+                        },
+                    ),
+                    last_accessed: current_t,
+                }),
             )
         });
 
@@ -98,13 +147,72 @@ where
             let (current, children) = arg.nodes.split_at_mut(1);
             let current = &mut current[0];
 
-            current.arena_mut()[self.index].mutate_rng(
+            current.arena_mut()[self.index].value.mutate_rng(
                 rng,
                 state,
                 MutArg {
                     nodes: children,
                     data: arg.data,
                     depth: arg.depth + 1,
+                    current_t: arg.current_t,
+                },
+            );
+        }
+    }
+}
+
+impl<'a, T> Updatable<'a> for NodeBox<T>
+where
+    NodeSet: Storage<T>,
+    T: Updatable<'a, UpdateArg = UpdArg<'a>>,
+{
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, state: mutagen::State, mut arg: Self::UpdateArg) {
+        let (current, children) = arg.nodes.split_at_mut(1);
+        let current = &mut current[0];
+
+        let node = &mut current.arena_mut()[self.index];
+
+        if node.last_accessed != arg.current_t {
+            node.last_accessed = arg.current_t;
+            node.value.update(
+                state,
+                UpdArg {
+                    nodes: children,
+                    data: arg.data,
+                    depth: arg.depth + 1,
+                    coordinate_set: arg.coordinate_set,
+                    history: arg.history,
+                    current_t: arg.current_t,
+                },
+            );
+        }
+    }
+}
+
+impl<'a, T> UpdatableRecursively<'a> for NodeBox<T>
+where
+    NodeSet: Storage<T>,
+    T: UpdatableRecursively<'a, UpdateArg = UpdArg<'a>>,
+{
+    fn update_recursively(&mut self, state: mutagen::State, mut arg: Self::UpdateArg) {
+        let (current, children) = arg.nodes.split_at_mut(1);
+        let current = &mut current[0];
+
+        let node = &mut current.arena_mut()[self.index];
+
+        if node.last_accessed != arg.current_t {
+            node.last_accessed = arg.current_t;
+            node.value.update_recursively(
+                state,
+                UpdArg {
+                    nodes: children,
+                    data: arg.data,
+                    depth: arg.depth + 1,
+                    coordinate_set: arg.coordinate_set,
+                    history: arg.history,
+                    current_t: arg.current_t,
                 },
             );
         }

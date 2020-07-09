@@ -7,6 +7,7 @@ pub struct GenArg<'a> {
     pub nodes: &'a mut [NodeSet],
     pub data: &'a mut DataSet,
     pub depth: usize,
+    pub current_t: usize,
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, GenArg<'a>> for GenArg<'b> {
@@ -15,6 +16,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, GenArg<'a>> for GenArg<'b> {
             nodes: &mut self.nodes,
             data: &mut self.data,
             depth: self.depth,
+            current_t: self.current_t,
         }
     }
 }
@@ -24,6 +26,7 @@ pub struct MutArg<'a> {
     pub nodes: &'a mut [NodeSet],
     pub data: &'a mut DataSet,
     pub depth: usize,
+    pub current_t: usize,
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, MutArg<'a>> for MutArg<'b> {
@@ -32,6 +35,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, MutArg<'a>> for MutArg<'b> {
             nodes: &mut self.nodes,
             data: &mut self.data,
             depth: self.depth,
+            current_t: self.current_t,
         }
     }
 }
@@ -42,6 +46,7 @@ impl<'a> From<MutArg<'a>> for GenArg<'a> {
             nodes: arg.nodes,
             data: arg.data,
             depth: arg.depth,
+            current_t: arg.current_t,
         }
     }
 }
@@ -80,21 +85,23 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, ComArg<'a>> for ComArg<'b> {
 
 #[derive(Debug)]
 pub struct UpdArg<'a> {
-    pub nodes: &'a [NodeSet],
+    pub nodes: &'a mut [NodeSet],
     pub data: &'a mut DataSet,
     pub coordinate_set: CoordinateSet,
     pub history: &'a History,
     pub depth: usize,
+    pub current_t: usize,
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, UpdArg<'a>> for UpdArg<'b> {
     fn reborrow(&'a mut self) -> UpdArg<'a> {
         UpdArg {
-            nodes: &self.nodes,
+            nodes: &mut self.nodes,
             data: &mut self.data,
             coordinate_set: self.coordinate_set.clone(),
             history: &self.history,
             depth: self.depth,
+            current_t: self.current_t,
         }
     }
 }

@@ -8,7 +8,7 @@
             "name": "(Windows) Launch",
             "type": "cppvsdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/target/debug/cellular3.exe",
+            "program": "${workspaceFolder}/target/debug/cellular4.exe",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

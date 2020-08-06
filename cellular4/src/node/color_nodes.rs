@@ -105,6 +105,14 @@ pub enum FloatColorNodes {
         child_b: Box<PointSetNodes>,
         child_color: Box<FloatColorNodes>,
     },
+    
+    #[mutagen(gen_weight = branch_node_weight)]
+    NextPointLineBuffer {
+        buffer: Buffer<FloatColor>,
+        child_set: Box<PointSetNodes>,
+        child_index: Box<ByteNodes>,
+        child_color: Box<FloatColorNodes>,
+    }
 }
 
 impl Node for FloatColorNodes {
@@ -200,6 +208,7 @@ impl Node for FloatColorNodes {
             PointSetLineBuffer { buffer, .. } => buffer[compute_arg.coordinate_set.xy()],
             PointSetDotBuffer { buffer, .. } => buffer[compute_arg.coordinate_set.xy()],
             ClosestPointLineBuffer { buffer, .. } => buffer[compute_arg.coordinate_set.xy()],
+            NextPointLineBuffer { buffer, .. } => buffer[compute_arg.coordinate_set.xy()],
         }
     }
 }
@@ -292,6 +301,26 @@ impl<'a> Updatable<'a> for FloatColorNodes {
 
                     buffer.draw_line(*source, dest, color.clone())
                 }
+            }
+
+            NextPointLineBuffer {
+                buffer,
+                child_set,
+                child_index,
+                child_color,
+            } => {
+                let set = child_set.compute(arg.reborrow().into());
+
+                let index = child_index.compute(arg.reborrow().into()).into_inner() as usize;
+
+                let source = set.get_at(index % set.len());
+                let dest = set.get_at((index + 1) % set.len());
+
+                arg.coordinate_set.x = dest.x();
+                arg.coordinate_set.y = dest.y();
+                let color = child_color.compute(arg.reborrow().into());
+
+                buffer.draw_line(source, dest, color.clone());
             }
 
             _ => {}

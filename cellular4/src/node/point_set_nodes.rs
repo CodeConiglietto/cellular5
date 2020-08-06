@@ -33,6 +33,19 @@ pub enum PointSetNodes {
         child_radius: Box<SNFloatNodes>,
         child_edges: Box<NibbleNodes>,
     },
+    #[mutagen(gen_weight = branch_node_weight)]
+    ShearGrid {
+        value: PointSet,
+        child_x_scalar: Box<SNFloatNodes>,
+        child_y_scalar: Box<SNFloatNodes>,
+    },
+    #[mutagen(gen_weight = branch_node_weight)]
+    Line {
+        value: PointSet,
+        child_points: Box<ByteNodes>,
+        child_a: Box<SNPointNodes>,
+        child_b: Box<SNPointNodes>,
+    },
 }
 
 impl Node for PointSetNodes {
@@ -46,6 +59,8 @@ impl Node for PointSetNodes {
             Translating { value, .. } => value.clone(),
             Spreading { value, .. } => value.clone(),
             Polygonal { value, .. } => value.clone(),
+            ShearGrid { value, .. } => value.clone(),
+            Line { value, .. } => value.clone(),
         }
     }
 }
@@ -78,7 +93,6 @@ impl<'a> Updatable<'a> for PointSetNodes {
                     value.generator,
                 );
             }
-
             PointSetNodes::Spreading {
                 ref mut value,
                 child,
@@ -105,7 +119,6 @@ impl<'a> Updatable<'a> for PointSetNodes {
                     value.generator,
                 );
             }
-
             PointSetNodes::Polygonal {
                 ref mut value,
                 child_radius,
@@ -125,6 +138,62 @@ impl<'a> Updatable<'a> for PointSetNodes {
                 }
 
                 *value = PointSet::new(Arc::new(edge_vec), value.generator);
+            }
+            //TODO: Something is funky here, give it a second pass. looks like x and y scalars need to be swapped to achieve shear
+            PointSetNodes::ShearGrid {
+                ref mut value,
+                child_x_scalar,
+                child_y_scalar,
+            } => {
+                let x_scalar = child_x_scalar.compute(arg.reborrow().into()).into_inner();
+                let y_scalar = child_y_scalar.compute(arg.reborrow().into()).into_inner();
+                let mut edge_vec = Vec::new();
+
+                for x in 0..=8 {
+                    for y in 0..=8 {
+                        let ratio = 0.5 / 8 as f32;
+
+                        edge_vec.push(SNPoint::new_sawtooth(Point2::new(
+                            ratio * x as f32 + (x_scalar * x as f32),
+                            ratio * y as f32 + (y_scalar * y as f32),
+                        )));
+                        edge_vec.push(SNPoint::new_sawtooth(Point2::new(
+                            -ratio * x as f32 + (x_scalar * x as f32),
+                            ratio * y as f32 + (y_scalar * y as f32),
+                        )));
+                        edge_vec.push(SNPoint::new_sawtooth(Point2::new(
+                            ratio * x as f32 + (x_scalar * x as f32),
+                            -ratio * y as f32 + (y_scalar * y as f32),
+                        )));
+                        edge_vec.push(SNPoint::new_sawtooth(Point2::new(
+                            -ratio * x as f32 + (x_scalar * x as f32),
+                            -ratio * y as f32 + (y_scalar * y as f32),
+                        )));
+                    }
+                }
+
+                *value = PointSet::new(Arc::new(edge_vec), value.generator);
+            }
+            PointSetNodes::Line {
+                ref mut value,
+                child_points,
+                child_a,
+                child_b,
+            } => {
+                let point_a = child_a.compute(arg.reborrow().into()).into_inner();
+                let point_b = child_b.compute(arg.reborrow().into()).into_inner();
+
+                let point_difference = point_b - point_a;
+                
+                let point_count = child_points.compute(arg.reborrow().into()).into_inner();
+
+                let mut edge_vec = Vec::new();
+                for i in 0..point_count
+                {
+                    let ratio = 1.0 / point_count as f32;
+
+                    edge_vec.push(SNPoint::new(point_a + point_difference * ratio * i as f32));
+                }
             }
             _ => {}
         }

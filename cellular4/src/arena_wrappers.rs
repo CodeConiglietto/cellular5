@@ -40,7 +40,9 @@ impl<'a, T> UpdatableRecursively<'a> for Metarena<T>
 where
     T: Updatable<'a, UpdateArg = UpdArg<'a>>,
 {
-    fn update_recursively(&mut self, state: State, arg: Self::UpdateArg) {self.update(state, arg)}
+    fn update_recursively(&mut self, state: State, arg: Self::UpdateArg) {
+        self.update(state, arg)
+    }
 }
 
 #[derive(Debug)]

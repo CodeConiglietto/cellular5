@@ -34,6 +34,14 @@ impl PointSet {
         self.points.iter().map(|p| p.scale_point(scale)).collect()
     }
 
+    pub fn get_at(&self, index: usize) -> SNPoint {
+        self.points[index]
+    }
+
+    pub fn len(&self) -> usize {
+        self.points.len()
+    }
+
     pub fn get_closest_point(&self, other: SNPoint) -> SNPoint {
         *self
             .points

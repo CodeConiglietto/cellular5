@@ -36,6 +36,11 @@ impl SNPoint {
         Self::new_unchecked(value)
     }
 
+    pub fn new_sawtooth(value: Point2<f32>) -> Self
+    {
+        Self::from_snfloats(SNFloat::new_sawtooth(value.x), SNFloat::new_sawtooth(value.y))
+    }
+
     pub fn subtract_normalised(&self, other: SNPoint) -> Self {
         let result = self.into_inner() - other.into_inner();
         Self::new(

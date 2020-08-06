@@ -40,6 +40,8 @@ pub struct Constants {
     pub noise_y_scale_minimum: f64,
     pub noise_t_scale_minimum: f64,
 
+    pub graph_mutation_divisor: usize,
+
     pub activity_value_upper_bound: f64,
     pub activity_value_lower_bound: f64,
     pub alpha_value_upper_bound: f64,

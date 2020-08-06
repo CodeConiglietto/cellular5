@@ -1,4 +1,5 @@
 use std::{
+    cmp::Ordering,
     f32::consts::PI,
     fmt::{self, Display, Formatter},
 };
@@ -275,10 +276,14 @@ impl Angle {
     }
 
     pub fn new(value: f32) -> Self {
-        let normalised = value - 2.0 * PI * (value / (2.0 * PI)).floor();
+        let normalised = match value.partial_cmp(&0.0).unwrap() {
+            Ordering::Greater => (value / (2.0 * PI)).fract() * (2.0 * PI),
+            Ordering::Less => (value / (2.0 * PI)).fract() * (2.0 * PI) + (2.0 * PI),
+            Ordering::Equal => value,
+        };
 
-        debug_assert!(
-            normalised >= 0.0 && normalised < 2.0 * PI,
+        assert!(
+            normalised >= 0.0 && normalised <= 2.0 * PI,
             "Failed to normalize angle: {} -> {}",
             value,
             normalised,

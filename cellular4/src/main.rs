@@ -420,10 +420,9 @@ impl EventHandler for MyGame {
         let root_node = &self.node_tree.root_node;
         let nodes = &self.nodes;
         let data = &self.data;
+        let total_cells = CONSTS.cell_array_width * CONSTS.cell_array_height;
 
         let update_step = |y, x, mut new: ArrayViewMut1<u8>| {
-            let total_cells = CONSTS.cell_array_width * CONSTS.cell_array_height;
-
             let new_color = ByteColor::from(
                 root_node.compute(ComArg {
                     nodes,
@@ -469,15 +468,12 @@ impl EventHandler for MyGame {
             let global_color: FloatColor = global_color.into();
 
             UpdateStat {
-                activity_value: (older_color.get_average() - current_color.get_average()).abs()
-                    / total_cells as f32,
-                alpha_value: current_color.a.into_inner() / total_cells as f32,
+                activity_value: (older_color.get_average() - current_color.get_average()).abs(), // / total_cells as f32
+                alpha_value: current_color.a.into_inner(), // / total_cells as f32
                 local_similarity_value: (1.0
-                    - (local_color.get_average() - current_color.get_average()).abs())
-                    / total_cells as f32,
+                    - (local_color.get_average() - current_color.get_average()).abs()), // / total_cells as f32
                 global_similarity_value: (1.0
-                    - (global_color.get_average() - current_color.get_average()).abs())
-                    / total_cells as f32,
+                    - (global_color.get_average() - current_color.get_average()).abs()), // / total_cells as f32
             }
         };
 
@@ -491,7 +487,7 @@ impl EventHandler for MyGame {
             let mut stat = UpdateStat::default();
             zip.apply(|(y, x), new| stat += update_step(y, x, new));
             stat
-        };
+        } / total_cells as f32;
 
         self.rolling_update_stat_total += slice_update_stat;
 
@@ -519,7 +515,7 @@ impl EventHandler for MyGame {
 
             if self.tree_dirty
                 || (CONSTS.auto_mutate
-                    && (dbg!(thread_rng().gen::<u32>() % 500) == 0
+                    && (dbg!(thread_rng().gen::<usize>() % CONSTS.graph_mutation_divisor) == 0
                         || dbg!(f64::from(self.average_update_stat.activity_value))
                             < CONSTS.activity_value_lower_bound
                         || dbg!(f64::from(self.average_update_stat.alpha_value))
@@ -540,16 +536,16 @@ impl EventHandler for MyGame {
                         current_t,
                     },
                 );
-                 self.node_tree.render_nodes.mutate_rng(
-                     &mut self.rng,
-                     mutagen::State::default(),
-                     MutArg {
-                         nodes: &mut self.nodes,
-                         data: &mut self.data,
-                         depth: 0,
-                         current_t,
-                     },
-                 );
+                self.node_tree.render_nodes.mutate_rng(
+                    &mut self.rng,
+                    mutagen::State::default(),
+                    MutArg {
+                        nodes: &mut self.nodes,
+                        data: &mut self.data,
+                        depth: 0,
+                        current_t,
+                    },
+                );
                 // // info!("{:#?}", &self.root_node);
                 // if self.record_tree {
                 //     self.node_tree.save("latest");
@@ -558,7 +554,7 @@ impl EventHandler for MyGame {
             }
 
             let hist_len = self.history.history_steps.len();
-            let history_index = (self.current_t - 1) % hist_len;
+            let history_index = self.current_t.saturating_sub(1) % hist_len;
             let history_step = &self.history.history_steps[history_index];
 
             // let last_update_state = UpdateState {
@@ -673,7 +669,7 @@ impl EventHandler for MyGame {
             self.node_tree
                 .update_recursively(mutagen::State::default(), step_upd_arg.reborrow());
 
-                let max_node_depth = self.nodes.len();
+            let max_node_depth = self.nodes.len();
 
             for i in 0..max_node_depth {
                 let (nodes_a, children) = self.nodes.split_at_mut(i + 1);
@@ -797,16 +793,22 @@ impl EventHandler for MyGame {
                                 / CONSTS.cell_array_lerp_length as f32)
                                 // * lerp(1.0, history_step.alpha.into_inner(), root_scalar),
                         ))
-                        // .dest([
-                        //     ((CONSTS.initial_window_width * 0.5)
-                        //         + dest_offset_x * scale_x * translation_scalar * root_scalar),
-                        //     ((CONSTS.initial_window_height * 0.5)
-                        //         + dest_offset_y * scale_y * translation_scalar * root_scalar),
-                        // ])
-                        // .offset([
-                        //     0.5 + offset_offset_x * scale_x * offset_scalar * root_scalar,
-                        //     0.5 + offset_offset_y * scale_y * offset_scalar * root_scalar,
-                        // ])
+                        .dest([
+                            ((CONSTS.initial_window_width * 0.5)
+                                // + dest_offset_x * scale_x * translation_scalar * root_scalar
+                            ),
+                            ((CONSTS.initial_window_height * 0.5)
+                                // + dest_offset_y * scale_y * translation_scalar * root_scalar
+                            ),
+                        ])
+                        .offset([
+                            0.5
+                            //  + offset_offset_x * scale_x * offset_scalar * root_scalar
+                        ,
+                            0.5
+                            //  + offset_offset_y * scale_y * offset_scalar * root_scalar
+                            ,
+                        ])
                         // .scale([
                         //     lerp(1.0, 1.0 + scale_x, root_scalar) * x_scale_ratio,
                         //     lerp(1.0, 1.0 + scale_y, root_scalar) * y_scale_ratio,

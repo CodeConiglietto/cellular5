@@ -139,7 +139,8 @@ impl<'a> Updatable<'a> for PointSetNodes {
 
                 *value = PointSet::new(Arc::new(edge_vec), value.generator);
             }
-            //TODO: Something is funky here, give it a second pass. looks like x and y scalars need to be swapped to achieve shear
+            //TODO: Something is funky here, give it a second pass.
+            //TODO: Maybe swap this out for a matrix point grid
             PointSetNodes::ShearGrid {
                 ref mut value,
                 child_x_scalar,
@@ -154,20 +155,20 @@ impl<'a> Updatable<'a> for PointSetNodes {
                         let ratio = 0.5 / 8 as f32;
 
                         edge_vec.push(SNPoint::new_sawtooth(Point2::new(
-                            ratio * x as f32 + (x_scalar * x as f32),
-                            ratio * y as f32 + (y_scalar * y as f32),
+                            ratio * x as f32 + (x_scalar * y as f32),
+                            ratio * y as f32 + (y_scalar * x as f32),
                         )));
                         edge_vec.push(SNPoint::new_sawtooth(Point2::new(
-                            -ratio * x as f32 + (x_scalar * x as f32),
-                            ratio * y as f32 + (y_scalar * y as f32),
+                            -ratio * x as f32 + (x_scalar * y as f32),
+                            ratio * y as f32 + (y_scalar * x as f32),
                         )));
                         edge_vec.push(SNPoint::new_sawtooth(Point2::new(
-                            ratio * x as f32 + (x_scalar * x as f32),
-                            -ratio * y as f32 + (y_scalar * y as f32),
+                            ratio * x as f32 + (x_scalar * y as f32),
+                            -ratio * y as f32 + (y_scalar * x as f32),
                         )));
                         edge_vec.push(SNPoint::new_sawtooth(Point2::new(
-                            -ratio * x as f32 + (x_scalar * x as f32),
-                            -ratio * y as f32 + (y_scalar * y as f32),
+                            -ratio * x as f32 + (x_scalar * y as f32),
+                            -ratio * y as f32 + (y_scalar * x as f32),
                         )));
                     }
                 }

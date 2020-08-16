@@ -791,29 +791,29 @@ impl EventHandler for MyGame {
                             1.0,
                             ((1.0 - ((alpha * 2.0) - 1.0).abs())
                                 / CONSTS.cell_array_lerp_length as f32)
-                                // * lerp(1.0, history_step.alpha.into_inner(), root_scalar),
+                                * lerp(1.0, history_step.alpha.into_inner(), root_scalar),
                         ))
                         .dest([
                             ((CONSTS.initial_window_width * 0.5)
-                                // + dest_offset_x * scale_x * translation_scalar * root_scalar
+                                + dest_offset_x * scale_x * translation_scalar * root_scalar
                             ),
                             ((CONSTS.initial_window_height * 0.5)
-                                // + dest_offset_y * scale_y * translation_scalar * root_scalar
+                                + dest_offset_y * scale_y * translation_scalar * root_scalar
                             ),
                         ])
                         .offset([
                             0.5
-                            //  + offset_offset_x * scale_x * offset_scalar * root_scalar
+                             + offset_offset_x * scale_x * offset_scalar * root_scalar
                         ,
                             0.5
-                            //  + offset_offset_y * scale_y * offset_scalar * root_scalar
+                             + offset_offset_y * scale_y * offset_scalar * root_scalar
                             ,
                         ])
-                        // .scale([
-                        //     lerp(1.0, 1.0 + scale_x, root_scalar) * x_scale_ratio,
-                        //     lerp(1.0, 1.0 + scale_y, root_scalar) * y_scale_ratio,
-                        // ])
-                        // .rotation(rotation * rotation_scalar * root_scalar),
+                        .scale([
+                            lerp(1.0, 1.0 + scale_x, root_scalar) * x_scale_ratio,
+                            lerp(1.0, 1.0 + scale_y, root_scalar) * y_scale_ratio,
+                        ])
+                        .rotation(rotation * rotation_scalar * root_scalar),
                 )?;
 
                 // alphas.push(alpha);

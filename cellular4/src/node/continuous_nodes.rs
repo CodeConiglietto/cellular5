@@ -442,7 +442,7 @@ impl Node for UNFloatNodes {
                 let iterations = 1 + child_iterations
                     .compute(compute_arg.reborrow())
                     .into_inner()
-                    / 8;
+                    / 2;
 
                 // x and y are swapped intentionally
                 let c = Complex::new(

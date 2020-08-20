@@ -11,7 +11,7 @@ use rand::prelude::*;
 use serde::{de::Deserializer, ser::Serializer, Deserialize, Serialize};
 
 use crate::{
-    datatype::{constraint_normaliser::*, continuous::*, discrete::*, points::*},
+    datatype::{constraint_resolvers::*, continuous::*, discrete::*, points::*},
     mutagen_args::*,
 };
 
@@ -173,7 +173,7 @@ impl PointSetGenerator {
                 rng,
                 count.into_inner().max(4) as usize,
                 (2.0 * radius.into_inner() / (count.into_inner() as f32).sqrt().max(2.0)).max(0.01),
-                SNFloatNormaliser::generate_rng(rng),
+                SNFloatNormaliser::generate_rng(rng, mutagen::State::default(), ()),
             ),
         };
 

@@ -157,31 +157,31 @@ impl SNFloat {
         Self::new_unchecked(value)
     }
 
-    // pub fn new_clamped(value: f32) -> Self {
-    //     Self::new_unchecked(value.max(-1.0).min(1.0))
-    // }
+    pub fn new_clamped(value: f32) -> Self {
+        Self::new_unchecked(value.max(-1.0).min(1.0))
+    }
 
     pub fn new_from_range(value: f32, min: f32, max: f32) -> Self {
         Self::new_unchecked(map_range(value, (min, max), (-1.0, 1.0)))
     }
 
-    // pub fn new_sawtooth(value: f32) -> Self {
-    //     let scaled_value = (value + 1.0) / 2.0;
-    //     Self::new((scaled_value.fract() - scaled_value.signum().min(0.0)) * 2.0 - 1.0)
-    // }
+    pub fn new_sawtooth(value: f32) -> Self {
+        let scaled_value = (value + 1.0) / 2.0;
+        Self::new((scaled_value.fract() - scaled_value.signum().min(0.0)) * 2.0 - 1.0)
+    }
 
-    // pub fn new_triangle(value: f32) -> Self {
-    //     let scaled_value = (value - 1.0) / 4.0;
-    //     Self::new((scaled_value.fract() - scaled_value.signum().min(0.0) - 0.5).abs() * 4.0 - 1.0)
-    // }
+    pub fn new_triangle(value: f32) -> Self {
+        let scaled_value = (value - 1.0) / 4.0;
+        Self::new((scaled_value.fract() - scaled_value.signum().min(0.0) - 0.5).abs() * 4.0 - 1.0)
+    }
 
-    // pub fn new_fractional(value: f32) -> Self{
-    //     Self::new(value.fract())
-    // }
+    pub fn new_fractional(value: f32) -> Self{
+        Self::new(value.fract())
+    }
 
-    // pub fn new_tanh(value: f32) -> Self{
-    //     Self::new(value.tanh())
-    // }
+    pub fn new_tanh(value: f32) -> Self{
+        Self::new(value.tanh())
+    }
 
     pub fn into_inner(self) -> f32 {
         self.value

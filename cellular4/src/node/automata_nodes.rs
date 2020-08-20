@@ -5,7 +5,7 @@ use crate::{
     constants::*,
     datatype::{continuous::*, discrete::*},
     mutagen_args::*,
-    node::{discrete_nodes::*, point_set_nodes::*, Node},
+    node::{constraint_resolver_nodes::*, discrete_nodes::*, point_set_nodes::*, Node},
 };
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]
@@ -14,6 +14,7 @@ pub enum BinaryAutomataNodes {
     Majority {
         child: Box<BooleanNodes>,
         point_set: Box<PointSetNodes>,
+        child_normaliser: Box<SNFloatNormaliserNodes>,
     },
 }
 
@@ -24,7 +25,7 @@ impl Node for BinaryAutomataNodes {
         use BinaryAutomataNodes::*;
 
         match self {
-            Majority { child, point_set } => {
+            Majority { child, point_set, child_normaliser } => {
                 let mut true_count = 0;
                 let offsets = point_set
                     .compute(compute_arg.reborrow())
@@ -37,6 +38,7 @@ impl Node for BinaryAutomataNodes {
                             point.x(),
                             point.y(),
                             SNFloat::new(0.0),
+                            child_normaliser.compute(compute_arg.reborrow()),
                         ),
                         ..compute_arg.reborrow()
                     };

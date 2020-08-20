@@ -8,6 +8,7 @@ use crate::{
     datatype::continuous::*,
     mutagen_args::*,
     node::{
+        constraint_resolver_nodes::*,
         color_nodes::*, coord_map_nodes::*, discrete_nodes::*, distance_function_nodes::*,
         mutagen_functions::*, noise_nodes::*, point_nodes::*, Node,
     },
@@ -164,15 +165,10 @@ pub enum SNFloatNodes {
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
-    SawtoothAdd {
+    NormalisedAdd {
         child_a: Box<SNFloatNodes>,
         child_b: Box<SNFloatNodes>,
-    },
-
-    #[mutagen(gen_weight = branch_node_weight)]
-    TriangleAdd {
-        child_a: Box<SNFloatNodes>,
-        child_b: Box<SNFloatNodes>,
+        child_normaliser: Box<SNFloatNormaliserNodes>,
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
@@ -221,12 +217,9 @@ impl Node for SNFloatNodes {
             SubDivide { child_a, child_b } => child_a
                 .compute(compute_arg.reborrow())
                 .subdivide(child_b.compute(compute_arg.reborrow())),
-            SawtoothAdd { child_a, child_b } => child_a
+            NormalisedAdd { child_a, child_b, child_normaliser } => child_a
                 .compute(compute_arg.reborrow())
-                .sawtooth_add(child_b.compute(compute_arg.reborrow())),
-            TriangleAdd { child_a, child_b } => child_a
-                .compute(compute_arg.reborrow())
-                .triangle_add(child_b.compute(compute_arg.reborrow())),
+                .normalised_add(child_b.compute(compute_arg.reborrow()), child_normaliser.compute(compute_arg.reborrow())),
             IfElse {
                 predicate,
                 child_a,

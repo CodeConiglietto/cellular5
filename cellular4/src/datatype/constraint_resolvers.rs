@@ -20,11 +20,11 @@ impl SNFloatNormaliser {
         use SNFloatNormaliser::*;
 
         match self {
-            Sawtooth => todo!(),   //SNFloat::new_sawtooth(value),
-            Triangle => todo!(),   //SNFloat::new_triangle(value),
-            Sigmoid => todo!(),    //SNFloat::new_tanh(value),
-            Clamp => todo!(),      //SNFloat::new_clamped(value),
-            Fractional => todo!(), //SNFloat::new_fractional(value),
+            Sawtooth => SNFloat::new_sawtooth(value),
+            Triangle => SNFloat::new_triangle(value),
+            Sigmoid => SNFloat::new_tanh(value),
+            Clamp => SNFloat::new_clamped(value),
+            Fractional => SNFloat::new_fractional(value),
         }
     }
 }

@@ -9,7 +9,7 @@ use crate::{
     datatype::{buffers::*, colors::*, image::*, points::*},
     mutagen_args::*,
     node::{
-        color_blend_nodes::*, continuous_nodes::*, coord_map_nodes::*, discrete_nodes::*,
+        constraint_resolver_nodes::*, color_blend_nodes::*, continuous_nodes::*, coord_map_nodes::*, discrete_nodes::*,
         mutagen_functions::*, point_nodes::*, point_set_nodes::*, Node,
     },
 };
@@ -78,7 +78,7 @@ pub enum FloatColorNodes {
         child: Box<SNPointNodes>,
         child_color: Box<FloatColorNodes>,
         points_len_child: Box<NibbleNodes>,
-        child_normaliser: Box<FloatNormaliserNodes>,
+        child_normaliser: Box<SNFloatNormaliserNodes>,
         #[mutagen(skip)]
         #[serde(skip)]
         points: VecDeque<SNPoint>,

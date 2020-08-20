@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     datatype::{continuous::*, point_sets::*, points::*},
     mutagen_args::*,
-    node::{continuous_nodes::*, discrete_nodes::*, mutagen_functions::*, point_nodes::*, Node},
+    node::{constraint_resolver_nodes::*, continuous_nodes::*, discrete_nodes::*, mutagen_functions::*, point_nodes::*, Node},
 };
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]
@@ -21,11 +21,13 @@ pub enum PointSetNodes {
     Translating {
         value: PointSet,
         child: Box<SNPointNodes>,
+        child_normaliser: Box<SNFloatNormaliserNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     Spreading {
         value: PointSet,
         child: Box<UNFloatNodes>,
+        child_normaliser: Box<SNFloatNormaliserNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     Polygonal {
@@ -38,6 +40,7 @@ pub enum PointSetNodes {
         value: PointSet,
         child_x_scalar: Box<SNFloatNodes>,
         child_y_scalar: Box<SNFloatNodes>,
+        child_normaliser: Box<SNFloatNormaliserNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     Line {
@@ -73,8 +76,10 @@ impl<'a> Updatable<'a> for PointSetNodes {
             PointSetNodes::Translating {
                 ref mut value,
                 child,
+                child_normaliser,
             } => {
-                let compute_arg = ComArg::from(arg);
+                let compute_arg = ComArg::from(arg.reborrow());
+                let normaliser = child_normaliser.compute(arg.reborrow().into());
 
                 *value = PointSet::new(
                     Arc::new(
@@ -82,10 +87,11 @@ impl<'a> Updatable<'a> for PointSetNodes {
                             .points
                             .par_iter()
                             .map(|p| {
-                                p.sawtooth_add(
+                                p.normalised_add(
                                     child
                                         .compute(compute_arg.clone().replace_coords(p))
-                                        .scale_unfloat(UNFloat::new(0.05)),
+                                        .scale_unfloat(UNFloat::new(0.05)),//magic number makes things translate at a not-insane rate
+                                    normaliser,
                                 )
                             })
                             .collect(),
@@ -96,8 +102,10 @@ impl<'a> Updatable<'a> for PointSetNodes {
             PointSetNodes::Spreading {
                 ref mut value,
                 child,
+                child_normaliser,
             } => {
-                let compute_arg = ComArg::from(arg);
+                let compute_arg = ComArg::from(arg.reborrow());
+                let normaliser = child_normaliser.compute(arg.reborrow().into());
 
                 *value = PointSet::new(
                     Arc::new(
@@ -106,13 +114,14 @@ impl<'a> Updatable<'a> for PointSetNodes {
                             .par_iter()
                             .map(|p| {
                                 // TODO Attempt to refactor to use normalised_add instead of sawtooth_add
-                                p.sawtooth_add(
+                                p.normalised_add(
                                     p.subtract_normalised(value.get_random_point())
                                         .scale_unfloat(
                                             child
                                                 .compute(compute_arg.clone().replace_coords(p))
                                                 .multiply(UNFloat::new(0.25)),
                                         ),
+                                        normaliser,
                                 )
                             })
                             .collect(),
@@ -146,31 +155,33 @@ impl<'a> Updatable<'a> for PointSetNodes {
                 ref mut value,
                 child_x_scalar,
                 child_y_scalar,
+                child_normaliser,
             } => {
                 let x_scalar = child_x_scalar.compute(arg.reborrow().into()).into_inner();
                 let y_scalar = child_y_scalar.compute(arg.reborrow().into()).into_inner();
+                let normaliser = child_normaliser.compute(arg.reborrow().into());
                 let mut edge_vec = Vec::new();
 
                 for x in 0..=8 {
                     for y in 0..=8 {
                         let ratio = 0.5 / 8 as f32;
 
-                        edge_vec.push(SNPoint::new_sawtooth(Point2::new(
+                        edge_vec.push(SNPoint::new_normalised(Point2::new(
                             ratio * x as f32 + (x_scalar * y as f32),
                             ratio * y as f32 + (y_scalar * x as f32),
-                        )));
-                        edge_vec.push(SNPoint::new_sawtooth(Point2::new(
+                        ), normaliser));
+                        edge_vec.push(SNPoint::new_normalised(Point2::new(
                             -ratio * x as f32 + (x_scalar * y as f32),
                             ratio * y as f32 + (y_scalar * x as f32),
-                        )));
-                        edge_vec.push(SNPoint::new_sawtooth(Point2::new(
+                        ), normaliser));
+                        edge_vec.push(SNPoint::new_normalised(Point2::new(
                             ratio * x as f32 + (x_scalar * y as f32),
                             -ratio * y as f32 + (y_scalar * x as f32),
-                        )));
-                        edge_vec.push(SNPoint::new_sawtooth(Point2::new(
+                        ), normaliser));
+                        edge_vec.push(SNPoint::new_normalised(Point2::new(
                             -ratio * x as f32 + (x_scalar * y as f32),
                             -ratio * y as f32 + (y_scalar * x as f32),
-                        )));
+                        ), normaliser));
                     }
                 }
 

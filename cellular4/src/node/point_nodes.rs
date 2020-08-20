@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     datatype::{constraint_resolvers::*, points::*},
     mutagen_args::*,
-    node::{continuous_nodes::*, mutagen_functions::*, point_set_nodes::*, Node},
+    node::{constraint_resolver_nodes::*, continuous_nodes::*, mutagen_functions::*, point_set_nodes::*, Node},
 };
 
 //Note: SNPoints are not normalised in the mathematical sense, each coordinate is simply capped at -1..1
@@ -29,13 +29,13 @@ pub enum SNPointNodes {
     NormalisedAdd {
         child_a: Box<SNPointNodes>,
         child_b: Box<SNPointNodes>,
-        child_normaliser: Box<SNFloatNormaliser>,
+        child_normaliser: Box<SNFloatNormaliserNodes>,
     },
     #[mutagen(gen_weight = pipe_node_weight)]
     IterativeNormalisedAdd {
         value: SNPoint,
         child_point: Box<SNPointNodes>,
-        child_normaliser: Box<SNFloatNormaliser>,
+        child_normaliser: Box<SNFloatNormaliserNodes>,
     },
     #[mutagen(gen_weight = pipe_node_weight)]
     GetClosestPointInSet { child: Box<PointSetNodes> },
@@ -61,7 +61,7 @@ impl Node for SNPointNodes {
                 child_a.compute(compute_arg.reborrow()).into_inner(),
                 child_b.compute(compute_arg.reborrow()).into_inner(),
             )),
-            NormalisedAdd { child_a, child_b } => {
+            NormalisedAdd { child_a, child_b, child_normaliser } => {
                 child_a.compute(compute_arg.reborrow()).normalised_add(
                     child_b.compute(compute_arg.reborrow()),
                     child_normaliser.compute(compute_arg.reborrow()),

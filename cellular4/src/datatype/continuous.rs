@@ -8,7 +8,11 @@ use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::{datatype::discrete::*, mutagen_args::*, util::*};
+use crate::{
+    datatype::{constraint_resolvers::*, discrete::*},
+    mutagen_args::*,
+    util::*,
+};
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, PartialOrd, Default)]
 pub struct UNFloat {
@@ -189,6 +193,10 @@ impl SNFloat {
 
     pub fn to_unsigned(self) -> UNFloat {
         UNFloat::new_from_range(self.value, -1.0, 1.0)
+    }
+
+    pub fn normalised_add(self, other: Self, normaliser: SNFloatNormaliser) -> Self {
+        normaliser.normalise(self.into_inner() + other.into_inner())
     }
 
     // pub fn sawtooth_add(self, other: Self) -> Self {

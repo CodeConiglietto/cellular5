@@ -3,7 +3,7 @@ use nalgebra::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    datatype::points::*,
+    datatype::{constraint_resolvers::*, points::*},
     mutagen_args::*,
     node::{continuous_nodes::*, mutagen_functions::*, point_set_nodes::*, Node},
 };
@@ -26,19 +26,16 @@ pub enum SNPointNodes {
         child_b: Box<SNFloatNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
-    SawtoothAdd {
+    NormalisedAdd {
         child_a: Box<SNPointNodes>,
         child_b: Box<SNPointNodes>,
-    },
-    #[mutagen(gen_weight = branch_node_weight)]
-    TriangleAdd {
-        child_a: Box<SNPointNodes>,
-        child_b: Box<SNPointNodes>,
+        child_normaliser: Box<SNFloatNormaliser>,
     },
     #[mutagen(gen_weight = pipe_node_weight)]
-    IterativeSawtoothAdd {
+    IterativeNormalisedAdd {
         value: SNPoint,
-        child: Box<SNPointNodes>,
+        child_point: Box<SNPointNodes>,
+        child_normaliser: Box<SNFloatNormaliser>,
     },
     #[mutagen(gen_weight = pipe_node_weight)]
     GetClosestPointInSet { child: Box<PointSetNodes> },
@@ -64,13 +61,13 @@ impl Node for SNPointNodes {
                 child_a.compute(compute_arg.reborrow()).into_inner(),
                 child_b.compute(compute_arg.reborrow()).into_inner(),
             )),
-            SawtoothAdd { child_a, child_b } => child_a
-                .compute(compute_arg.reborrow())
-                .sawtooth_add(child_b.compute(compute_arg.reborrow())),
-            TriangleAdd { child_a, child_b } => child_a
-                .compute(compute_arg.reborrow())
-                .triangle_add(child_b.compute(compute_arg.reborrow())),
-            IterativeSawtoothAdd { value, .. } => *value,
+            NormalisedAdd { child_a, child_b } => {
+                child_a.compute(compute_arg.reborrow()).normalised_add(
+                    child_b.compute(compute_arg.reborrow()),
+                    child_normaliser.compute(compute_arg.reborrow()),
+                )
+            }
+            IterativeNormalisedAdd { value, .. } => *value,
             GetClosestPointInSet { child } => child
                 .compute(compute_arg.reborrow())
                 .get_closest_point(compute_arg.coordinate_set.get_coord_point()),
@@ -88,8 +85,15 @@ impl<'a> Updatable<'a> for SNPointNodes {
         use SNPointNodes::*;
 
         match self {
-            IterativeSawtoothAdd { value, child } => {
-                *value = value.sawtooth_add(child.compute(arg.into()));
+            IterativeNormalisedAdd {
+                value,
+                child_point,
+                child_normaliser,
+            } => {
+                *value = value.normalised_add(
+                    child_point.compute(arg.reborrow().into()),
+                    child_normaliser.compute(arg.reborrow().into()),
+                );
             }
             _ => {}
         }

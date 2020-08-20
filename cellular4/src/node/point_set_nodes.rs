@@ -105,6 +105,7 @@ impl<'a> Updatable<'a> for PointSetNodes {
                             .points
                             .par_iter()
                             .map(|p| {
+                                // TODO Attempt to refactor to use normalised_add instead of sawtooth_add
                                 p.sawtooth_add(
                                     p.subtract_normalised(value.get_random_point())
                                         .scale_unfloat(
@@ -185,12 +186,11 @@ impl<'a> Updatable<'a> for PointSetNodes {
                 let point_b = child_b.compute(arg.reborrow().into()).into_inner();
 
                 let point_difference = point_b - point_a;
-                
+
                 let point_count = child_points.compute(arg.reborrow().into()).into_inner();
 
                 let mut edge_vec = Vec::new();
-                for i in 0..point_count
-                {
+                for i in 0..point_count {
                     let ratio = 1.0 / point_count as f32;
 
                     edge_vec.push(SNPoint::new(point_a + point_difference * ratio * i as f32));

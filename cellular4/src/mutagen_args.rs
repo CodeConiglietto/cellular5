@@ -125,3 +125,15 @@ pub struct UpdateState<'a> {
     //cell array to read from
     pub history: &'a History,
 }
+
+impl<'a> From<GenArg<'a>> for () {
+    fn from(_arg: GenArg<'a>) -> Self {
+        ()
+    }
+}
+
+impl<'a> From<MutArg<'a>> for () {
+    fn from(_arg: MutArg<'a>) -> Self {
+        ()
+    }
+}

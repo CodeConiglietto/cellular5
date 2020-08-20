@@ -7,8 +7,8 @@ use crate::{
     datatype::{continuous::*, points::*},
     mutagen_args::*,
     node::{
-        continuous_nodes::*, discrete_nodes::*, matrix_nodes::*, mutagen_functions::*,
-        point_nodes::*, point_set_nodes::*, Node,
+        constraint_resolver_nodes::*, continuous_nodes::*, discrete_nodes::*, matrix_nodes::*,
+        mutagen_functions::*, point_nodes::*, point_set_nodes::*, Node,
     },
 };
 
@@ -22,16 +22,21 @@ pub enum CoordMapNodes {
     Shift {
         x: Box<SNFloatNodes>,
         y: Box<SNFloatNodes>,
+        child_normaliser: Box<SNFloatNormaliserNodes>,
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
     Scale {
         x: Box<SNFloatNodes>,
         y: Box<SNFloatNodes>,
+        child_normaliser: Box<SNFloatNormaliserNodes>,
     },
 
     #[mutagen(gen_weight = pipe_node_weight)]
-    Rotation { angle: Box<AngleNodes> },
+    Rotation {
+        child_angle: Box<AngleNodes>,
+        child_normaliser: Box<SNFloatNormaliserNodes>,
+    },
 
     #[mutagen(gen_weight = leaf_node_weight)]
     ToPolar,
@@ -45,12 +50,16 @@ pub enum CoordMapNodes {
         child_b: Box<CoordMapNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
-    ApplyMatrix { child: Box<SNFloatMatrix3Nodes> },
+    ApplyMatrix {
+        child_matrix: Box<SNFloatMatrix3Nodes>,
+        child_normaliser: Box<SNFloatNormaliserNodes>,
+    },
     #[mutagen(gen_weight = branch_node_weight)]
     Tessellate {
         child_a: Box<SNPointNodes>,
         child_b: Box<SNPointNodes>,
         child_scale: Box<SNPointNodes>,
+        child_normaliser: Box<SNFloatNormaliserNodes>,
         point_a: SNPoint,
         point_b: SNPoint,
     },
@@ -79,26 +88,42 @@ impl Node for CoordMapNodes {
                     .replace_coords(&coords)
                     .coordinate_set
             }
-            Shift { x, y } => compute_arg.coordinate_set.get_coord_shifted(
+            Shift {
+                x,
+                y,
+                child_normaliser,
+            } => compute_arg.coordinate_set.get_coord_shifted(
                 x.compute(compute_arg.reborrow()),
                 y.compute(compute_arg.reborrow()),
                 SNFloat::new(0.0),
+                child_normaliser.compute(compute_arg.reborrow()),
             ),
-            Scale { x, y } => compute_arg.coordinate_set.get_coord_scaled(
+            Scale {
+                x,
+                y,
+                child_normaliser,
+            } => compute_arg.coordinate_set.get_coord_scaled(
                 x.compute(compute_arg.reborrow()),
                 y.compute(compute_arg.reborrow()),
                 SNFloat::new(1.0),
+                child_normaliser.compute(compute_arg.reborrow()),
             ),
-            Rotation { angle } => {
-                let new_pos = Rotation2::new(angle.compute(compute_arg.reborrow()).into_inner())
-                    .transform_point(&Point2::new(
-                        compute_arg.coordinate_set.x.into_inner(),
-                        compute_arg.coordinate_set.y.into_inner(),
-                    ));
+            Rotation {
+                child_angle,
+                child_normaliser,
+            } => {
+                let new_pos =
+                    Rotation2::new(child_angle.compute(compute_arg.reborrow()).into_inner())
+                        .transform_point(&Point2::new(
+                            compute_arg.coordinate_set.x.into_inner(),
+                            compute_arg.coordinate_set.y.into_inner(),
+                        ));
+
+                let normaliser = child_normaliser.compute(compute_arg.reborrow());
 
                 CoordinateSet {
-                    x: SNFloat::new(0.0).sawtooth_add_f32(new_pos.x),
-                    y: SNFloat::new(0.0).sawtooth_add_f32(new_pos.y),
+                    x: normaliser.normalise(new_pos.x),
+                    y: normaliser.normalise(new_pos.y),
                     t: compute_arg.coordinate_set.t,
                 }
             }
@@ -131,7 +156,10 @@ impl Node for CoordMapNodes {
                     child_b.compute(compute_arg.reborrow())
                 }
             }
-            ApplyMatrix { child_matrix, child_normaliser } => {
+            ApplyMatrix {
+                child_matrix,
+                child_normaliser,
+            } => {
                 let point = Point2::new(
                     compute_arg.coordinate_set.x.into_inner(),
                     compute_arg.coordinate_set.y.into_inner(),
@@ -141,13 +169,13 @@ impl Node for CoordMapNodes {
                 let normaliser = child_normaliser.compute(compute_arg.reborrow());
 
                 let result = Point2::from_homogeneous(
-                    child.compute(compute_arg.reborrow()).into_inner() * point,
+                    child_matrix.compute(compute_arg.reborrow()).into_inner() * point,
                 )
                 .unwrap();
 
                 CoordinateSet {
-                    x: SNFloat::new_triangle(result.coords.x),
-                    y: SNFloat::new_triangle(result.coords.y),
+                    x: normaliser.normalise(result.coords.x),
+                    y: normaliser.normalise(result.coords.y),
                     t: compute_arg.coordinate_set.t,
                 }
             }
@@ -297,6 +325,7 @@ impl<'a> Updatable<'a> for CoordMapNodes {
                 child_a,
                 child_b,
                 child_scale,
+                child_normaliser,
                 ref mut point_a,
                 ref mut point_b,
             } => {
@@ -304,24 +333,28 @@ impl<'a> Updatable<'a> for CoordMapNodes {
                     .compute(arg.reborrow().into())
                     .scale_unfloat(UNFloat::new(0.025));
 
+                let normaliser = child_normaliser.compute(arg.reborrow().into());
+
                 let mut state_a = arg.reborrow();
                 state_a.coordinate_set.x = point_a.x();
                 state_a.coordinate_set.y = point_a.y();
 
-                *point_a = point_a.sawtooth_add(
+                *point_a = point_a.normalised_add(
                     child_a
                         .compute(state_a.into())
                         .scale_point(translation_scale),
+                    normaliser,
                 );
 
                 let mut state_b = arg.reborrow();
                 state_b.coordinate_set.x = point_b.x();
                 state_b.coordinate_set.y = point_b.y();
 
-                *point_b = point_b.sawtooth_add(
+                *point_b = point_b.normalised_add(
                     child_b
                         .compute(state_b.into())
                         .scale_point(translation_scale),
+                    normaliser,
                 );
             }
             _ => (),

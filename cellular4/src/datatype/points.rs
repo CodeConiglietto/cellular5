@@ -14,7 +14,10 @@ use serde::{
     Deserialize, Serialize,
 };
 
-use crate::{datatype::{constraint_resolvers::*, continuous::*}, mutagen_args::*};
+use crate::{
+    datatype::{constraint_resolvers::*, continuous::*},
+    mutagen_args::*,
+};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SNPoint {
@@ -36,11 +39,11 @@ impl SNPoint {
         Self::new_unchecked(value)
     }
 
-    pub fn new_normalised(value: Point2<f32>, normaliser: SNFloatNormaliser) -> Self
-    {
+    pub fn new_normalised(value: Point2<f32>, normaliser: SNFloatNormaliser) -> Self {
         Self::from_snfloats(normaliser.normalise(value.x), normaliser.normalise(value.y))
     }
 
+    // TODO Figure out what this does, if possible replace distance function with distance function enum
     pub fn subtract_normalised(&self, other: SNPoint) -> Self {
         let result = self.into_inner() - other.into_inner();
         Self::new(
@@ -75,8 +78,8 @@ impl SNPoint {
 
     pub fn normalised_add(self, other: SNPoint, normaliser: SNFloatNormaliser) -> SNPoint {
         SNPoint::from_snfloats(
-            normaliser.normalise(self.x().into_inner() + other.x().into_inner()),
-            normaliser.normalise(self.y().into_inner() + other.y().into_inner()),
+            self.x().normalised_add(other.x(), normaliser),
+            self.y().normalised_add(other.y(), normaliser),
         )
     }
 

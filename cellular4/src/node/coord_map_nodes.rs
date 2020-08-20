@@ -131,12 +131,14 @@ impl Node for CoordMapNodes {
                     child_b.compute(compute_arg.reborrow())
                 }
             }
-            ApplyMatrix { child } => {
+            ApplyMatrix { child_matrix, child_normaliser } => {
                 let point = Point2::new(
                     compute_arg.coordinate_set.x.into_inner(),
                     compute_arg.coordinate_set.y.into_inner(),
                 )
                 .to_homogeneous();
+
+                let normaliser = child_normaliser.compute(compute_arg.reborrow());
 
                 let result = Point2::from_homogeneous(
                     child.compute(compute_arg.reborrow()).into_inner() * point,

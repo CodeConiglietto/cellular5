@@ -1,5 +1,6 @@
 pub mod buffers;
 pub mod colors;
+pub mod constraint_resolvers;
 pub mod continuous;
 pub mod discrete;
 pub mod distance_functions;

@@ -1,6 +1,6 @@
 use crate::{
     constants::*,
-    datatype::{continuous::*, discrete::*, points::*},
+    datatype::{continuous::*, discrete::*, points::*, constraint_resolvers::*},
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -14,18 +14,18 @@ pub struct CoordinateSet {
 }
 
 impl CoordinateSet {
-    pub fn get_coord_shifted(self, shift_x: SNFloat, shift_y: SNFloat, shift_t: SNFloat) -> Self {
+    pub fn get_coord_shifted(self, shift_x: SNFloat, shift_y: SNFloat, shift_t: SNFloat, normaliser: SNFloatNormaliser) -> Self {
         CoordinateSet {
-            x: self.x.sawtooth_add(shift_x),
-            y: self.y.sawtooth_add(shift_y),
+            x: normaliser.normalise(self.x.into_inner() + shift_x.into_inner()),
+            y: normaliser.normalise(self.y.into_inner() + shift_y.into_inner()),
             t: self.t + shift_t.into_inner(),
         }
     }
 
-    pub fn get_coord_scaled(self, scale_x: SNFloat, scale_y: SNFloat, scale_t: SNFloat) -> Self {
+    pub fn get_coord_scaled(self, scale_x: SNFloat, scale_y: SNFloat, scale_t: SNFloat, normaliser: SNFloatNormaliser) -> Self {
         CoordinateSet {
-            x: SNFloat::new(self.x.into_inner() * scale_x.into_inner()),
-            y: SNFloat::new(self.y.into_inner() * scale_y.into_inner()),
+            x: normaliser.normalise(self.x.into_inner() * scale_x.into_inner()),
+            y: normaliser.normalise(self.y.into_inner() * scale_y.into_inner()),
             t: self.t * scale_t.into_inner(),
         }
     }

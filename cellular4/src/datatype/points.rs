@@ -14,7 +14,7 @@ use serde::{
     Deserialize, Serialize,
 };
 
-use crate::{datatype::continuous::*, mutagen_args::*};
+use crate::{datatype::{constraint_resolvers::*, continuous::*}, mutagen_args::*};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SNPoint {
@@ -36,9 +36,9 @@ impl SNPoint {
         Self::new_unchecked(value)
     }
 
-    pub fn new_sawtooth(value: Point2<f32>) -> Self
+    pub fn new_normalised(value: Point2<f32>, normaliser: SNFloatNormaliser) -> Self
     {
-        Self::from_snfloats(SNFloat::new_sawtooth(value.x), SNFloat::new_sawtooth(value.y))
+        Self::from_snfloats(normaliser.normalise(value.x), normaliser.normalise(value.y))
     }
 
     pub fn subtract_normalised(&self, other: SNPoint) -> Self {
@@ -73,17 +73,10 @@ impl SNPoint {
         Angle::new(f32::atan2(self.value.x, self.value.y))
     }
 
-    pub fn sawtooth_add(self, other: SNPoint) -> SNPoint {
+    pub fn normalised_add(self, other: SNPoint, normaliser: SNFloatNormaliser) -> SNPoint {
         SNPoint::from_snfloats(
-            self.x().sawtooth_add(other.x()),
-            self.y().sawtooth_add(other.y()),
-        )
-    }
-
-    pub fn triangle_add(self, other: SNPoint) -> SNPoint {
-        SNPoint::from_snfloats(
-            self.x().triangle_add(other.x()),
-            self.y().triangle_add(other.y()),
+            normaliser.normalise(self.x().into_inner() + other.x().into_inner()),
+            normaliser.normalise(self.y().into_inner() + other.y().into_inner()),
         )
     }
 

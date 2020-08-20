@@ -78,6 +78,7 @@ pub enum FloatColorNodes {
         child: Box<SNPointNodes>,
         child_color: Box<FloatColorNodes>,
         points_len_child: Box<NibbleNodes>,
+        child_normaliser: Box<FloatNormaliserNodes>,
         #[mutagen(skip)]
         #[serde(skip)]
         points: VecDeque<SNPoint>,
@@ -225,6 +226,7 @@ impl<'a> Updatable<'a> for FloatColorNodes {
                 child,
                 child_color,
                 points_len_child,
+                child_normaliser,
                 points,
             } => {
                 let last_point = points.back().copied().unwrap_or_else(SNPoint::zero);
@@ -232,7 +234,7 @@ impl<'a> Updatable<'a> for FloatColorNodes {
                 arg.coordinate_set.x = last_point.x();
                 arg.coordinate_set.y = last_point.y();
 
-                let new_point = last_point.sawtooth_add(child.compute(arg.reborrow().into()));
+                let new_point = last_point.normalised_add(child.compute(arg.reborrow().into()), child_normaliser.compute(arg.reborrow().into()));
 
                 let points_len = points_len_child.compute(arg.reborrow().into());
 

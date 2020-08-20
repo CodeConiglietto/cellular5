@@ -1,4 +1,6 @@
-pub enum SNFloatConstraintResolver{
+use crate::datatype::continuous::*;
+
+pub enum SNFloatNormaliser{
     Sawtooth,
     Triangle,
     Sigmoid,
@@ -6,18 +8,18 @@ pub enum SNFloatConstraintResolver{
     Fractional
 }
 
-impl SNFloatConstraintResolver{
-    fn resolve(f32) -> SNFloat
+impl SNFloatNormaliser{
+    pub fn normalise(self, value: f32) -> SNFloat
     {
-        use SNFloatConstraintResolver::*;
+        use SNFloatNormaliser::*;
 
-        match self
+        match (self)
         {
-            Sawtooth =>,
-            Triangle =>,
-            Sigmoid =>,
-            Clamp =>,
-            Fractional =>,
+            Sawtooth => SNFloat::new_sawtooth(value),
+            Triangle => SNFloat::new_triangle(value),
+            Sigmoid => SNFloat::new_tanh(value),
+            Clamp => SNFloat::new_clamped(value),
+            Fractional => SNFloat::new_fractional(value),
         }
     }
 }

@@ -11,7 +11,7 @@ use rand::prelude::*;
 use serde::{de::Deserializer, ser::Serializer, Deserialize, Serialize};
 
 use crate::{
-    datatype::{continuous::*, discrete::*, points::*},
+    datatype::{constraint_normaliser::*, continuous::*, discrete::*, points::*},
     mutagen_args::*,
 };
 
@@ -173,6 +173,7 @@ impl PointSetGenerator {
                 rng,
                 count.into_inner().max(4) as usize,
                 (2.0 * radius.into_inner() / (count.into_inner() as f32).sqrt().max(2.0)).max(0.01),
+                SNFloatNormaliser::generate_rng(rng),
             ),
         };
 
@@ -212,7 +213,7 @@ pub fn uniform<R: Rng + ?Sized>(rng: &mut R, count: usize) -> Vec<SNPoint> {
         .collect()
 }
 
-pub fn poisson<R: Rng + ?Sized>(rng: &mut R, count: usize, radius: f32) -> Vec<SNPoint> {
+pub fn poisson<R: Rng + ?Sized>(rng: &mut R, count: usize, radius: f32, normaliser: SNFloatNormaliser) -> Vec<SNPoint> {
     assert!(radius > 0.0);
     assert!(count > 0);
 
@@ -256,8 +257,8 @@ pub fn poisson<R: Rng + ?Sized>(rng: &mut R, count: usize, radius: f32) -> Vec<S
             let dy = f32::sin(theta) * r;
 
             let new_p = SNPoint::from_snfloats(
-                SNFloat::new_clamped(p.x().into_inner() + dx),
-                SNFloat::new_clamped(p.y().into_inner() + dy),
+                normaliser.normalise(p.x().into_inner() + dx),
+                normaliser.normalise(p.y().into_inner() + dy),
             );
 
             let [gx, gy] = p_to_grid(new_p);

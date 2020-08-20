@@ -5,7 +5,10 @@ use serde::{Deserialize, Serialize};
 use crate::{
     datatype::{constraint_resolvers::*, points::*},
     mutagen_args::*,
-    node::{constraint_resolver_nodes::*, continuous_nodes::*, mutagen_functions::*, point_set_nodes::*, Node},
+    node::{
+        constraint_resolver_nodes::*, continuous_nodes::*, mutagen_functions::*,
+        point_set_nodes::*, Node,
+    },
 };
 
 //Note: SNPoints are not normalised in the mathematical sense, each coordinate is simply capped at -1..1
@@ -61,12 +64,14 @@ impl Node for SNPointNodes {
                 child_a.compute(compute_arg.reborrow()).into_inner(),
                 child_b.compute(compute_arg.reborrow()).into_inner(),
             )),
-            NormalisedAdd { child_a, child_b, child_normaliser } => {
-                child_a.compute(compute_arg.reborrow()).normalised_add(
-                    child_b.compute(compute_arg.reborrow()),
-                    child_normaliser.compute(compute_arg.reborrow()),
-                )
-            }
+            NormalisedAdd {
+                child_a,
+                child_b,
+                child_normaliser,
+            } => child_a.compute(compute_arg.reborrow()).normalised_add(
+                child_b.compute(compute_arg.reborrow()),
+                child_normaliser.compute(compute_arg.reborrow()),
+            ),
             IterativeNormalisedAdd { value, .. } => *value,
             GetClosestPointInSet { child } => child
                 .compute(compute_arg.reborrow())
@@ -81,7 +86,7 @@ impl Node for SNPointNodes {
 impl<'a> Updatable<'a> for SNPointNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, arg: UpdArg<'a>) {
+    fn update(&mut self, _state: mutagen::State, mut arg: UpdArg<'a>) {
         use SNPointNodes::*;
 
         match self {

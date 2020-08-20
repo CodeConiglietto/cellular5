@@ -169,12 +169,18 @@ impl PointSetGenerator {
             PointSetGenerator::Uniform { count } => {
                 uniform(rng, count.into_inner().max(2) as usize)
             }
-            PointSetGenerator::Poisson { count, radius } => poisson(
-                rng,
-                count.into_inner().max(4) as usize,
-                (2.0 * radius.into_inner() / (count.into_inner() as f32).sqrt().max(2.0)).max(0.01),
-                SNFloatNormaliser::generate_rng(rng, mutagen::State::default(), ()),
-            ),
+            PointSetGenerator::Poisson { count, radius } => {
+                let normaliser =
+                    SNFloatNormaliser::generate_rng(rng, mutagen::State::default(), ());
+
+                poisson(
+                    rng,
+                    count.into_inner().max(4) as usize,
+                    (2.0 * radius.into_inner() / (count.into_inner() as f32).sqrt().max(2.0))
+                        .max(0.01),
+                    normaliser,
+                )
+            }
         };
 
         PointSet::new(Arc::new(points), *self)
@@ -213,7 +219,12 @@ pub fn uniform<R: Rng + ?Sized>(rng: &mut R, count: usize) -> Vec<SNPoint> {
         .collect()
 }
 
-pub fn poisson<R: Rng + ?Sized>(rng: &mut R, count: usize, radius: f32, normaliser: SNFloatNormaliser) -> Vec<SNPoint> {
+pub fn poisson<R: Rng + ?Sized>(
+    rng: &mut R,
+    count: usize,
+    radius: f32,
+    normaliser: SNFloatNormaliser,
+) -> Vec<SNPoint> {
     assert!(radius > 0.0);
     assert!(count > 0);
 

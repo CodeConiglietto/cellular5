@@ -8,7 +8,10 @@ use serde::{Deserialize, Serialize};
 use crate::{
     datatype::{continuous::*, point_sets::*, points::*},
     mutagen_args::*,
-    node::{constraint_resolver_nodes::*, continuous_nodes::*, discrete_nodes::*, mutagen_functions::*, point_nodes::*, Node},
+    node::{
+        constraint_resolver_nodes::*, continuous_nodes::*, discrete_nodes::*, mutagen_functions::*,
+        point_nodes::*, Node,
+    },
 };
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]
@@ -78,8 +81,8 @@ impl<'a> Updatable<'a> for PointSetNodes {
                 child,
                 child_normaliser,
             } => {
-                let compute_arg = ComArg::from(arg.reborrow());
                 let normaliser = child_normaliser.compute(arg.reborrow().into());
+                let compute_arg = ComArg::from(arg.reborrow());
 
                 *value = PointSet::new(
                     Arc::new(
@@ -90,7 +93,7 @@ impl<'a> Updatable<'a> for PointSetNodes {
                                 p.normalised_add(
                                     child
                                         .compute(compute_arg.clone().replace_coords(p))
-                                        .scale_unfloat(UNFloat::new(0.05)),//magic number makes things translate at a not-insane rate
+                                        .scale_unfloat(UNFloat::new(0.05)), //magic number makes things translate at a not-insane rate
                                     normaliser,
                                 )
                             })
@@ -104,8 +107,8 @@ impl<'a> Updatable<'a> for PointSetNodes {
                 child,
                 child_normaliser,
             } => {
-                let compute_arg = ComArg::from(arg.reborrow());
                 let normaliser = child_normaliser.compute(arg.reborrow().into());
+                let compute_arg = ComArg::from(arg.reborrow());
 
                 *value = PointSet::new(
                     Arc::new(
@@ -121,7 +124,7 @@ impl<'a> Updatable<'a> for PointSetNodes {
                                                 .compute(compute_arg.clone().replace_coords(p))
                                                 .multiply(UNFloat::new(0.25)),
                                         ),
-                                        normaliser,
+                                    normaliser,
                                 )
                             })
                             .collect(),
@@ -166,22 +169,34 @@ impl<'a> Updatable<'a> for PointSetNodes {
                     for y in 0..=8 {
                         let ratio = 0.5 / 8 as f32;
 
-                        edge_vec.push(SNPoint::new_normalised(Point2::new(
-                            ratio * x as f32 + (x_scalar * y as f32),
-                            ratio * y as f32 + (y_scalar * x as f32),
-                        ), normaliser));
-                        edge_vec.push(SNPoint::new_normalised(Point2::new(
-                            -ratio * x as f32 + (x_scalar * y as f32),
-                            ratio * y as f32 + (y_scalar * x as f32),
-                        ), normaliser));
-                        edge_vec.push(SNPoint::new_normalised(Point2::new(
-                            ratio * x as f32 + (x_scalar * y as f32),
-                            -ratio * y as f32 + (y_scalar * x as f32),
-                        ), normaliser));
-                        edge_vec.push(SNPoint::new_normalised(Point2::new(
-                            -ratio * x as f32 + (x_scalar * y as f32),
-                            -ratio * y as f32 + (y_scalar * x as f32),
-                        ), normaliser));
+                        edge_vec.push(SNPoint::new_normalised(
+                            Point2::new(
+                                ratio * x as f32 + (x_scalar * y as f32),
+                                ratio * y as f32 + (y_scalar * x as f32),
+                            ),
+                            normaliser,
+                        ));
+                        edge_vec.push(SNPoint::new_normalised(
+                            Point2::new(
+                                -ratio * x as f32 + (x_scalar * y as f32),
+                                ratio * y as f32 + (y_scalar * x as f32),
+                            ),
+                            normaliser,
+                        ));
+                        edge_vec.push(SNPoint::new_normalised(
+                            Point2::new(
+                                ratio * x as f32 + (x_scalar * y as f32),
+                                -ratio * y as f32 + (y_scalar * x as f32),
+                            ),
+                            normaliser,
+                        ));
+                        edge_vec.push(SNPoint::new_normalised(
+                            Point2::new(
+                                -ratio * x as f32 + (x_scalar * y as f32),
+                                -ratio * y as f32 + (y_scalar * x as f32),
+                            ),
+                            normaliser,
+                        ));
                     }
                 }
 
@@ -206,6 +221,8 @@ impl<'a> Updatable<'a> for PointSetNodes {
 
                     edge_vec.push(SNPoint::new(point_a + point_difference * ratio * i as f32));
                 }
+
+                *value = PointSet::new(Arc::new(edge_vec), value.generator);
             }
             _ => {}
         }

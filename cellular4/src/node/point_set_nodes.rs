@@ -213,7 +213,7 @@ impl<'a> Updatable<'a> for PointSetNodes {
 
                 let point_difference = point_b - point_a;
 
-                let point_count = child_points.compute(arg.reborrow().into()).into_inner();
+                let point_count = child_points.compute(arg.reborrow().into()).into_inner().max(1);
 
                 let mut edge_vec = Vec::new();
                 for i in 0..point_count {

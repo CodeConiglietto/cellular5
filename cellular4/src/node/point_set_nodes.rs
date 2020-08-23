@@ -24,13 +24,13 @@ pub enum PointSetNodes {
     Translating {
         value: PointSet,
         child: Box<SNPointNodes>,
-        child_normaliser: Box<SNFloatNormaliserNodes>,
+        child_normaliser: Box<SFloatNormaliserNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     Spreading {
         value: PointSet,
         child: Box<UNFloatNodes>,
-        child_normaliser: Box<SNFloatNormaliserNodes>,
+        child_normaliser: Box<SFloatNormaliserNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     Polygonal {
@@ -43,7 +43,7 @@ pub enum PointSetNodes {
         value: PointSet,
         child_x_scalar: Box<SNFloatNodes>,
         child_y_scalar: Box<SNFloatNodes>,
-        child_normaliser: Box<SNFloatNormaliserNodes>,
+        child_normaliser: Box<SFloatNormaliserNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     Line {

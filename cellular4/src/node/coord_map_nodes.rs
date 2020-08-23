@@ -22,20 +22,20 @@ pub enum CoordMapNodes {
     Shift {
         x: Box<SNFloatNodes>,
         y: Box<SNFloatNodes>,
-        child_normaliser: Box<SNFloatNormaliserNodes>,
+        child_normaliser: Box<SFloatNormaliserNodes>,
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
     Scale {
         x: Box<SNFloatNodes>,
         y: Box<SNFloatNodes>,
-        child_normaliser: Box<SNFloatNormaliserNodes>,
+        child_normaliser: Box<SFloatNormaliserNodes>,
     },
 
     #[mutagen(gen_weight = pipe_node_weight)]
     Rotation {
         child_angle: Box<AngleNodes>,
-        child_normaliser: Box<SNFloatNormaliserNodes>,
+        child_normaliser: Box<SFloatNormaliserNodes>,
     },
 
     #[mutagen(gen_weight = leaf_node_weight)]
@@ -52,14 +52,14 @@ pub enum CoordMapNodes {
     #[mutagen(gen_weight = branch_node_weight)]
     ApplyMatrix {
         child_matrix: Box<SNFloatMatrix3Nodes>,
-        child_normaliser: Box<SNFloatNormaliserNodes>,
+        child_normaliser: Box<SFloatNormaliserNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     Tessellate {
         child_a: Box<SNPointNodes>,
         child_b: Box<SNPointNodes>,
         child_scale: Box<SNPointNodes>,
-        child_normaliser: Box<SNFloatNormaliserNodes>,
+        child_normaliser: Box<SFloatNormaliserNodes>,
         point_a: SNPoint,
         point_b: SNPoint,
     },

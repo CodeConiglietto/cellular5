@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     datatype::{continuous::*, distance_functions::*},
     mutagen_args::*,
-    node::{point_nodes::*, Node},
+    node::{constraint_resolver_nodes::*, point_nodes::*, Node},
 };
 
 #[derive(Mutatable, Generatable, Serialize, Deserialize, Debug)]
@@ -14,6 +14,7 @@ pub enum DistanceFunctionNodes {
         value: DistanceFunction,
         child_a: Box<SNPointNodes>,
         child_b: Box<SNPointNodes>,
+        child_normaliser: Box<UFloatNormaliserNodes>,
     },
 }
 
@@ -28,9 +29,11 @@ impl Node for DistanceFunctionNodes {
                 value,
                 child_a,
                 child_b,
-            } => value.calculate(
+                child_normaliser,
+            } => value.calculate_normalised(
                 child_a.compute(compute_arg.reborrow()),
                 child_b.compute(compute_arg.reborrow()),
+                child_normaliser.compute(compute_arg.reborrow()),
             ),
         }
     }

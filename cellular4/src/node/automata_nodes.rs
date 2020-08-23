@@ -14,7 +14,7 @@ pub enum BinaryAutomataNodes {
     Majority {
         child: Box<BooleanNodes>,
         point_set: Box<PointSetNodes>,
-        child_normaliser: Box<SNFloatNormaliserNodes>,
+        child_normaliser: Box<SFloatNormaliserNodes>,
     },
 }
 

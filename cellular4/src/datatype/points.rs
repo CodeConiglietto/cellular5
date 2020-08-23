@@ -39,7 +39,7 @@ impl SNPoint {
         Self::new_unchecked(value)
     }
 
-    pub fn new_normalised(value: Point2<f32>, normaliser: SNFloatNormaliser) -> Self {
+    pub fn new_normalised(value: Point2<f32>, normaliser: SFloatNormaliser) -> Self {
         Self::from_snfloats(normaliser.normalise(value.x), normaliser.normalise(value.y))
     }
 
@@ -76,7 +76,7 @@ impl SNPoint {
         Angle::new(f32::atan2(self.value.x, self.value.y))
     }
 
-    pub fn normalised_add(self, other: SNPoint, normaliser: SNFloatNormaliser) -> SNPoint {
+    pub fn normalised_add(self, other: SNPoint, normaliser: SFloatNormaliser) -> SNPoint {
         SNPoint::from_snfloats(
             self.x().normalised_add(other.x(), normaliser),
             self.y().normalised_add(other.y(), normaliser),

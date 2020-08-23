@@ -1,14 +1,14 @@
-use mutagen::{Generatable, Mutatable};
+use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
 use nalgebra::*;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    datatype::{continuous::*, points::*},
+    datatype::{constraint_resolvers::*, continuous::*, points::*},
     mutagen_args::*,
 };
 
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, UpdatableRecursively)]
 pub enum DistanceFunction {
     Euclidean,
     Manhattan,
@@ -19,19 +19,23 @@ pub enum DistanceFunction {
 
 //wrapped in triangle waves for now, maybe parametrise SN resolution method
 impl DistanceFunction {
-    pub fn calculate(self, a: SNPoint, b: SNPoint) -> UNFloat {
-        let new_point = a.into_inner() - b.into_inner();
+    pub fn calculate_point2(self, a: Point2<f32>, b: Point2<f32>) -> f32 {
+        let new_point = b - a;
         let x = new_point.x;
         let y = new_point.y;
 
         use DistanceFunction::*;
 
         match self {
-            Euclidean => UNFloat::new_triangle(distance(&a.into_inner(), &b.into_inner()) * 0.5),
-            Manhattan => UNFloat::new_triangle((x.abs() + y.abs()) * 0.5),
-            Chebyshev => UNFloat::new_triangle((x.abs()).max(y.abs())),
-            Minimum => UNFloat::new_triangle((x.abs()).min(y.abs())),
+            Euclidean => distance(&a, &b) * 0.5,
+            Manhattan => (x.abs() + y.abs()) * 0.5,
+            Chebyshev => (x.abs()).max(y.abs()),
+            Minimum => (x.abs()).min(y.abs()),
         }
+    }
+
+    pub fn calculate_normalised(self, a: SNPoint, b: SNPoint, normaliser: UFloatNormaliser) -> UNFloat {
+        normaliser.normalise(self.calculate_point2(a.into_inner(), b.into_inner()))
     }
 
     pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
@@ -61,5 +65,15 @@ impl<'a> Mutatable<'a> for DistanceFunction {
     type MutArg = MutArg<'a>;
     fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, state: mutagen::State, arg: MutArg<'a>) {
         *self = Self::random(rng);
+    }
+}
+
+impl<'a> Updatable<'a> for DistanceFunction {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _state: mutagen::State, _arg: Self::UpdateArg) {
+        match self {
+            _ => {}
+        }
     }
 }

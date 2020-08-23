@@ -78,7 +78,7 @@ pub enum FloatColorNodes {
         child: Box<SNPointNodes>,
         child_color: Box<FloatColorNodes>,
         points_len_child: Box<NibbleNodes>,
-        child_normaliser: Box<SNFloatNormaliserNodes>,
+        child_normaliser: Box<SFloatNormaliserNodes>,
         #[mutagen(skip)]
         #[serde(skip)]
         points: VecDeque<SNPoint>,

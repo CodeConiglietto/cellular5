@@ -171,7 +171,7 @@ impl PointSetGenerator {
             }
             PointSetGenerator::Poisson { count, radius } => {
                 let normaliser =
-                    SNFloatNormaliser::generate_rng(rng, mutagen::State::default(), ());
+                    SFloatNormaliser::generate_rng(rng, mutagen::State::default(), ());
 
                 poisson(
                     rng,
@@ -223,7 +223,7 @@ pub fn poisson<R: Rng + ?Sized>(
     rng: &mut R,
     count: usize,
     radius: f32,
-    normaliser: SNFloatNormaliser,
+    normaliser: SFloatNormaliser,
 ) -> Vec<SNPoint> {
     assert!(radius > 0.0);
     assert!(count > 0);

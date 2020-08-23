@@ -195,7 +195,7 @@ impl SNFloat {
         UNFloat::new_from_range(self.value, -1.0, 1.0)
     }
 
-    pub fn normalised_add(self, other: Self, normaliser: SNFloatNormaliser) -> Self {
+    pub fn normalised_add(self, other: Self, normaliser: SFloatNormaliser) -> Self {
         normaliser.normalise(self.into_inner() + other.into_inner())
     }
 

@@ -32,13 +32,13 @@ pub enum SNPointNodes {
     NormalisedAdd {
         child_a: Box<SNPointNodes>,
         child_b: Box<SNPointNodes>,
-        child_normaliser: Box<SNFloatNormaliserNodes>,
+        child_normaliser: Box<SFloatNormaliserNodes>,
     },
     #[mutagen(gen_weight = pipe_node_weight)]
     IterativeNormalisedAdd {
         value: SNPoint,
         child_point: Box<SNPointNodes>,
-        child_normaliser: Box<SNFloatNormaliserNodes>,
+        child_normaliser: Box<SFloatNormaliserNodes>,
     },
     #[mutagen(gen_weight = pipe_node_weight)]
     GetClosestPointInSet { child: Box<PointSetNodes> },

@@ -7,29 +7,57 @@ use crate::{datatype::continuous::*, mutagen_args::*};
     Clone, Copy, Generatable, UpdatableRecursively, Mutatable, Serialize, Deserialize, Debug,
 )]
 #[mutagen(gen_arg = type (), mut_arg = type ())]
-pub enum SNFloatNormaliser {
+pub enum SFloatNormaliser {
     Sawtooth,
     Triangle,
-    Sigmoid,
+    TanH,
     Clamp,
     Fractional,
 }
 
-impl SNFloatNormaliser {
+impl SFloatNormaliser {
     pub fn normalise(self, value: f32) -> SNFloat {
-        use SNFloatNormaliser::*;
+        use SFloatNormaliser::*;
 
         match self {
             Sawtooth => SNFloat::new_sawtooth(value),
             Triangle => SNFloat::new_triangle(value),
-            Sigmoid => SNFloat::new_tanh(value),
+            TanH => SNFloat::new_tanh(value),
             Clamp => SNFloat::new_clamped(value),
             Fractional => SNFloat::new_fractional(value),
         }
     }
 }
 
-impl<'a> Updatable<'a> for SNFloatNormaliser {
+impl<'a> Updatable<'a> for SFloatNormaliser {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _state: mutagen::State, mut _arg: UpdArg<'a>) {}
+}
+
+#[derive(
+    Clone, Copy, Generatable, UpdatableRecursively, Mutatable, Serialize, Deserialize, Debug,
+)]
+#[mutagen(gen_arg = type (), mut_arg = type ())]
+pub enum UFloatNormaliser {//TODO: Add sigmoid function
+    Sawtooth,
+    Triangle,
+    Clamp,
+}
+
+impl UFloatNormaliser {
+    pub fn normalise(self, value: f32) -> UNFloat {
+        use UFloatNormaliser::*;
+
+        match self {
+            Sawtooth => UNFloat::new_sawtooth(value),
+            Triangle => UNFloat::new_triangle(value),
+            Clamp => UNFloat::new_clamped(value),
+        }
+    }
+}
+
+impl<'a> Updatable<'a> for UFloatNormaliser {
     type UpdateArg = UpdArg<'a>;
 
     fn update(&mut self, _state: mutagen::State, mut _arg: UpdArg<'a>) {}

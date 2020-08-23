@@ -5,7 +5,7 @@ use nalgebra::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    datatype::continuous::*,
+    datatype::{continuous::*, distance_functions::*},
     mutagen_args::*,
     node::{
         constraint_resolver_nodes::*,
@@ -168,7 +168,7 @@ pub enum SNFloatNodes {
     NormalisedAdd {
         child_a: Box<SNFloatNodes>,
         child_b: Box<SNFloatNodes>,
-        child_normaliser: Box<SNFloatNormaliserNodes>,
+        child_normaliser: Box<SFloatNormaliserNodes>,
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
@@ -294,6 +294,7 @@ pub enum UNFloatNodes {
         child_scale: Box<SNPointNodes>,
         child_iterations: Box<ByteNodes>,
         child_exponentiate: Box<BooleanNodes>,
+        child_distance_function: DistanceFunction,
     },
     // #[mutagen(gen_weight = leaf_node_weight)]
     // LastRotation,
@@ -419,6 +420,7 @@ impl Node for UNFloatNodes {
                 child_scale,
                 child_iterations,
                 child_exponentiate,
+                child_distance_function,
             } => {
                 let power = f64::from(
                     (1 + child_power.compute(compute_arg.reborrow()).into_inner()) as f32
@@ -466,7 +468,7 @@ impl Node for UNFloatNodes {
                     c,
                     iterations as usize,
                     |z, i| z.powf(power) + z_offset * i as f64,
-                    |z, i| z.norm_sqr() > 4.0,
+                    |z, i| child_distance_function.calculate_point2(Point2::origin(), Point2::new(z.re as f32, z.im as f32)) > 4.0,
                 );
 
                 UNFloat::new(((escape as f32 / iterations as f32) * 4.0).fract())

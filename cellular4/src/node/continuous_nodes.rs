@@ -468,7 +468,7 @@ impl Node for UNFloatNodes {
                     c,
                     iterations as usize,
                     |z, i| z.powf(power) + z_offset * i as f64,
-                    |z, i| child_distance_function.calculate_point2(Point2::origin(), Point2::new(z.re as f32, z.im as f32)) > 4.0,
+                    |z, i| child_distance_function.calculate_point2(Point2::origin(), Point2::new(z.re as f32, z.im as f32)) > 2.0,
                 );
 
                 UNFloat::new(((escape as f32 / iterations as f32) * 4.0).fract())

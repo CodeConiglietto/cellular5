@@ -30,7 +30,7 @@ lazy_static! {
     static ref FALLBACK_IMAGE: Image = Image::load(
         ImageSource::Fallback,
         Cursor::new(FALLBACK_IMAGE_DATA),
-        ImageFormat::JPEG,
+        ImageFormat::PNG,
     )
     .unwrap_or_else(|e| {
         error!("Error loading fallback image: {}", e);
@@ -43,7 +43,7 @@ thread_local! {
 }
 
 const FALLBACK_IMAGE_DATA: &[u8] =
-    include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/eyeball.jpg"));
+    include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/eyeball2.png"));
 
 struct RandomImageLoader {
     rng: DeterministicRng,

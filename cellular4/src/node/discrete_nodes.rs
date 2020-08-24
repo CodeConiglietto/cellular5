@@ -21,6 +21,12 @@ pub enum BooleanNodes {
         child_b: Box<UNFloatNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
+    UNFloatBetween {
+        child_value: Box<UNFloatNodes>,
+        child_range_a: Box<UNFloatNodes>,
+        child_range_b: Box<UNFloatNodes>,
+    },
+    #[mutagen(gen_weight = branch_node_weight)]
     SNFloatLess {
         child_a: Box<SNFloatNodes>,
         child_b: Box<SNFloatNodes>,
@@ -29,6 +35,12 @@ pub enum BooleanNodes {
     SNFloatMore {
         child_a: Box<SNFloatNodes>,
         child_b: Box<SNFloatNodes>,
+    },
+    #[mutagen(gen_weight = branch_node_weight)]
+    SNFloatBetween {
+        child_value: Box<SNFloatNodes>,
+        child_range_a: Box<SNFloatNodes>,
+        child_range_b: Box<SNFloatNodes>,
     },
     #[mutagen(gen_weight = pipe_node_weight)]
     SNFloatSign { child: Box<SNFloatNodes> },
@@ -92,6 +104,19 @@ impl Node for BooleanNodes {
                 value: child_a.compute(compute_arg.reborrow()).into_inner()
                     > child_b.compute(compute_arg.reborrow()).into_inner(),
             },
+            UNFloatBetween { child_value, child_range_a, child_range_b } => {
+                
+                let range_a = child_range_a.compute(compute_arg.reborrow()).into_inner();
+                let range_b = child_range_b.compute(compute_arg.reborrow()).into_inner();
+
+                let max = range_a.max(range_b);
+                let min = range_a.min(range_b);
+
+                let value = child_value.compute(compute_arg.reborrow()).into_inner();
+
+                Boolean {
+                value: value > min && value < max,
+            }},
             SNFloatLess { child_a, child_b } => Boolean {
                 value: child_a.compute(compute_arg.reborrow()).into_inner()
                     < child_b.compute(compute_arg.reborrow()).into_inner(),
@@ -100,6 +125,19 @@ impl Node for BooleanNodes {
                 value: child_a.compute(compute_arg.reborrow()).into_inner()
                     > child_b.compute(compute_arg.reborrow()).into_inner(),
             },
+            SNFloatBetween { child_value, child_range_a, child_range_b } => {
+                
+                let range_a = child_range_a.compute(compute_arg.reborrow()).into_inner();
+                let range_b = child_range_b.compute(compute_arg.reborrow()).into_inner();
+
+                let max = range_a.max(range_b);
+                let min = range_a.min(range_b);
+
+                let value = child_value.compute(compute_arg.reborrow()).into_inner();
+
+                Boolean {
+                value: value > min && value < max,
+            }},
             SNFloatSign { child } => Boolean {
                 value: child.compute(compute_arg.reborrow()).into_inner() >= 0.0,
             },

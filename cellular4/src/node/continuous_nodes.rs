@@ -5,12 +5,12 @@ use nalgebra::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    datatype::{continuous::*, distance_functions::*},
+    datatype::{continuous::*, distance_functions::*, points::*},
     mutagen_args::*,
     node::{
         constraint_resolver_nodes::*,
         color_nodes::*, coord_map_nodes::*, discrete_nodes::*, distance_function_nodes::*,
-        mutagen_functions::*, noise_nodes::*, point_nodes::*, Node,
+        matrix_nodes::*, mutagen_functions::*, noise_nodes::*, point_nodes::*, Node,
     },
     util::*,
 };
@@ -296,6 +296,13 @@ pub enum UNFloatNodes {
         child_exponentiate: Box<BooleanNodes>,
         child_distance_function: DistanceFunction,
     },
+    #[mutagen(gen_weight = pipe_node_weight)]
+    IterativeMatrix {
+        child_matrix: Box<SNFloatMatrix3Nodes>,
+        child_iterations: Box<ByteNodes>,
+        child_exit_condition: Box<BooleanNodes>,
+        child_normaliser: Box<SFloatNormaliserNodes>,
+    },
     // #[mutagen(gen_weight = leaf_node_weight)]
     // LastRotation,
     #[mutagen(gen_weight = branch_node_weight)]
@@ -469,6 +476,37 @@ impl Node for UNFloatNodes {
                     iterations as usize,
                     |z, i| z.powf(power) + z_offset * i as f64,
                     |z, i| child_distance_function.calculate_point2(Point2::origin(), Point2::new(z.re as f32, z.im as f32)) > 2.0,
+                );
+
+                UNFloat::new(((escape as f32 / iterations as f32) * 4.0).fract())
+            }
+            IterativeMatrix {
+                child_matrix,
+                child_iterations,
+                child_exit_condition,
+                child_normaliser,
+            } => {
+                let matrix = child_matrix.compute(compute_arg.reborrow()).into_inner();
+                
+                let iterations = 1 + child_iterations
+                    .compute(compute_arg.reborrow())
+                    .into_inner()
+                    / 4;
+
+                let normaliser = child_normaliser.compute(compute_arg.reborrow());
+
+                // x and y are swapped intentionally
+                let c = Complex::new(
+                    f64::from(compute_arg.coordinate_set.y.into_inner()),
+                    f64::from(compute_arg.coordinate_set.x.into_inner()),
+                );
+
+                let (z_final, escape) = escape_time_system(
+                    c,
+                    iterations as usize,
+                    |z, i| {let new_point = matrix.transform_point(&Point2::new(z.re as f32, z.im as f32));
+                            Complex::new(new_point.x as f64, new_point.y as f64)},
+                    |z, i| child_exit_condition.compute(compute_arg.reborrow().replace_coords(&SNPoint::new_normalised(Point2::new(z.re as f32, z.im as f32), normaliser))).into_inner(),
                 );
 
                 UNFloat::new(((escape as f32 / iterations as f32) * 4.0).fract())

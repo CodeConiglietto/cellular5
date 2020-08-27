@@ -19,6 +19,7 @@ lazy_static = "1.4.0"
 log = "0.4.8"
 ndarray = { version = "0.13.0", features = ["rayon"] }
 nalgebra = { version = "0.21.0", features = ["serde-serialize"] }
+num = "0.2"
 noise = "0.6.0"
 palette = "0.5.0"
 rand = "0.7.3"

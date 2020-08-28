@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     constants::*,
-    datatype::{buffers::*, colors::*, image::*, points::*},
+    datatype::{continuous::*, buffers::*, colors::*, image::*, points::*},
     mutagen_args::*,
     node::{
         constraint_resolver_nodes::*, color_blend_nodes::*, continuous_nodes::*, coord_map_nodes::*, discrete_nodes::*,
@@ -41,6 +41,25 @@ pub enum FloatColorNodes {
         h: Box<UNFloatNodes>,
         s: Box<UNFloatNodes>,
         v: Box<UNFloatNodes>,
+        a: Box<UNFloatNodes>,
+        offset: UNFloat
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    HSVAngle {
+        h: Box<AngleNodes>,
+        s: Box<UNFloatNodes>,
+        v: Box<UNFloatNodes>,
+        a: Box<UNFloatNodes>,
+        offset: Angle
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    CMYK {
+        c: Box<UNFloatNodes>,
+        m: Box<UNFloatNodes>,
+        y: Box<UNFloatNodes>,
+        k: Box<UNFloatNodes>,
         a: Box<UNFloatNodes>,
     },
 
@@ -158,10 +177,10 @@ impl Node for FloatColorNodes {
                 b: b.compute(compute_arg.reborrow().into()),
                 a: a.compute(compute_arg.reborrow().into()),
             },
-            HSV { h, s, v, a } => {
+            HSV { h, s, v, a, offset } => {
                 let rgb: Rgb = Hsv::<Srgb, _>::from_components((
                     RgbHue::from_degrees(
-                        h.compute(compute_arg.reborrow().into()).into_inner() as f32 * 360.0,
+                        (h.compute(compute_arg.reborrow().into()).into_inner() + offset.into_inner()) * 360.0,
                     ),
                     s.compute(compute_arg.reborrow().into()).into_inner() as f32,
                     v.compute(compute_arg.reborrow().into()).into_inner() as f32,
@@ -172,6 +191,31 @@ impl Node for FloatColorNodes {
                     rgb,
                     a.compute(compute_arg.reborrow().into()).into_inner(),
                 )
+            },
+            HSVAngle { h, s, v, a, offset } => {
+                let rgb: Rgb = Hsv::<Srgb, _>::from_components((
+                    RgbHue::from_radians(
+                        h.compute(compute_arg.reborrow().into()).into_inner() + offset.into_inner(),
+                    ),
+                    s.compute(compute_arg.reborrow().into()).into_inner(),
+                    v.compute(compute_arg.reborrow().into()).into_inner(),
+                ))
+                .into();
+
+                float_color_from_pallette_rgb(
+                    rgb,
+                    a.compute(compute_arg.reborrow().into()).into_inner(),
+                )
+            }
+            CMYK { c, m, y, k, a } => {
+                let k_value = k.compute(compute_arg.reborrow()).into_inner();
+
+                FloatColor {
+                    r: UNFloat::new((1.0 - c.compute(compute_arg.reborrow()).into_inner()) * (1.0 - k_value)),
+                    g: UNFloat::new((1.0 - m.compute(compute_arg.reborrow()).into_inner()) * (1.0 - k_value)),
+                    b: UNFloat::new((1.0 - y.compute(compute_arg.reborrow()).into_inner()) * (1.0 - k_value)),
+                    a: a.compute(compute_arg.reborrow()),
+                }
             }
             FromBlend { child } => child.compute(compute_arg.reborrow().into()),
             FromBitColor { child } => {

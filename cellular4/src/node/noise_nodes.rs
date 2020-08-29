@@ -3,10 +3,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     constants::*,
-    datatype::{continuous::*, noisefunctions::*},
+    datatype::{continuous::*, matrices::*, noisefunctions::*},
     mutagen_args::*,
-    node::{continuous_nodes::*, Node},
+    node::{continuous_nodes::*, matrix_nodes::*, Node},
 };
+
+use nalgebra::*;
 
 #[derive(Mutatable, Generatable, Deserialize, Serialize, Debug)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
@@ -17,6 +19,16 @@ pub enum NoiseNodes {
         scale_y_child: Box<UNFloatNodes>,
         scale_t_child: Box<UNFloatNodes>,
     },
+    // IterativeMatrixNoiseFunction {//TODO: finish
+    //     noise_function: Box<UNFloatNodes>,
+    //     child_matrix: Box<SNFloatMatrix3Nodes>,
+    //     iterated_matrix: SNFloatMatrix3,
+    //     #[mutagen(skip)]
+    //     offset_xy: Point2<f32>,
+    //     child_offset_t: Box<SNFloatNodes>,
+    //     #[mutagen(skip)]
+    //     t_offset: f32,
+    // },
 }
 
 impl Node for NoiseNodes {
@@ -48,6 +60,37 @@ impl Node for NoiseNodes {
                         * CONSTS.noise_t_scale_factor,
                 ) as f32,
             ),
+            // NoiseNodes::IterativeMatrixNoiseFunction {
+            //     noise_function,
+            //     child_matrix,
+            //     iterated_matrix,
+            //     child_offset_xy,
+            //     child_offset_t,
+            //     child_scale_t,
+            // } => 
+            // {
+            //     let transformed_point = Point2::from_homogeneous(child_offset_xy.to_homogeneous() * child_matrix.into_inner());
+
+            //     SNFloat::new_clamped(
+            //         noise_function.compute(
+            //             compute_arg.coordinate_set.x.into_inner() as f64
+            //                 * scale_x_child
+            //                     .compute(compute_arg.reborrow())
+            //                     .into_inner()
+            //                     .powf(2.0) as f64
+            //                 * CONSTS.noise_x_scale_factor,
+            //             compute_arg.coordinate_set.y.into_inner() as f64
+            //                 * scale_y_child
+            //                     .compute(compute_arg.reborrow())
+            //                     .into_inner()
+            //                     .powf(2.0) as f64
+            //                 * CONSTS.noise_y_scale_factor,
+            //             compute_arg.coordinate_set.t as f64
+            //                 * scale_t_child.compute(compute_arg.reborrow()).into_inner() as f64
+            //                 * CONSTS.noise_t_scale_factor,
+            //         ) as f32,
+            //     )
+            // }
         }
     }
 }

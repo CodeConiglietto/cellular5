@@ -128,6 +128,18 @@ pub enum FloatColorNodes {
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
+    IterativePolarLineBuffer {
+        buffer: Buffer<FloatColor>,
+        // TODO Replace child_theta and child_rho with a polar coordinate node when they're implemented
+        child_theta: Box<AngleNodes>,
+        child_rho: Box<UNFloatNodes>,
+        child_normaliser: Box<SFloatNormaliserNodes>,
+        child_color: Box<FloatColorNodes>,
+        point: SNPoint,
+        theta: Angle,
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
     ClosestPointLineBuffer {
         buffer: Buffer<FloatColor>,
         child_a: Box<PointSetNodes>,
@@ -282,6 +294,7 @@ impl Node for FloatColorNodes {
             }
             PointDrawingBuffer { buffer, .. } => buffer[compute_arg.coordinate_set.xy()],
             PointSetLineBuffer { buffer, .. } => buffer[compute_arg.coordinate_set.xy()],
+            IterativePolarLineBuffer { buffer, .. } => buffer[compute_arg.coordinate_set.xy()],
             PointSetDotBuffer { buffer, .. } => buffer[compute_arg.coordinate_set.xy()],
             ClosestPointLineBuffer { buffer, .. } => buffer[compute_arg.coordinate_set.xy()],
             NextPointLineBuffer { buffer, .. } => buffer[compute_arg.coordinate_set.xy()],
@@ -361,6 +374,35 @@ impl<'a> Updatable<'a> for FloatColorNodes {
 
                     buffer.draw_dot(*dest, color.clone());
                 }
+            }
+
+            IterativePolarLineBuffer {
+                buffer,
+                child_theta,
+                child_rho,
+                child_normaliser,
+                child_color,
+                ref mut point,
+                ref mut theta,
+            } => {
+                let new_theta = *theta + child_theta.compute(arg.reborrow().into());
+                let rho = child_rho.compute(arg.reborrow().into());
+                let normaliser = child_normaliser.compute(arg.reborrow().into());
+                let color = child_color.compute(arg.reborrow().into());
+
+                // TODO rewrite this once we have a polar type node
+                let new_point = point.normalised_add(
+                    SNPoint::from_snfloats(
+                        SNFloat::new(rho.into_inner() * f32::sin(new_theta.into_inner())),
+                        SNFloat::new(rho.into_inner() * f32::cos(new_theta.into_inner())),
+                    ),
+                    normaliser,
+                );
+
+                buffer.draw_line(*point, new_point, color);
+
+                *point = new_point;
+                *theta = new_theta;
             }
 
             ClosestPointLineBuffer {

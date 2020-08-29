@@ -175,11 +175,11 @@ impl SNFloat {
         Self::new((scaled_value.fract() - scaled_value.signum().min(0.0) - 0.5).abs() * 4.0 - 1.0)
     }
 
-    pub fn new_fractional(value: f32) -> Self{
+    pub fn new_fractional(value: f32) -> Self {
         Self::new(value.fract())
     }
 
-    pub fn new_tanh(value: f32) -> Self{
+    pub fn new_tanh(value: f32) -> Self {
         Self::new(value.tanh())
     }
 

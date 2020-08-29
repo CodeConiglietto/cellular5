@@ -170,8 +170,7 @@ impl PointSetGenerator {
                 uniform(rng, count.into_inner().max(2) as usize)
             }
             PointSetGenerator::Poisson { count, radius } => {
-                let normaliser =
-                    SFloatNormaliser::generate_rng(rng, mutagen::State::default(), ());
+                let normaliser = SFloatNormaliser::generate_rng(rng, mutagen::State::default(), ());
 
                 poisson(
                     rng,

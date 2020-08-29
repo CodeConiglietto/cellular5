@@ -1,16 +1,17 @@
 use std::collections::VecDeque;
 
 use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
-use palette::{encoding::srgb::Srgb, rgb::Rgb, Hsv, RgbHue};
+use palette::{encoding::srgb::Srgb, rgb::Rgb, Hsv, Lab, Limited, RgbHue};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     constants::*,
-    datatype::{continuous::*, buffers::*, colors::*, image::*, points::*},
+    datatype::{buffers::*, colors::*, continuous::*, image::*, points::*},
     mutagen_args::*,
     node::{
-        constraint_resolver_nodes::*, color_blend_nodes::*, continuous_nodes::*, coord_map_nodes::*, discrete_nodes::*,
-        mutagen_functions::*, point_nodes::*, point_set_nodes::*, Node,
+        color_blend_nodes::*, constraint_resolver_nodes::*, continuous_nodes::*,
+        coord_map_nodes::*, discrete_nodes::*, mutagen_functions::*, point_nodes::*,
+        point_set_nodes::*, Node,
     },
 };
 
@@ -42,7 +43,7 @@ pub enum FloatColorNodes {
         s: Box<UNFloatNodes>,
         v: Box<UNFloatNodes>,
         a: Box<UNFloatNodes>,
-        offset: UNFloat
+        offset: UNFloat,
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
@@ -51,7 +52,7 @@ pub enum FloatColorNodes {
         s: Box<UNFloatNodes>,
         v: Box<UNFloatNodes>,
         a: Box<UNFloatNodes>,
-        offset: Angle
+        offset: Angle,
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
@@ -61,6 +62,14 @@ pub enum FloatColorNodes {
         y: Box<UNFloatNodes>,
         k: Box<UNFloatNodes>,
         a: Box<UNFloatNodes>,
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    LAB {
+        l: Box<UNFloatNodes>,
+        a: Box<SNFloatNodes>,
+        b: Box<SNFloatNodes>,
+        alpha: Box<UNFloatNodes>,
     },
 
     #[mutagen(gen_weight = pipe_node_weight)]
@@ -125,14 +134,14 @@ pub enum FloatColorNodes {
         child_b: Box<PointSetNodes>,
         child_color: Box<FloatColorNodes>,
     },
-    
+
     #[mutagen(gen_weight = branch_node_weight)]
     NextPointLineBuffer {
         buffer: Buffer<FloatColor>,
         child_set: Box<PointSetNodes>,
         child_index: Box<ByteNodes>,
         child_color: Box<FloatColorNodes>,
-    }
+    },
 }
 
 impl Node for FloatColorNodes {
@@ -180,7 +189,9 @@ impl Node for FloatColorNodes {
             HSV { h, s, v, a, offset } => {
                 let rgb: Rgb = Hsv::<Srgb, _>::from_components((
                     RgbHue::from_degrees(
-                        (h.compute(compute_arg.reborrow().into()).into_inner() + offset.into_inner()) * 360.0,
+                        (h.compute(compute_arg.reborrow().into()).into_inner()
+                            + offset.into_inner())
+                            * 360.0,
                     ),
                     s.compute(compute_arg.reborrow().into()).into_inner() as f32,
                     v.compute(compute_arg.reborrow().into()).into_inner() as f32,
@@ -191,7 +202,7 @@ impl Node for FloatColorNodes {
                     rgb,
                     a.compute(compute_arg.reborrow().into()).into_inner(),
                 )
-            },
+            }
             HSVAngle { h, s, v, a, offset } => {
                 let rgb: Rgb = Hsv::<Srgb, _>::from_components((
                     RgbHue::from_radians(
@@ -211,11 +222,31 @@ impl Node for FloatColorNodes {
                 let k_value = k.compute(compute_arg.reborrow()).into_inner();
 
                 FloatColor {
-                    r: UNFloat::new((1.0 - c.compute(compute_arg.reborrow()).into_inner()) * (1.0 - k_value)),
-                    g: UNFloat::new((1.0 - m.compute(compute_arg.reborrow()).into_inner()) * (1.0 - k_value)),
-                    b: UNFloat::new((1.0 - y.compute(compute_arg.reborrow()).into_inner()) * (1.0 - k_value)),
+                    r: UNFloat::new(
+                        (1.0 - c.compute(compute_arg.reborrow()).into_inner()) * (1.0 - k_value),
+                    ),
+                    g: UNFloat::new(
+                        (1.0 - m.compute(compute_arg.reborrow()).into_inner()) * (1.0 - k_value),
+                    ),
+                    b: UNFloat::new(
+                        (1.0 - y.compute(compute_arg.reborrow()).into_inner()) * (1.0 - k_value),
+                    ),
                     a: a.compute(compute_arg.reborrow()),
                 }
+            }
+            LAB { l, a, b, alpha } => {
+                let lab = Lab::new(
+                    l.compute(compute_arg.reborrow()).into_inner() * 100.0,
+                    a.compute(compute_arg.reborrow()).into_inner() * 127.0,
+                    b.compute(compute_arg.reborrow()).into_inner() * 127.0,
+                );
+
+                let rgb: Rgb = lab.into();
+
+                float_color_from_pallette_rgb(
+                    rgb.clamp(),
+                    alpha.compute(compute_arg.reborrow().into()).into_inner(),
+                )
             }
             FromBlend { child } => child.compute(compute_arg.reborrow().into()),
             FromBitColor { child } => {
@@ -278,7 +309,10 @@ impl<'a> Updatable<'a> for FloatColorNodes {
                 arg.coordinate_set.x = last_point.x();
                 arg.coordinate_set.y = last_point.y();
 
-                let new_point = last_point.normalised_add(child.compute(arg.reborrow().into()), child_normaliser.compute(arg.reborrow().into()));
+                let new_point = last_point.normalised_add(
+                    child.compute(arg.reborrow().into()),
+                    child_normaliser.compute(arg.reborrow().into()),
+                );
 
                 let points_len = points_len_child.compute(arg.reborrow().into());
 

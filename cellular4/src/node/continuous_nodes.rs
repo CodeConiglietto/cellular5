@@ -8,9 +8,9 @@ use crate::{
     datatype::{continuous::*, distance_functions::*, points::*},
     mutagen_args::*,
     node::{
-        constraint_resolver_nodes::*,
-        color_nodes::*, coord_map_nodes::*, discrete_nodes::*, distance_function_nodes::*,
-        matrix_nodes::*, mutagen_functions::*, noise_nodes::*, point_nodes::*, Node,
+        color_nodes::*, constraint_resolver_nodes::*, coord_map_nodes::*, discrete_nodes::*,
+        distance_function_nodes::*, matrix_nodes::*, mutagen_functions::*, noise_nodes::*,
+        point_nodes::*, Node,
     },
     util::*,
 };
@@ -217,9 +217,14 @@ impl Node for SNFloatNodes {
             SubDivide { child_a, child_b } => child_a
                 .compute(compute_arg.reborrow())
                 .subdivide(child_b.compute(compute_arg.reborrow())),
-            NormalisedAdd { child_a, child_b, child_normaliser } => child_a
-                .compute(compute_arg.reborrow())
-                .normalised_add(child_b.compute(compute_arg.reborrow()), child_normaliser.compute(compute_arg.reborrow())),
+            NormalisedAdd {
+                child_a,
+                child_b,
+                child_normaliser,
+            } => child_a.compute(compute_arg.reborrow()).normalised_add(
+                child_b.compute(compute_arg.reborrow()),
+                child_normaliser.compute(compute_arg.reborrow()),
+            ),
             IfElse {
                 predicate,
                 child_a,
@@ -475,7 +480,12 @@ impl Node for UNFloatNodes {
                     c,
                     iterations as usize,
                     |z, i| z.powf(power) + z_offset * i as f64,
-                    |z, i| child_distance_function.calculate_point2(Point2::origin(), Point2::new(z.re as f32, z.im as f32)) > 2.0,
+                    |z, i| {
+                        child_distance_function.calculate_point2(
+                            Point2::origin(),
+                            Point2::new(z.re as f32, z.im as f32),
+                        ) > 2.0
+                    },
                 );
 
                 UNFloat::new(((escape as f32 / iterations as f32) * 4.0).fract())
@@ -487,7 +497,7 @@ impl Node for UNFloatNodes {
                 child_normaliser,
             } => {
                 let matrix = child_matrix.compute(compute_arg.reborrow()).into_inner();
-                
+
                 let iterations = 1 + child_iterations
                     .compute(compute_arg.reborrow())
                     .into_inner()
@@ -504,9 +514,21 @@ impl Node for UNFloatNodes {
                 let (z_final, escape) = escape_time_system(
                     c,
                     iterations as usize,
-                    |z, i| {let new_point = matrix.transform_point(&Point2::new(z.re as f32, z.im as f32));
-                            Complex::new(new_point.x as f64, new_point.y as f64)},
-                    |z, i| child_exit_condition.compute(compute_arg.reborrow().replace_coords(&SNPoint::new_normalised(Point2::new(z.re as f32, z.im as f32), normaliser))).into_inner(),
+                    |z, i| {
+                        let new_point =
+                            matrix.transform_point(&Point2::new(z.re as f32, z.im as f32));
+                        Complex::new(new_point.x as f64, new_point.y as f64)
+                    },
+                    |z, i| {
+                        child_exit_condition
+                            .compute(compute_arg.reborrow().replace_coords(
+                                &SNPoint::new_normalised(
+                                    Point2::new(z.re as f32, z.im as f32),
+                                    normaliser,
+                                ),
+                            ))
+                            .into_inner()
+                    },
                 );
 
                 UNFloat::new(((escape as f32 / iterations as f32) * 4.0).fract())

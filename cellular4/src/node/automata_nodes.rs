@@ -25,7 +25,11 @@ impl Node for BinaryAutomataNodes {
         use BinaryAutomataNodes::*;
 
         match self {
-            Majority { child, point_set, child_normaliser } => {
+            Majority {
+                child,
+                point_set,
+                child_normaliser,
+            } => {
                 let mut true_count = 0;
                 let offsets = point_set
                     .compute(compute_arg.reborrow())

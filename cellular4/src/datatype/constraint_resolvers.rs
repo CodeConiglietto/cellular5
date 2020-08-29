@@ -39,7 +39,8 @@ impl<'a> Updatable<'a> for SFloatNormaliser {
     Clone, Copy, Generatable, UpdatableRecursively, Mutatable, Serialize, Deserialize, Debug,
 )]
 #[mutagen(gen_arg = type (), mut_arg = type ())]
-pub enum UFloatNormaliser {//TODO: Add sigmoid function
+pub enum UFloatNormaliser {
+    //TODO: Add sigmoid function
     Sawtooth,
     Triangle,
     Clamp,

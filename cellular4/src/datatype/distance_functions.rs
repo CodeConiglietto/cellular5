@@ -34,7 +34,12 @@ impl DistanceFunction {
         }
     }
 
-    pub fn calculate_normalised(self, a: SNPoint, b: SNPoint, normaliser: UFloatNormaliser) -> UNFloat {
+    pub fn calculate_normalised(
+        self,
+        a: SNPoint,
+        b: SNPoint,
+        normaliser: UFloatNormaliser,
+    ) -> UNFloat {
         normaliser.normalise(self.calculate_point2(a.into_inner(), b.into_inner()))
     }
 

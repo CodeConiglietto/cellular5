@@ -41,7 +41,10 @@ impl SNComplex {
     }
 
     pub fn new_normalised(value: Complex<f32>, normaliser: SFloatNormaliser) -> Self {
-        Self::from_snfloats(normaliser.normalise(value.re), normaliser.normalise(value.im))
+        Self::from_snfloats(
+            normaliser.normalise(value.re),
+            normaliser.normalise(value.im),
+        )
     }
 
     pub fn from_snfloats(x: SNFloat, y: SNFloat) -> Self {
@@ -69,10 +72,7 @@ impl SNComplex {
     }
 
     pub fn normalised_add(self, other: SNComplex, normaliser: SFloatNormaliser) -> SNComplex {
-        SNComplex::new_normalised(
-            self.value + other.into_inner(),
-            normaliser,
-        )
+        SNComplex::new_normalised(self.value + other.into_inner(), normaliser)
     }
 
     pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {

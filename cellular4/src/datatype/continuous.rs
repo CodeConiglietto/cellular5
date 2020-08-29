@@ -2,6 +2,7 @@ use std::{
     cmp::Ordering,
     f32::consts::PI,
     fmt::{self, Display, Formatter},
+    ops::{Add, AddAssign, Sub, SubAssign},
 };
 
 use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
@@ -326,6 +327,34 @@ impl Angle {
 
     pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
         Self::new_unchecked(rng.gen_range(0.0, 2.0 * PI))
+    }
+}
+
+impl Add<Angle> for Angle {
+    type Output = Angle;
+
+    fn add(self, rhs: Angle) -> Self::Output {
+        Self::new(self.into_inner() + rhs.into_inner())
+    }
+}
+
+impl AddAssign<Angle> for Angle {
+    fn add_assign(&mut self, rhs: Angle) {
+        *self = *self + rhs;
+    }
+}
+
+impl Sub<Angle> for Angle {
+    type Output = Angle;
+
+    fn sub(self, rhs: Angle) -> Self::Output {
+        Self::new(self.into_inner() - rhs.into_inner())
+    }
+}
+
+impl SubAssign<Angle> for Angle {
+    fn sub_assign(&mut self, rhs: Angle) {
+        *self = *self - rhs;
     }
 }
 

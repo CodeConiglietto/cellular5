@@ -11,8 +11,8 @@ use syn::{
     punctuated::Punctuated,
     spanned::Spanned,
     token::Paren,
-    Attribute, Data, DataEnum, DataStruct, Error, Field, Fields, Ident, LitFloat, Result, Token,
-    Type,
+    Attribute, Data, DataEnum, DataStruct, Error, ExprClosure, Field, Fields, Ident, LitFloat,
+    Result, Token, Type,
 };
 
 mod a {
@@ -22,6 +22,7 @@ mod a {
     // Keys
     pub const GEN_WEIGHT: &str = "gen_weight";
     pub const GEN_ARG: &str = "gen_arg";
+    pub const GEN_PREFERRED: &str = "gen_preferred";
     pub const MUT_REROLL: &str = "mut_reroll";
     pub const MUT_ARG: &str = "mut_arg";
     pub const MUT_WEIGHT: &str = "mut_weight";
@@ -29,7 +30,7 @@ mod a {
 
     // Allowed keys for each item
     pub const ENUM: &[&str] = &[MUT_REROLL, MUT_ARG, GEN_ARG];
-    pub const ENUM_VARIANT: &[&str] = &[GEN_WEIGHT, MUT_REROLL];
+    pub const ENUM_VARIANT: &[&str] = &[GEN_WEIGHT, GEN_PREFERRED, MUT_REROLL];
     pub const FIELD: &[&str] = &[MUT_WEIGHT, SKIP];
     pub const TYPE: &[&str] = &[MUT_REROLL, MUT_ARG, GEN_ARG];
 }
@@ -105,10 +106,26 @@ fn generatable_enum(
     roll(
         &e.variants.iter().collect::<Vec<_>>(),
         |variant| {
-            Ok(parse_attrs(&variant.attrs, a::ENUM_VARIANT)?
+            let attrs = parse_attrs(&variant.attrs, a::ENUM_VARIANT)?;
+
+            let weight = attrs
                 .get(a::GEN_WEIGHT)
                 .cloned()
-                .unwrap_or_else(|| Value::None(span.clone())))
+                .unwrap_or_else(|| Value::None(span.clone()));
+
+            if attrs.contains_key(a::GEN_PREFERRED) {
+                let w = weight.to_weight()?.unwrap_or_else(|| quote!(0.0));
+
+                let c: TokenStream2 = quote! {
+                    |state| {
+                        (#w) * 10000.0
+                    }
+                };
+
+                Ok(Value::Closure(parse2(c)?))
+            } else {
+                Ok(weight)
+            }
         },
         |variant, _| {
             let ident = &variant.ident;
@@ -603,6 +620,7 @@ impl Parse for KeyValue {
 enum Value {
     Lit(LitFloat),
     FnIdent(Ident),
+    Closure(ExprClosure),
     Val(f64),
     Type(Type),
     None(Span),
@@ -613,6 +631,7 @@ impl Value {
         match self {
             Value::Lit(lit) => Err(Error::new(lit.span(), "Expected type, found literal")),
             Value::FnIdent(ident) => Err(Error::new(ident.span(), "Expected type, found ident")),
+            Value::Closure(c) => Err(Error::new(c.span(), "Expected type, found closure")),
             Value::Val(_) => panic!("Internal error: expected type, found value"),
             Value::Type(t) => Ok(quote!(#t)),
             Value::None(span) => Err(Error::new(span.clone(), "Expected type, found nothing")),
@@ -643,6 +662,13 @@ impl Value {
                 }
                 }))
             }
+            Value::Closure(c) => Ok(Some(quote! {
+                {
+                    let value = (#c)(state);
+                    assert!(value >= 0.0, "Closure returned invalid weight {}", value);
+                    value
+                }
+            })),
             Value::Val(v) => {
                 if *v == 0.0 {
                     Ok(None)
@@ -678,6 +704,13 @@ impl Value {
                     }
                 }))
             }
+            Value::Closure(c) => Ok(Some(quote! {
+                {
+                    let value = (#c)(state);
+                    assert!(value >= 0.0, "Closure returned invalid probability {}", value);
+                    value
+                }
+            })),
             Value::Val(v) => {
                 if *v == 0.0 {
                     Ok(None)
@@ -693,6 +726,7 @@ impl Value {
 
 impl Parse for Value {
     fn parse(input: ParseStream) -> Result<Self> {
+        // TODO Add support for closure variant
         let lookahead = input.lookahead1();
         if lookahead.peek(Token![type]) {
             let _type: Token![type] = input.parse()?;

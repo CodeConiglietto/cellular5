@@ -300,6 +300,7 @@ pub enum UNFloatNodes {
         child_iterations: Box<ByteNodes>,
         child_exponentiate: Box<BooleanNodes>,
         child_distance_function: DistanceFunction,
+        child_exit_normaliser: Box<UFloatNormaliserNodes>,
     },
     #[mutagen(gen_weight = pipe_node_weight)]
     IterativeMatrix {
@@ -307,6 +308,7 @@ pub enum UNFloatNodes {
         child_iterations: Box<ByteNodes>,
         child_exit_condition: Box<BooleanNodes>,
         child_normaliser: Box<SFloatNormaliserNodes>,
+        child_exit_normaliser: Box<UFloatNormaliserNodes>,
     },
     // #[mutagen(gen_weight = leaf_node_weight)]
     // LastRotation,
@@ -433,6 +435,7 @@ impl Node for UNFloatNodes {
                 child_iterations,
                 child_exponentiate,
                 child_distance_function,
+                child_exit_normaliser,
             } => {
                 let power = f64::from(
                     (1 + child_power.compute(compute_arg.reborrow()).into_inner()) as f32
@@ -488,13 +491,14 @@ impl Node for UNFloatNodes {
                     },
                 );
 
-                UNFloat::new(((escape as f32 / iterations as f32) * 4.0).fract())
+                child_exit_normaliser.compute(compute_arg.reborrow()).normalise((escape as f32 / iterations as f32) * 4.0)
             }
             IterativeMatrix {
                 child_matrix,
                 child_iterations,
                 child_exit_condition,
                 child_normaliser,
+                child_exit_normaliser,
             } => {
                 let matrix = child_matrix.compute(compute_arg.reborrow()).into_inner();
 
@@ -531,7 +535,7 @@ impl Node for UNFloatNodes {
                     },
                 );
 
-                UNFloat::new(((escape as f32 / iterations as f32) * 4.0).fract())
+                child_exit_normaliser.compute(compute_arg.reborrow()).normalise((escape as f32 / iterations as f32) * 4.0)
             }
             SubDivideSawtooth { child_a, child_b } => child_a
                 .compute(compute_arg.reborrow())

@@ -22,15 +22,16 @@ use crate::{
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SNComplex {
-    value: Complex<f32>,
+    value: Complex<f64>,
 }
 
+//TODO: fix the whole f32 vs f64 situation. Maybe we need more precision in floats (change all to f64?)
 impl SNComplex {
-    pub fn new_unchecked(value: Complex<f32>) -> Self {
+    pub fn new_unchecked(value: Complex<f64>) -> Self {
         Self { value }
     }
 
-    pub fn new(value: Complex<f32>) -> Self {
+    pub fn new(value: Complex<f64>) -> Self {
         assert!(
             value.re >= -1.0 && value.re <= 1.0 && value.im >= -1.0 && value.im <= 1.0,
             "Invalid Complex value: {}",
@@ -40,35 +41,35 @@ impl SNComplex {
         Self::new_unchecked(value)
     }
 
-    pub fn new_normalised(value: Complex<f32>, normaliser: SFloatNormaliser) -> Self {
+    pub fn new_normalised(value: Complex<f64>, normaliser: SFloatNormaliser) -> Self {
         Self::from_snfloats(
-            normaliser.normalise(value.re),
-            normaliser.normalise(value.im),
+            normaliser.normalise(value.re as f32),
+            normaliser.normalise(value.im as f32),
         )
     }
 
     pub fn from_snfloats(x: SNFloat, y: SNFloat) -> Self {
-        Self::new_unchecked(Complex::new(x.into_inner(), y.into_inner()))
+        Self::new_unchecked(Complex::new(x.into_inner() as f64, y.into_inner() as f64))
     }
 
     pub fn from_snpoint(value: SNPoint) -> Self {
-        Self::new_unchecked(Complex::new(value.x().into_inner(), value.y().into_inner()))
+        Self::new_unchecked(Complex::new(value.x().into_inner() as f64, value.y().into_inner() as f64))
     }
 
     pub fn zero() -> Self {
         Self::new(Complex::zero())
     }
 
-    pub fn into_inner(self) -> Complex<f32> {
-        self.value
+    pub fn into_inner(self) -> Complex<f64> {
+        self.value     
     }
 
     pub fn re(self) -> SNFloat {
-        SNFloat::new_unchecked(self.value.re)
+        SNFloat::new_unchecked(self.value.re as f32)
     }
 
     pub fn im(self) -> SNFloat {
-        SNFloat::new_unchecked(self.value.im)
+        SNFloat::new_unchecked(self.value.im as f32)
     }
 
     pub fn normalised_add(self, other: SNComplex, normaliser: SFloatNormaliser) -> SNComplex {
@@ -127,7 +128,7 @@ impl<'de> Visitor<'de> for SNComplexVisitor {
             return Err(E::custom(format!("SNComplex out of range: {}", v)));
         }
 
-        Ok(SNComplex::new(Complex::new(x, y)))
+        Ok(SNComplex::new(Complex::new(x as f64, y as f64)))
     }
 }
 
@@ -139,7 +140,7 @@ impl Display for SNComplex {
 
 impl Default for SNComplex {
     fn default() -> Self {
-        Self::new(Complex::new(f32::default(), f32::default()))
+        Self::new(Complex::new(f64::default(), f64::default()))
     }
 }
 

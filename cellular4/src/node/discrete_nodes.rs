@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     datatype::discrete::*,
     mutagen_args::*,
-    node::{color_nodes::*, continuous_nodes::*, coord_map_nodes::*, mutagen_functions::*, Node},
+    node::{color_nodes::*, continuous_nodes::*, coord_map_nodes::*, iterative_function_nodes::*, mutagen_functions::*, Node},
 };
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]
@@ -389,6 +389,10 @@ pub enum ByteNodes {
         child_value: Box<ByteNodes>,
         child_divisor: Box<ByteNodes>,
     },
+    #[mutagen(gen_weight = pipe_node_weight)]
+    FromIterativeResult{
+        child: Box<IterativeFunctionNodes>,
+    },
     #[mutagen(gen_weight = leaf_node_weight)]
     FromGametic,
     #[mutagen(gen_weight = branch_node_weight)]
@@ -430,6 +434,7 @@ impl Node for ByteNodes {
             } => child_value
                 .compute(compute_arg.reborrow())
                 .modulus(child_divisor.compute(compute_arg.reborrow())),
+            FromIterativeResult { child} => child.compute(compute_arg).iter_final,
             FromGametic => compute_arg.coordinate_set.get_byte_t(),
             IfElse {
                 predicate,

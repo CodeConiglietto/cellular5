@@ -179,6 +179,10 @@ impl Byte {
         }
     }
 
+    pub fn invert_wrapped(self) -> Self {
+        Self::new((Wrapping(255u8) - self.value).0)
+    }
+
     pub fn multiply(self, other: Self) -> Self {
         Self::new((self.value * other.value).0)
     }

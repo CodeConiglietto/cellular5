@@ -8,7 +8,7 @@ use crate::{
     datatype::{continuous::*, distance_functions::*, points::*},
     mutagen_args::*,
     node::{
-        color_nodes::*, constraint_resolver_nodes::*, coord_map_nodes::*, discrete_nodes::*,
+        color_nodes::*, complex_nodes::*, constraint_resolver_nodes::*, coord_map_nodes::*, discrete_nodes::*,
         distance_function_nodes::*, matrix_nodes::*, mutagen_functions::*, noise_nodes::*,
         point_nodes::*, Node,
     },
@@ -171,6 +171,14 @@ pub enum SNFloatNodes {
         child_normaliser: Box<SFloatNormaliserNodes>,
     },
 
+    ComplexReal {
+        child_complex: Box<SNComplexNodes>,
+    },
+
+    ComplexImaginary {
+        child_complex: Box<SNComplexNodes>,
+    },
+
     #[mutagen(gen_weight = branch_node_weight)]
     IfElse {
         predicate: Box<BooleanNodes>,
@@ -225,6 +233,12 @@ impl Node for SNFloatNodes {
                 child_b.compute(compute_arg.reborrow()),
                 child_normaliser.compute(compute_arg.reborrow()),
             ),
+            ComplexReal {
+                child_complex
+            } => {child_complex.compute(compute_arg).re()},
+            ComplexImaginary {
+                child_complex
+            } => {child_complex.compute(compute_arg).im()},
             IfElse {
                 predicate,
                 child_a,

@@ -20,11 +20,11 @@ impl SFloatNormaliser {
         use SFloatNormaliser::*;
 
         match self {
-            Sawtooth => SNFloat::new_sawtooth(nan_to_default(value)),
-            Triangle => SNFloat::new_triangle(nan_to_default(value)),
-            TanH => SNFloat::new_tanh(nan_to_default(value)),
-            Clamp => SNFloat::new_clamped(nan_to_default(value)),
-            Fractional => SNFloat::new_fractional(nan_to_default(value)),
+            Sawtooth => SNFloat::new_sawtooth(non_normal_to_default(value)),
+            Triangle => SNFloat::new_triangle(non_normal_to_default(value)),
+            TanH => SNFloat::new_tanh(non_normal_to_default(value)),
+            Clamp => SNFloat::new_clamped(non_normal_to_default(value)),
+            Fractional => SNFloat::new_fractional(non_normal_to_default(value)),
         }
     }
 }
@@ -51,9 +51,9 @@ impl UFloatNormaliser {
         use UFloatNormaliser::*;
 
         match self {
-            Sawtooth => UNFloat::new_sawtooth(nan_to_default(value)),
-            Triangle => UNFloat::new_triangle(nan_to_default(value)),
-            Clamp => UNFloat::new_clamped(nan_to_default(value)),
+            Sawtooth => UNFloat::new_sawtooth(non_normal_to_default(value)),
+            Triangle => UNFloat::new_triangle(non_normal_to_default(value)),
+            Clamp => UNFloat::new_clamped(non_normal_to_default(value)),
         }
     }
 }
@@ -64,6 +64,6 @@ impl<'a> Updatable<'a> for UFloatNormaliser {
     fn update(&mut self, _state: mutagen::State, mut _arg: UpdArg<'a>) {}
 }
 
-fn nan_to_default(value: f32) -> f32 {
-    if value == f32::NAN {f32::default()} else {value}
+fn non_normal_to_default(value: f32) -> f32 {
+    if value.is_normal() {value} else {f32::default()}
 }

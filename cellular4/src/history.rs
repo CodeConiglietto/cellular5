@@ -14,7 +14,7 @@ pub struct HistoryStep {
 
     pub update_coordinate: CoordinateSet,
 
-    pub rotation: f32,
+    pub rotation: Angle,
     pub translation: SNPoint,
     pub offset: SNPoint,
     pub from_scale: SNPoint,
@@ -49,7 +49,7 @@ impl History {
                             y: SNFloat::ZERO,
                             t: 0.0,
                         },
-                        rotation: 0.0,
+                        rotation: Angle::ZERO,
                         translation: SNPoint::zero(),
                         offset: SNPoint::zero(),
                         from_scale: SNPoint::zero(),

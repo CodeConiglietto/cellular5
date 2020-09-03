@@ -51,6 +51,10 @@ impl UNFloat {
         self.value
     }
 
+    pub fn average(self, other: Self) -> Self {
+        Self::new((self.into_inner() + other.into_inner()) * 0.5)
+    }
+
     pub fn new_sawtooth(value: f32) -> Self {
         Self::new(value.fract() - value.signum().min(0.0))
     }
@@ -171,6 +175,10 @@ impl SNFloat {
         } else{
             Self::new_unchecked(value)
         }
+    }
+
+    pub fn average(self, other: Self) -> Self {
+        Self::new((self.into_inner() + other.into_inner()) * 0.5)
     }
 
     pub fn new_from_range(value: f32, min: f32, max: f32) -> Self {
@@ -317,6 +325,10 @@ impl Angle {
         Self::new_unchecked(normalised)
     }
 
+    pub fn average(self, other: Self) -> Self {
+        Self::new((self.into_inner() + other.into_inner()) * 0.5)
+    }
+
     pub fn new_from_range(value: f32, min: f32, max: f32) -> Self {
         Self::new_unchecked(map_range(value, (min, max), (0.0, 2.0 * PI)))
     }
@@ -336,6 +348,8 @@ impl Angle {
     pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
         Self::new_unchecked(rng.gen_range(0.0, 2.0 * PI))
     }
+
+    pub const ZERO: Self = Self { value: 0.0 };
 }
 
 impl Add<Angle> for Angle {

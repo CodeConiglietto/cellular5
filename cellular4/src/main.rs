@@ -99,7 +99,7 @@ fn setup_logging() {
 struct RenderNodes {
     compute_offset_node: NodeBox<CoordMapNodes>,
 
-    root_rotation_node: NodeBox<SNFloatNodes>,
+    root_rotation_node: NodeBox<AngleNodes>,
     root_translation_node: NodeBox<SNPointNodes>,
     root_offset_node: NodeBox<SNPointNodes>,
     root_from_scale_node: NodeBox<SNPointNodes>,
@@ -260,7 +260,7 @@ impl MyGame {
                     y: SNFloat::ZERO,
                     t: 0.0,
                 },
-                rotation: 0.0,
+                rotation: Angle::ZERO,
                 translation: SNPoint::zero(),
                 offset: SNPoint::zero(),
                 from_scale: SNPoint::zero(),
@@ -574,76 +574,75 @@ impl EventHandler for MyGame {
                 .node_tree
                 .render_nodes
                 .root_rotation_node
-                .compute(step_com_arg.reborrow())
-                .into_inner();
+                .compute(step_com_arg.reborrow()).average(history_step.rotation);
             self.next_history_step.translation = self
                 .node_tree
                 .render_nodes
                 .root_translation_node
-                .compute(step_com_arg.reborrow());
+                .compute(step_com_arg.reborrow()).average(history_step.translation);
             self.next_history_step.offset = self
                 .node_tree
                 .render_nodes
                 .root_offset_node
-                .compute(step_com_arg.reborrow());
+                .compute(step_com_arg.reborrow()).average(history_step.offset);
             self.next_history_step.from_scale = self
                 .node_tree
                 .render_nodes
                 .root_from_scale_node
-                .compute(step_com_arg.reborrow());
+                .compute(step_com_arg.reborrow()).average(history_step.from_scale);
             self.next_history_step.to_scale = self
                 .node_tree
                 .render_nodes
                 .root_to_scale_node
-                .compute(step_com_arg.reborrow());
+                .compute(step_com_arg.reborrow()).average(history_step.to_scale);
 
             self.next_history_step.root_scalar = self
                 .node_tree
                 .render_nodes
                 .root_scalar_node
-                .compute(step_com_arg.reborrow());
+                .compute(step_com_arg.reborrow()).average(history_step.root_scalar);
 
             self.next_history_step.alpha = self
                 .node_tree
                 .render_nodes
                 .root_alpha_node
-                .compute(step_com_arg.reborrow());
+                .compute(step_com_arg.reborrow()).average(history_step.alpha);
 
             self.next_history_step.rotation_scalar = self
                 .node_tree
                 .render_nodes
                 .rotation_scalar_node
-                .compute(step_com_arg.reborrow());
+                .compute(step_com_arg.reborrow()).average(history_step.rotation_scalar);
 
             self.next_history_step.translation_scalar = self
                 .node_tree
                 .render_nodes
                 .translation_scalar_node
-                .compute(step_com_arg.reborrow());
+                .compute(step_com_arg.reborrow()).average(history_step.translation_scalar);
 
             self.next_history_step.offset_scalar = self
                 .node_tree
                 .render_nodes
                 .offset_scalar_node
-                .compute(step_com_arg.reborrow());
+                .compute(step_com_arg.reborrow()).average(history_step.offset_scalar);
 
             self.next_history_step.to_scale_scalar = self
                 .node_tree
                 .render_nodes
                 .to_scale_scalar_node
-                .compute(step_com_arg.reborrow());
+                .compute(step_com_arg.reborrow()).average(history_step.to_scale_scalar);
 
             self.next_history_step.from_scale_scalar = self
                 .node_tree
                 .render_nodes
                 .from_scale_scalar_node
-                .compute(step_com_arg.reborrow());
+                .compute(step_com_arg.reborrow()).average(history_step.from_scale_scalar);
 
             self.next_history_step.root_scalar = self
                 .node_tree
                 .render_nodes
                 .root_scalar_node
-                .compute(step_com_arg.reborrow());
+                .compute(step_com_arg.reborrow()).average(history_step.root_scalar);
 
             self.next_history_step.computed_texture =
                 compute_texture(ctx, self.next_history_step.cell_array.view());
@@ -747,7 +746,7 @@ impl EventHandler for MyGame {
                     offset_x += offset_offset_x * scale_x * offset_scalar * root_scalar;
                     offset_y += offset_offset_y * scale_y * offset_scalar * root_scalar;
                     rotation +=
-                        (1.0 - alpha) * history_step.rotation * PI * rotation_scalar * root_scalar;
+                        (1.0 - alpha) * history_step.rotation.into_inner() * PI * rotation_scalar * root_scalar;
 
                     scale_x *= lerp(
                         1.0,

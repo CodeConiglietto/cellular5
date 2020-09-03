@@ -76,6 +76,10 @@ impl SNPoint {
         Angle::new(f32::atan2(self.value.x, self.value.y))
     }
 
+    pub fn average(self, other: Self) -> Self {
+        Self::new(Point2::from(self.into_inner().coords + other.into_inner().coords) * 0.5)
+    }
+
     pub fn normalised_add(self, other: SNPoint, normaliser: SFloatNormaliser) -> SNPoint {
         SNPoint::from_snfloats(
             self.x().normalised_add(other.x(), normaliser),

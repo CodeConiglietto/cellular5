@@ -4,7 +4,7 @@ use cpu_monitor::CpuInstant;
 use ggez::{
     conf::{FullscreenType, WindowMode, WindowSetup},
     event::{self, EventHandler, KeyCode, KeyMods},
-    graphics::{self, Color as GgColor, DrawParam, Image as GgImage, Rect, WHITE},
+    graphics::{self, Color as GgColor, DrawParam, Image as GgImage, WHITE},
     input::keyboard,
     timer, Context, ContextBuilder, GameResult,
 };
@@ -204,9 +204,6 @@ impl<'a> Updatable<'a> for NodeTree {
 }
 
 struct MyGame {
-    //Screen bounds
-    bounds: Rect,
-
     history: History,
     next_history_step: HistoryStep,
 
@@ -230,9 +227,6 @@ struct MyGame {
 
 impl MyGame {
     pub fn new(ctx: &mut Context, opts: Opts) -> MyGame {
-        // Load/create resources such as images here.
-        let (pixels_x, pixels_y) = ggez::graphics::size(ctx);
-
         if let Some(seed) = opts.seed {
             info!("Manually setting RNG seed");
             *RNG_SEED.lock().unwrap() = seed;
@@ -258,8 +252,6 @@ impl MyGame {
         let mut data = DataSet::new();
 
         MyGame {
-            bounds: Rect::new(0.0, 0.0, pixels_x, pixels_y),
-
             next_history_step: HistoryStep {
                 cell_array: init_cell_array(CONSTS.cell_array_width, CONSTS.cell_array_height),
                 computed_texture: GgImage::solid(ctx, 1, WHITE).unwrap(),
@@ -695,11 +687,6 @@ impl EventHandler for MyGame {
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         if self.last_render_t != timer::ticks(ctx) {
-            let base_params = DrawParam::new().dest([0.0, 0.0]).scale([
-                self.bounds.w as f32 / CONSTS.cell_array_width as f32,
-                self.bounds.h as f32 / CONSTS.cell_array_height as f32,
-            ]);
-
             let lerp_value =
                 (timer::ticks(ctx) % CONSTS.tics_per_update) as f32 / CONSTS.tics_per_update as f32;
 
@@ -739,9 +726,6 @@ impl EventHandler for MyGame {
                 let offset_offset_x = history_step.offset.into_inner().x * 0.5 * (1.0 - alpha);
                 let offset_offset_y = history_step.offset.into_inner().y * 0.5 * (1.0 - alpha);
 
-                let x_scale_ratio = CONSTS.initial_window_width / CONSTS.cell_array_width as f32;
-                let y_scale_ratio = CONSTS.initial_window_height / CONSTS.cell_array_height as f32;
-
                 let mut alpha =
                     (1.0 - ((alpha * 2.0) - 1.0).abs()) / CONSTS.cell_array_lerp_length as f32;
 
@@ -751,8 +735,8 @@ impl EventHandler for MyGame {
                 let mut offset_x = 0.5;
                 let mut offset_y = 0.5;
 
-                let mut scale_x = 1.0;
-                let mut scale_y = 1.0;
+                let mut scale_x = CONSTS.initial_window_width / CONSTS.cell_array_width as f32;
+                let mut scale_y = CONSTS.initial_window_height / CONSTS.cell_array_height as f32;
 
                 let mut rotation = 0.0;
 
@@ -781,7 +765,7 @@ impl EventHandler for MyGame {
                             alpha,
                         ),
                         root_scalar,
-                    ) * x_scale_ratio;
+                    );
 
                     scale_y *= lerp(
                         1.0,
@@ -799,13 +783,13 @@ impl EventHandler for MyGame {
                             alpha,
                         ),
                         root_scalar,
-                    ) * y_scale_ratio;
+                    );
                 }
 
                 ggez::graphics::draw(
                     ctx,
                     &history_step.computed_texture,
-                    base_params
+                    DrawParam::new()
                         .color(GgColor::new(1.0, 1.0, 1.0, alpha))
                         .dest([dest_x, dest_y])
                         .offset([offset_x, offset_y])

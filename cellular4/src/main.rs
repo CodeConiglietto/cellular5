@@ -701,17 +701,17 @@ impl EventHandler for MyGame {
                 let history_step = &self.history.history_steps[history_index];
 
                 let root_scalar =
-                    history_step.root_scalar.into_inner() * history_step.root_scalar.into_inner();
-                let rotation_scalar = history_step.rotation_scalar.into_inner()
-                    * history_step.rotation_scalar.into_inner();
-                let translation_scalar = history_step.translation_scalar.into_inner()
-                    * history_step.translation_scalar.into_inner();
-                let offset_scalar = history_step.offset_scalar.into_inner()
-                    * history_step.offset_scalar.into_inner();
-                let from_scale_scalar = history_step.from_scale_scalar.into_inner()
-                    * history_step.from_scale_scalar.into_inner();
-                let to_scale_scalar = history_step.to_scale_scalar.into_inner()
-                    * history_step.to_scale_scalar.into_inner();
+                    history_step.root_scalar.into_inner();// * history_step.root_scalar.into_inner();
+                let rotation_scalar = history_step.rotation_scalar.into_inner();
+                    // * history_step.rotation_scalar.into_inner();
+                let translation_scalar = history_step.translation_scalar.into_inner();
+                    // * history_step.translation_scalar.into_inner();
+                let offset_scalar = history_step.offset_scalar.into_inner();
+                    // * history_step.offset_scalar.into_inner();
+                let from_scale_scalar = history_step.from_scale_scalar.into_inner();
+                    // * history_step.from_scale_scalar.into_inner();
+                let to_scale_scalar = history_step.to_scale_scalar.into_inner();
+                    // * history_step.to_scale_scalar.into_inner();
 
                 let dest_offset_x = CONSTS.initial_window_width
                     * history_step.translation.into_inner().x

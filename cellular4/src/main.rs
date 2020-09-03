@@ -1,5 +1,6 @@
 use std::{f32::consts::PI, fs, path::PathBuf};
 
+use cpu_monitor::CpuInstant;
 use ggez::{
     conf::{FullscreenType, WindowMode, WindowSetup},
     event::{self, EventHandler, KeyCode, KeyMods},
@@ -237,6 +238,7 @@ struct MyGame {
     tree_dirty: bool,
     current_t: usize,
     last_render_t: usize,
+    cpu_t: CpuInstant,
     rng: DeterministicRng,
     opts: Opts,
 }
@@ -326,6 +328,7 @@ impl MyGame {
             tree_dirty: false,
             current_t: 0,
             last_render_t: 0,
+            cpu_t: CpuInstant::now().unwrap(),
             rng,
             opts,
             history,
@@ -492,6 +495,9 @@ impl EventHandler for MyGame {
         self.rolling_update_stat_total += slice_update_stat;
 
         if timer::ticks(ctx) % CONSTS.tics_per_update == 0 {
+            let next_cpu_t = CpuInstant::now().unwrap();
+            let cpu_usage = (next_cpu_t - self.cpu_t).non_idle();
+
             self.average_update_stat =
                 (self.average_update_stat + self.rolling_update_stat_total) / 2.0;
 
@@ -514,6 +520,7 @@ impl EventHandler for MyGame {
             };
 
             if self.tree_dirty
+                || cpu_usage >= CONSTS.auto_mutate_above_cpu_usage
                 || (CONSTS.auto_mutate
                     && (dbg!(thread_rng().gen::<usize>() % CONSTS.graph_mutation_divisor) == 0
                         || dbg!(f64::from(self.average_update_stat.activity_value))
@@ -695,6 +702,7 @@ impl EventHandler for MyGame {
             );
 
             self.current_t += 1;
+            self.cpu_t = next_cpu_t;
         }
 
         timer::yield_now();
@@ -803,10 +811,10 @@ impl EventHandler for MyGame {
                         ,
                         ])
                         .offset([
-                            0.5 
+                            0.5
                         // + offset_offset_x * scale_x * offset_scalar * root_scalar
                         ,
-                            0.5 
+                            0.5
                         // + offset_offset_y * scale_y * offset_scalar * root_scalar
                         ,
                         ])

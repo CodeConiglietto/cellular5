@@ -88,6 +88,8 @@ fullscreen: false
 # auto_mutate: false
 auto_mutate: true
 
+auto_mutate_above_cpu_usage: 0.9
+
 vsync: false
 
 cell_array_history_length: 4

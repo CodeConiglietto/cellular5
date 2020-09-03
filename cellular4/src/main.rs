@@ -642,7 +642,12 @@ impl EventHandler for MyGame {
                 .node_tree
                 .render_nodes
                 .root_scalar_node
-                .compute(step_com_arg.reborrow()).average(history_step.root_scalar);
+                .compute(step_com_arg.reborrow())
+                .multiply(UNFloat::new_clamped(1.0 - self.average_update_stat.activity_value as f32))
+                .multiply(UNFloat::new_clamped(1.0 - self.average_update_stat.alpha_value as f32))
+                .multiply(UNFloat::new_clamped(self.average_update_stat.global_similarity_value as f32))
+                .multiply(UNFloat::new_clamped(1.0 - self.average_update_stat.local_similarity_value as f32))
+                .average(history_step.root_scalar);
 
             self.next_history_step.computed_texture =
                 compute_texture(ctx, self.next_history_step.cell_array.view());

@@ -3,7 +3,9 @@ use std::{
     ops::{Add, AddAssign, Div},
 };
 
-#[derive(Default, Clone, Copy)]
+use crate::constants::CONSTS;
+
+#[derive(Default, Debug, Clone, Copy)]
 pub struct UpdateStat {
     //Update stats are used to determine an approximation of the entropy of the current state
     //Update stats contain two values:
@@ -13,10 +15,19 @@ pub struct UpdateStat {
     //-Neighbour similarity
     //--If all neighbours are similar, we have close to a flat color
     //--If all neighbours are distinct, we have visual noise
-    pub activity_value: f32,
-    pub alpha_value: f32,
-    pub local_similarity_value: f32,
-    pub global_similarity_value: f32,
+    pub activity_value: f64,
+    pub alpha_value: f64,
+    pub local_similarity_value: f64,
+    pub global_similarity_value: f64,
+}
+
+impl UpdateStat {
+    pub fn should_mutate(&self) -> bool {
+        self.activity_value < CONSTS.activity_value_lower_bound
+            || self.alpha_value < CONSTS.alpha_value_lower_bound
+            || self.local_similarity_value > CONSTS.local_similarity_upper_bound
+            || self.global_similarity_value >= CONSTS.global_similarity_upper_bound
+    }
 }
 
 impl Add<UpdateStat> for UpdateStat {
@@ -32,10 +43,10 @@ impl Add<UpdateStat> for UpdateStat {
     }
 }
 
-impl Div<f32> for UpdateStat {
+impl Div<f64> for UpdateStat {
     type Output = UpdateStat;
 
-    fn div(self, other: f32) -> UpdateStat {
+    fn div(self, other: f64) -> UpdateStat {
         UpdateStat {
             activity_value: self.activity_value / other,
             alpha_value: self.alpha_value / other,

@@ -8,9 +8,9 @@ use crate::{
     datatype::{continuous::*, distance_functions::*, points::*},
     mutagen_args::*,
     node::{
-        color_nodes::*, complex_nodes::*, constraint_resolver_nodes::*, coord_map_nodes::*, discrete_nodes::*,
-        distance_function_nodes::*, matrix_nodes::*, mutagen_functions::*, noise_nodes::*,
-        point_nodes::*, Node,
+        color_nodes::*, complex_nodes::*, constraint_resolver_nodes::*, coord_map_nodes::*,
+        discrete_nodes::*, distance_function_nodes::*, matrix_nodes::*, mutagen_functions::*,
+        noise_nodes::*, point_nodes::*, Node,
     },
     util::*,
 };
@@ -112,21 +112,31 @@ impl<'a> Updatable<'a> for AngleNodes {
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum SNFloatNodes {
     #[mutagen(gen_weight = pipe_node_weight)]
-    Sin { child: Box<AngleNodes> },
+    Sin {
+        child: Box<AngleNodes>,
+    },
 
     #[mutagen(gen_weight = pipe_node_weight)]
-    Cos { child: Box<AngleNodes> },
+    Cos {
+        child: Box<AngleNodes>,
+    },
 
     // #[mutagen(gen_weight = leaf_node_weight)]
     // Random,
     #[mutagen(gen_weight = leaf_node_weight)]
-    Constant { value: SNFloat },
+    Constant {
+        value: SNFloat,
+    },
 
     #[mutagen(gen_weight = pipe_node_weight)]
-    FromAngle { child: Box<AngleNodes> },
+    FromAngle {
+        child: Box<AngleNodes>,
+    },
 
     #[mutagen(gen_weight = pipe_node_weight)]
-    FromUNFloat { child: Box<UNFloatNodes> },
+    FromUNFloat {
+        child: Box<UNFloatNodes>,
+    },
 
     #[mutagen(gen_weight = branch_node_weight)]
     Multiply {
@@ -135,10 +145,14 @@ pub enum SNFloatNodes {
     },
 
     #[mutagen(gen_weight = pipe_node_weight)]
-    Abs { child: Box<SNFloatNodes> },
+    Abs {
+        child: Box<SNFloatNodes>,
+    },
 
     #[mutagen(gen_weight = pipe_node_weight)]
-    Invert { child: Box<SNFloatNodes> },
+    Invert {
+        child: Box<SNFloatNodes>,
+    },
 
     #[mutagen(gen_weight = leaf_node_weight)]
     XRatio,
@@ -150,7 +164,9 @@ pub enum SNFloatNodes {
     FromGametic,
 
     #[mutagen(gen_weight = leaf_node_weight)]
-    NoiseFunction { child: Box<NoiseNodes> },
+    NoiseFunction {
+        child: Box<NoiseNodes>,
+    },
 
     #[mutagen(gen_weight = branch_node_weight)]
     SubDivide {
@@ -233,12 +249,8 @@ impl Node for SNFloatNodes {
                 child_b.compute(compute_arg.reborrow()),
                 child_normaliser.compute(compute_arg.reborrow()),
             ),
-            ComplexReal {
-                child_complex
-            } => {child_complex.compute(compute_arg).re()},
-            ComplexImaginary {
-                child_complex
-            } => {child_complex.compute(compute_arg).im()},
+            ComplexReal { child_complex } => child_complex.compute(compute_arg).re(),
+            ComplexImaginary { child_complex } => child_complex.compute(compute_arg).im(),
             IfElse {
                 predicate,
                 child_a,
@@ -505,7 +517,9 @@ impl Node for UNFloatNodes {
                     },
                 );
 
-                child_exit_normaliser.compute(compute_arg.reborrow()).normalise((escape as f32 / iterations as f32) * 4.0)
+                child_exit_normaliser
+                    .compute(compute_arg.reborrow())
+                    .normalise((escape as f32 / iterations as f32) * 4.0)
             }
             IterativeMatrix {
                 child_matrix,
@@ -549,7 +563,9 @@ impl Node for UNFloatNodes {
                     },
                 );
 
-                child_exit_normaliser.compute(compute_arg.reborrow()).normalise((escape as f32 / iterations as f32) * 4.0)
+                child_exit_normaliser
+                    .compute(compute_arg.reborrow())
+                    .normalise((escape as f32 / iterations as f32) * 4.0)
             }
             SubDivideSawtooth { child_a, child_b } => child_a
                 .compute(compute_arg.reborrow())

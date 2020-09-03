@@ -471,12 +471,15 @@ impl EventHandler for MyGame {
             let global_color: FloatColor = global_color.into();
 
             UpdateStat {
-                activity_value: (older_color.get_average() - current_color.get_average()).abs(), // / total_cells as f32
-                alpha_value: current_color.a.into_inner(), // / total_cells as f32
-                local_similarity_value: (1.0
-                    - (local_color.get_average() - current_color.get_average()).abs()), // / total_cells as f32
-                global_similarity_value: (1.0
-                    - (global_color.get_average() - current_color.get_average()).abs()), // / total_cells as f32
+                activity_value: f64::from(older_color.get_average() - current_color.get_average())
+                    .abs(), // / total_cells as f64
+                alpha_value: f64::from(current_color.a.into_inner()), // / total_cells as f64
+                local_similarity_value: f64::from(
+                    1.0 - (local_color.get_average() - current_color.get_average()).abs(),
+                ), // / total_cells as f64
+                global_similarity_value: f64::from(
+                    1.0 - (global_color.get_average() - current_color.get_average()).abs(),
+                ), // / total_cells as f64
             }
         };
 
@@ -490,7 +493,7 @@ impl EventHandler for MyGame {
             let mut stat = UpdateStat::default();
             zip.apply(|(y, x), new| stat += update_step(y, x, new));
             stat
-        } / total_cells as f32;
+        } / total_cells as f64;
 
         self.rolling_update_stat_total += slice_update_stat;
 
@@ -519,18 +522,14 @@ impl EventHandler for MyGame {
                 history,
             };
 
+            dbg!(cpu_usage);
+            dbg!(&self.average_update_stat);
+
             if self.tree_dirty
-                || cpu_usage >= CONSTS.auto_mutate_above_cpu_usage
                 || (CONSTS.auto_mutate
-                    && (dbg!(thread_rng().gen::<usize>() % CONSTS.graph_mutation_divisor) == 0
-                        || dbg!(f64::from(self.average_update_stat.activity_value))
-                            < CONSTS.activity_value_lower_bound
-                        || dbg!(f64::from(self.average_update_stat.alpha_value))
-                            < CONSTS.alpha_value_lower_bound
-                        || dbg!(f64::from(self.average_update_stat.local_similarity_value))
-                            > CONSTS.local_similarity_upper_bound
-                        || dbg!(f64::from(self.average_update_stat.global_similarity_value))
-                            >= CONSTS.global_similarity_upper_bound))
+                    && (dbg!(cpu_usage >= CONSTS.auto_mutate_above_cpu_usage)
+                        || dbg!(self.average_update_stat.should_mutate())
+                        || dbg!(thread_rng().gen::<usize>() % CONSTS.graph_mutation_divisor) == 0))
             {
                 info!("====TIC: {} MUTATING TREE====", self.current_t);
                 self.node_tree.root_node.mutate_rng(

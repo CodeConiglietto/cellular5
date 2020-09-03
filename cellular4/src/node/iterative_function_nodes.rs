@@ -4,9 +4,15 @@ use std::f32::consts::PI;
 
 use crate::{
     constants::*,
-    datatype::{complex::*, continuous::*, discrete::*, distance_functions::*, iterative_results::*, points::*},
+    datatype::{
+        complex::*, continuous::*, discrete::*, distance_functions::*, iterative_results::*,
+        points::*,
+    },
     mutagen_args::*,
-    node::{constraint_resolver_nodes::*, continuous_nodes::*, discrete_nodes::*, matrix_nodes::*, mutagen_functions::*, point_nodes::*, Node},
+    node::{
+        constraint_resolver_nodes::*, continuous_nodes::*, discrete_nodes::*, matrix_nodes::*,
+        mutagen_functions::*, point_nodes::*, Node,
+    },
     util::*,
 };
 
@@ -16,13 +22,9 @@ use nalgebra::*;
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum IterativeFunctionNodes {
     #[mutagen(gen_weight = leaf_node_weight)]
-    Constant {
-        value: IterativeResult,
-    },
+    Constant { value: IterativeResult },
     #[mutagen(gen_weight = pipe_node_weight)]
-    Invert {
-        child: Box<IterativeFunctionNodes>,
-    },
+    Invert { child: Box<IterativeFunctionNodes> },
     #[mutagen(gen_weight = branch_node_weight)]
     EscapeTimeSystem {
         child_power: Box<NibbleNodes>,
@@ -51,12 +53,12 @@ impl Node for IterativeFunctionNodes {
         use IterativeFunctionNodes::*;
 
         match self {
-            Constant {value} => *value,
-            Invert {child} => {
+            Constant { value } => *value,
+            Invert { child } => {
                 let val = child.compute(compute_arg);
 
                 IterativeResult::new(val.z_final, val.iter_final.invert_wrapped())
-            },
+            }
             EscapeTimeSystem {
                 child_power,
                 child_power_ratio,
@@ -98,7 +100,7 @@ impl Node for IterativeFunctionNodes {
                             f64::from(2.0 * scale.y) *
                             f64::from(offset.y),
                             f64::from(2.0 * scale.x) *
-                            f64::from(offset.x * PI) 
+                            f64::from(offset.x * PI)
                         ).exp()
                     }else{
                         Complex::new(
@@ -121,7 +123,13 @@ impl Node for IterativeFunctionNodes {
                     },
                 );
 
-                IterativeResult::new(SNComplex::new_normalised(z_final, child_exit_normaliser.compute(compute_arg.reborrow())), Byte::new(iterations))
+                IterativeResult::new(
+                    SNComplex::new_normalised(
+                        z_final,
+                        child_exit_normaliser.compute(compute_arg.reborrow()),
+                    ),
+                    Byte::new(iterations),
+                )
             }
             IterativeMatrix {
                 child_matrix,
@@ -165,7 +173,13 @@ impl Node for IterativeFunctionNodes {
                     },
                 );
 
-                IterativeResult::new(SNComplex::new_normalised(z_final, child_exit_normaliser.compute(compute_arg.reborrow())), Byte::new(iterations))
+                IterativeResult::new(
+                    SNComplex::new_normalised(
+                        z_final,
+                        child_exit_normaliser.compute(compute_arg.reborrow()),
+                    ),
+                    Byte::new(iterations),
+                )
             }
         }
     }

@@ -9,7 +9,17 @@ use crate::{
     mutagen_args::*,
 };
 
-#[derive(Generatable, Mutatable, UpdatableRecursively, Deserialize, Serialize, Clone, Copy, Debug, Default)]
+#[derive(
+    Generatable,
+    Mutatable,
+    UpdatableRecursively,
+    Deserialize,
+    Serialize,
+    Clone,
+    Copy,
+    Debug,
+    Default,
+)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub struct IterativeResult {
     pub z_final: SNComplex,

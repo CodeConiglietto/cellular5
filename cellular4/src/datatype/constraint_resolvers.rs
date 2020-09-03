@@ -69,5 +69,9 @@ impl<'a> Updatable<'a> for UFloatNormaliser {
 }
 
 fn non_normal_to_default(value: f32) -> f32 {
-    if value.is_normal() {value} else {f32::default()}
+    if value.is_normal() {
+        value
+    } else {
+        f32::default()
+    }
 }

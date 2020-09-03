@@ -53,7 +53,10 @@ impl SNComplex {
     }
 
     pub fn from_snpoint(value: SNPoint) -> Self {
-        Self::new_unchecked(Complex::new(value.x().into_inner() as f64, value.y().into_inner() as f64))
+        Self::new_unchecked(Complex::new(
+            value.x().into_inner() as f64,
+            value.y().into_inner() as f64,
+        ))
     }
 
     pub fn zero() -> Self {
@@ -61,7 +64,7 @@ impl SNComplex {
     }
 
     pub fn into_inner(self) -> Complex<f64> {
-        self.value     
+        self.value
     }
 
     pub fn re(self) -> SNFloat {

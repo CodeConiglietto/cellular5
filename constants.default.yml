@@ -55,11 +55,11 @@
 # tics_per_update: 75
 
 # Tiny window
-initial_window_width: 700.0
-initial_window_height: 700.0
-cell_array_width: 350
-cell_array_height: 350
-tics_per_update: 175
+# initial_window_width: 700.0
+# initial_window_height: 700.0
+# cell_array_width: 350
+# cell_array_height: 350
+# tics_per_update: 175
 
 # Tiny window big res
 # initial_window_width: 700.0
@@ -76,11 +76,11 @@ tics_per_update: 175
 # tics_per_update: 100
 
 # Super speedy smoke tester (tm)
-# initial_window_width: 200.0
-# initial_window_height: 200.0
-# cell_array_width: 20
-# cell_array_height: 20
-# tics_per_update: 2
+initial_window_width: 200.0
+initial_window_height: 200.0
+cell_array_width: 20
+cell_array_height: 20
+tics_per_update: 2
 
 fullscreen: false
 # fullscreen: true

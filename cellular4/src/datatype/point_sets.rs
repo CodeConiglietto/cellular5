@@ -42,6 +42,10 @@ impl PointSet {
         self.points.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub fn get_closest_point(&self, other: SNPoint) -> SNPoint {
         *self
             .points
@@ -70,7 +74,7 @@ impl PointSet {
     }
 
     pub fn get_random_point(&self) -> SNPoint {
-        self.points.choose(&mut thread_rng()).unwrap().clone()
+        *self.points.choose(&mut thread_rng()).unwrap()
     }
 
     pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
@@ -123,19 +127,11 @@ impl<'a> Mutatable<'a> for PointSet {
 impl<'a> Updatable<'a> for PointSet {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
 
 impl<'a> UpdatableRecursively<'a> for PointSet {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug)]

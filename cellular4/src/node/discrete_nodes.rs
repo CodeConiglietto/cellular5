@@ -1,14 +1,7 @@
 use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    datatype::discrete::*,
-    mutagen_args::*,
-    node::{
-        color_nodes::*, continuous_nodes::*, coord_map_nodes::*, iterative_function_nodes::*,
-        mutagen_functions::*, Node,
-    },
-};
+use crate::prelude::*;
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
@@ -223,11 +216,7 @@ impl Node for BooleanNodes {
 impl<'a> Updatable<'a> for BooleanNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]
@@ -294,10 +283,10 @@ impl Node for NibbleNodes {
             // Random => Nibble::generate(state),
             Add { child_a, child_b } => child_a
                 .compute(compute_arg.reborrow())
-                .add(child_b.compute(compute_arg.reborrow())),
+                .circular_add(child_b.compute(compute_arg.reborrow())),
             Multiply { child_a, child_b } => child_a
                 .compute(compute_arg.reborrow())
-                .multiply(child_b.compute(compute_arg.reborrow())),
+                .circular_multiply(child_b.compute(compute_arg.reborrow())),
             Divide {
                 child_value,
                 child_divisor,
@@ -329,12 +318,14 @@ impl Node for NibbleNodes {
                 Nibble::new(value)
             }
             FromByteModulo { child } => {
-                Nibble::new(child.compute(compute_arg.reborrow()).into_inner() % Nibble::MAX_VALUE)
+                Nibble::new_circular(child.compute(compute_arg.reborrow()).into_inner())
             }
             FromByteDivide { child } => {
-                Nibble::new(child.compute(compute_arg.reborrow()).into_inner() / Nibble::MAX_VALUE)
+                Nibble::new(child.compute(compute_arg.reborrow()).into_inner() / Nibble::MODULUS)
             }
-            FromGametic => Nibble::new(compute_arg.coordinate_set.get_byte_t().into_inner()),
+            FromGametic => {
+                Nibble::new_circular(compute_arg.coordinate_set.get_byte_t().into_inner())
+            }
             IfElse {
                 predicate,
                 child_a,
@@ -353,11 +344,7 @@ impl Node for NibbleNodes {
 impl<'a> Updatable<'a> for NibbleNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]
@@ -415,10 +402,10 @@ impl Node for ByteNodes {
             // Random => Byte::generate(state),
             Add { child_a, child_b } => child_a
                 .compute(compute_arg.reborrow())
-                .add(child_b.compute(compute_arg.reborrow())),
+                .circular_add(child_b.compute(compute_arg.reborrow())),
             Multiply { child_a, child_b } => child_a
                 .compute(compute_arg.reborrow())
-                .multiply(child_b.compute(compute_arg.reborrow())),
+                .circular_multiply(child_b.compute(compute_arg.reborrow())),
             MultiplyNibbles { child_a, child_b } => Byte::new(
                 child_a.compute(compute_arg.reborrow()).into_inner()
                     * child_b.compute(compute_arg.reborrow()).into_inner(),
@@ -455,11 +442,7 @@ impl Node for ByteNodes {
 impl<'a> Updatable<'a> for ByteNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]
@@ -510,10 +493,10 @@ impl Node for UIntNodes {
             // Random => UInt::generate(state),
             Add { child_a, child_b } => child_a
                 .compute(compute_arg.reborrow())
-                .add(child_b.compute(compute_arg.reborrow())),
+                .circular_add(child_b.compute(compute_arg.reborrow())),
             Multiply { child_a, child_b } => child_a
                 .compute(compute_arg.reborrow())
-                .multiply(child_b.compute(compute_arg.reborrow())),
+                .circular_multiply(child_b.compute(compute_arg.reborrow())),
             Divide {
                 child_value,
                 child_divisor,
@@ -545,11 +528,7 @@ impl Node for UIntNodes {
 impl<'a> Updatable<'a> for UIntNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]
@@ -598,10 +577,10 @@ impl Node for SIntNodes {
             // Random => SInt::generate(state),
             Add { child_a, child_b } => child_a
                 .compute(compute_arg.reborrow())
-                .add(child_b.compute(compute_arg.reborrow())),
+                .circular_add(child_b.compute(compute_arg.reborrow())),
             Multiply { child_a, child_b } => child_a
                 .compute(compute_arg.reborrow())
-                .multiply(child_b.compute(compute_arg.reborrow())),
+                .circular_multiply(child_b.compute(compute_arg.reborrow())),
             Divide {
                 child_value,
                 child_divisor,
@@ -632,9 +611,5 @@ impl Node for SIntNodes {
 impl<'a> Updatable<'a> for SIntNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }

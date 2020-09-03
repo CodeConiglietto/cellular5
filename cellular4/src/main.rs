@@ -1,4 +1,4 @@
-use std::{f32::consts::PI, fs, path::PathBuf};
+use std::{f32::consts::PI, fs};
 
 use cpu_monitor::CpuInstant;
 use ggez::{
@@ -16,38 +16,24 @@ use rayon::prelude::*;
 use structopt::StructOpt;
 
 use crate::{
-    arena_wrappers::*,
-    constants::*,
-    coordinate_set::*,
-    data_set::*,
-    datatype::{
-        colors::{ByteColor, FloatColor},
-        continuous::*,
-        image::*,
-        points::*,
-    },
-    history::*,
-    mutagen_args::*,
-    node::{color_nodes::*, continuous_nodes::*, coord_map_nodes::*, point_nodes::*, Node},
-    node_set::*,
-    opts::Opts,
+    arena_wrappers::*, data_set::*, history::*, node_set::*, opts::Opts, prelude::*,
     update_stat::UpdateStat,
-    util::{DeterministicRng, RNG_SEED, *},
 };
 
-mod arena_wrappers;
-mod constants;
-mod coordinate_set;
-mod data_set;
-mod datatype;
-mod history;
-mod mutagen_args;
-mod node;
-mod node_set;
-mod opts;
-mod preloader;
-mod update_stat;
-mod util;
+pub mod arena_wrappers;
+pub mod constants;
+pub mod coordinate_set;
+pub mod data_set;
+pub mod datatype;
+pub mod history;
+pub mod mutagen_args;
+pub mod node;
+pub mod node_set;
+pub mod opts;
+pub mod preloader;
+pub mod prelude;
+pub mod update_stat;
+pub mod util;
 
 fn main() {
     std::env::set_var("RUST_BACKTRACE", "full");
@@ -234,13 +220,12 @@ struct MyGame {
 
     node_tree: NodeTree,
 
-    record_tree: bool,
+    //record_tree: bool,
     tree_dirty: bool,
     current_t: usize,
     last_render_t: usize,
     cpu_t: CpuInstant,
     rng: DeterministicRng,
-    opts: Opts,
 }
 
 impl MyGame {
@@ -321,16 +306,15 @@ impl MyGame {
                 },
             ),
 
-            nodes: nodes,
-            data: data,
+            nodes,
+            data,
 
-            record_tree: false,
+            //record_tree: false,
             tree_dirty: false,
             current_t: 0,
             last_render_t: 0,
             cpu_t: CpuInstant::now().unwrap(),
             rng,
-            opts,
             history,
         }
     }
@@ -721,7 +705,6 @@ impl EventHandler for MyGame {
 
             let lerp_len = CONSTS.cell_array_lerp_length;
 
-            // let mut alphas = Vec::new();
             for i in 0..lerp_len {
                 //let transparency = if i == 0 {1.0} else {if i == 1 {0.5} else {0.0}};
                 let alpha = 1.0 - ((i as f32 - lerp_value) / (lerp_len - 1) as f32).max(0.0);
@@ -759,75 +742,77 @@ impl EventHandler for MyGame {
                 let x_scale_ratio = CONSTS.initial_window_width / CONSTS.cell_array_width as f32;
                 let y_scale_ratio = CONSTS.initial_window_height / CONSTS.cell_array_height as f32;
 
-                let scale_x = lerp(
-                    lerp(
-                        1.0,
-                        history_step.from_scale.into_inner().x * 2.0,
-                        from_scale_scalar * root_scalar,
-                    ),
-                    lerp(
-                        1.0,
-                        history_step.to_scale.into_inner().x * 2.0,
-                        to_scale_scalar * root_scalar,
-                    ),
-                    alpha,
-                );
-                let scale_y = lerp(
-                    lerp(
-                        1.0,
-                        history_step.from_scale.into_inner().y * 2.0,
-                        from_scale_scalar * root_scalar,
-                    ),
-                    lerp(
-                        1.0,
-                        history_step.to_scale.into_inner().y * 2.0,
-                        to_scale_scalar * root_scalar,
-                    ),
-                    alpha,
-                );
+                let mut alpha =
+                    (1.0 - ((alpha * 2.0) - 1.0).abs()) / CONSTS.cell_array_lerp_length as f32;
 
-                let rotation = (1.0 - alpha) * history_step.rotation * PI;
+                let mut dest_x = CONSTS.initial_window_width * 0.5;
+                let mut dest_y = CONSTS.initial_window_height * 0.5;
+
+                let mut offset_x = 0.5;
+                let mut offset_y = 0.5;
+
+                let mut scale_x = 1.0;
+                let mut scale_y = 1.0;
+
+                let mut rotation = 0.0;
+
+                if CONSTS.apply_frame_transformations {
+                    alpha *= lerp(1.0, history_step.alpha.into_inner(), root_scalar);
+                    dest_x += dest_offset_x * scale_x * translation_scalar * root_scalar;
+                    dest_y += dest_offset_y * scale_y * translation_scalar * root_scalar;
+                    offset_x += offset_offset_x * scale_x * offset_scalar * root_scalar;
+                    offset_y += offset_offset_y * scale_y * offset_scalar * root_scalar;
+                    rotation +=
+                        (1.0 - alpha) * history_step.rotation * PI * rotation_scalar * root_scalar;
+
+                    scale_x *= lerp(
+                        1.0,
+                        1.0 + lerp(
+                            lerp(
+                                1.0,
+                                history_step.from_scale.into_inner().x * 2.0,
+                                from_scale_scalar * root_scalar,
+                            ),
+                            lerp(
+                                1.0,
+                                history_step.to_scale.into_inner().x * 2.0,
+                                to_scale_scalar * root_scalar,
+                            ),
+                            alpha,
+                        ),
+                        root_scalar,
+                    ) * x_scale_ratio;
+
+                    scale_y *= lerp(
+                        1.0,
+                        1.0 + lerp(
+                            lerp(
+                                1.0,
+                                history_step.from_scale.into_inner().y * 2.0,
+                                from_scale_scalar * root_scalar,
+                            ),
+                            lerp(
+                                1.0,
+                                history_step.to_scale.into_inner().y * 2.0,
+                                to_scale_scalar * root_scalar,
+                            ),
+                            alpha,
+                        ),
+                        root_scalar,
+                    ) * y_scale_ratio;
+                }
 
                 ggez::graphics::draw(
                     ctx,
                     &history_step.computed_texture,
                     base_params
-                        .color(GgColor::new(
-                            1.0,
-                            1.0,
-                            1.0,
-                            ((1.0 - ((alpha * 2.0) - 1.0).abs())
-                                / CONSTS.cell_array_lerp_length as f32), // * lerp(1.0, history_step.alpha.into_inner(), root_scalar),
-                        ))
-                        .dest([
-                        //     (
-                            (CONSTS.initial_window_width * 0.5)
-                        //         + dest_offset_x * scale_x * translation_scalar * root_scalar)
-                        ,
-                        //     (
-                            (CONSTS.initial_window_height * 0.5)
-                        //         + dest_offset_y * scale_y * translation_scalar * root_scalar)
-                        ,
-                        ])
-                        .offset([
-                            0.5
-                        // + offset_offset_x * scale_x * offset_scalar * root_scalar
-                        ,
-                            0.5
-                        // + offset_offset_y * scale_y * offset_scalar * root_scalar
-                        ,
-                        ])
-                        // .scale([
-                        //     lerp(1.0, 1.0 + scale_x, root_scalar) * x_scale_ratio,
-                        //     lerp(1.0, 1.0 + scale_y, root_scalar) * y_scale_ratio,
-                        // ])
-                        // .rotation(rotation * rotation_scalar * root_scalar),
+                        .color(GgColor::new(1.0, 1.0, 1.0, alpha))
+                        .dest([dest_x, dest_y])
+                        .offset([offset_x, offset_y])
+                        .scale([scale_x, scale_y])
+                        .rotation(rotation),
                 )?;
-
-                // alphas.push(alpha);
             }
-
-            // info!("{}", alphas.iter().map(|a| format!("{:.2}", a)).join(","));
 
             self.last_render_t = timer::ticks(ctx);
         }

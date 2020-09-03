@@ -50,6 +50,12 @@ pub struct DeterministicRng {
     rng: DeterministicRngImpl,
 }
 
+impl Default for DeterministicRng {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RngCore for DeterministicRng {
     fn next_u32(&mut self) -> u32 {
         self.rng.next_u32()
@@ -143,7 +149,7 @@ where
         c = iteration(c, i);
     }
 
-    return (c, max_iterations);
+    (c, max_iterations)
 }
 
 pub fn init_cell_array(width: usize, height: usize) -> Array3<u8> {
@@ -159,7 +165,7 @@ pub fn init_cell_array(width: usize, height: usize) -> Array3<u8> {
 
 pub fn compute_texture(ctx: &mut Context, cell_array: ArrayView3<u8>) -> GgImage {
     let (height, width, _) = cell_array.dim();
-    let mut image = GgImage::from_rgba8(
+    let image = GgImage::from_rgba8(
         ctx,
         width as u16,
         height as u16,

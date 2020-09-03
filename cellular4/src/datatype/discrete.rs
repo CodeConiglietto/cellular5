@@ -39,7 +39,12 @@ impl<'a> Generatable<'a> for Boolean {
 
 impl<'a> Mutatable<'a> for Boolean {
     type MutArg = MutArg<'a>;
-    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, state: mutagen::State, arg: MutArg<'a>) {
+    fn mutate_rng<R: Rng + ?Sized>(
+        &mut self,
+        rng: &mut R,
+        _state: mutagen::State,
+        _arg: MutArg<'a>,
+    ) {
         *self = Self::random(rng);
     }
 }
@@ -47,19 +52,11 @@ impl<'a> Mutatable<'a> for Boolean {
 impl<'a> Updatable<'a> for Boolean {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
 
 impl<'a> UpdatableRecursively<'a> for Boolean {
-    fn update_recursively(&mut self, _state: mutagen::State, arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -69,44 +66,51 @@ pub struct Nibble {
 
 impl Nibble {
     pub fn new(value: u8) -> Self {
-        Self {
-            value: value % Self::MAX_VALUE,
-        }
+        assert!(value < Self::MODULUS);
+        Self::new_unchecked(value)
+    }
+
+    pub fn new_circular(value: u8) -> Self {
+        Self::new_unchecked(value % Self::MODULUS)
+    }
+
+    pub fn new_unchecked(value: u8) -> Self {
+        Self { value }
     }
 
     pub fn into_inner(self) -> u8 {
         self.value
     }
 
-    pub fn add(self, other: Self) -> Self {
-        Self::new(self.value + other.value)
+    pub fn circular_add(self, other: Self) -> Self {
+        Self::new_circular(self.value + other.value)
     }
 
     pub fn divide(self, other: Self) -> Self {
         if other.value == 0 {
-            Self::new(other.value)
+            other
         } else {
-            Self::new(self.value / other.value)
+            Self::new_unchecked(self.value / other.value)
         }
     }
 
-    pub fn multiply(self, other: Self) -> Self {
-        Self::new(self.value * other.value)
+    pub fn circular_multiply(self, other: Self) -> Self {
+        Self::new_circular(self.value * other.value)
     }
 
     pub fn modulus(self, other: Self) -> Self {
         if other.value == 0 {
-            Self::new(other.value)
+            other
         } else {
-            Self::new(self.value % other.value)
+            Self::new_circular(self.value % other.value)
         }
     }
 
     pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
-        Nibble::new(rng.gen_range(0, Self::MAX_VALUE))
+        Nibble::new_unchecked(rng.gen_range(0, Self::MODULUS))
     }
 
-    pub const MAX_VALUE: u8 = 16;
+    pub const MODULUS: u8 = 16;
 }
 
 impl<'a> Generatable<'a> for Nibble {
@@ -136,19 +140,11 @@ impl<'a> Mutatable<'a> for Nibble {
 impl<'a> Updatable<'a> for Nibble {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
 
 impl<'a> UpdatableRecursively<'a> for Nibble {
-    fn update_recursively(&mut self, _state: mutagen::State, arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -167,7 +163,7 @@ impl Byte {
         self.value.0
     }
 
-    pub fn add(self, other: Self) -> Self {
+    pub fn circular_add(self, other: Self) -> Self {
         Self::new((self.value + other.value).0)
     }
 
@@ -183,7 +179,7 @@ impl Byte {
         Self::new((Wrapping(255u8) - self.value).0)
     }
 
-    pub fn multiply(self, other: Self) -> Self {
+    pub fn circular_multiply(self, other: Self) -> Self {
         Self::new((self.value * other.value).0)
     }
 
@@ -227,19 +223,11 @@ impl<'a> Mutatable<'a> for Byte {
 impl<'a> Updatable<'a> for Byte {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
 
 impl<'a> UpdatableRecursively<'a> for Byte {
-    fn update_recursively(&mut self, _state: mutagen::State, arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default)]
@@ -258,7 +246,7 @@ impl UInt {
         self.value.0
     }
 
-    pub fn add(self, other: Self) -> Self {
+    pub fn circular_add(self, other: Self) -> Self {
         Self::new((self.value + other.value).0)
     }
 
@@ -270,7 +258,7 @@ impl UInt {
         }
     }
 
-    pub fn multiply(self, other: Self) -> Self {
+    pub fn circular_multiply(self, other: Self) -> Self {
         Self::new((self.value * other.value).0)
     }
 
@@ -314,19 +302,11 @@ impl<'a> Mutatable<'a> for UInt {
 impl<'a> Updatable<'a> for UInt {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
 
 impl<'a> UpdatableRecursively<'a> for UInt {
-    fn update_recursively(&mut self, _state: mutagen::State, arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default)]
@@ -345,7 +325,7 @@ impl SInt {
         self.value.0
     }
 
-    pub fn add(self, other: Self) -> Self {
+    pub fn circular_add(self, other: Self) -> Self {
         Self::new((self.value + other.value).0)
     }
 
@@ -357,7 +337,7 @@ impl SInt {
         }
     }
 
-    pub fn multiply(self, other: Self) -> Self {
+    pub fn circular_multiply(self, other: Self) -> Self {
         Self::new((self.value * other.value).0)
     }
 
@@ -388,7 +368,12 @@ impl<'a> Generatable<'a> for SInt {
 
 impl<'a> Mutatable<'a> for SInt {
     type MutArg = MutArg<'a>;
-    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, state: mutagen::State, arg: MutArg<'a>) {
+    fn mutate_rng<R: Rng + ?Sized>(
+        &mut self,
+        rng: &mut R,
+        _state: mutagen::State,
+        _arg: MutArg<'a>,
+    ) {
         *self = Self::random(rng);
     }
 }
@@ -396,17 +381,9 @@ impl<'a> Mutatable<'a> for SInt {
 impl<'a> Updatable<'a> for SInt {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
 
 impl<'a> UpdatableRecursively<'a> for SInt {
-    fn update_recursively(&mut self, _state: mutagen::State, arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }

@@ -68,6 +68,12 @@ impl DataSet {
     }
 }
 
+impl Default for DataSet {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 //example
 // impl Storage<FloatColor> for DataSet {
 //     fn arena(&self) -> &Arena<ArenaSlot<FloatColor>> {

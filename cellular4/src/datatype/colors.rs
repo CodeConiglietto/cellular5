@@ -1,12 +1,10 @@
+use approx::abs_diff_eq;
 use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
 use palette::rgb::Rgb;
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    datatype::{continuous::*, discrete::*},
-    mutagen_args::*,
-};
+use crate::prelude::*;
 
 #[derive(Generatable, Mutatable, Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
@@ -20,19 +18,11 @@ pub struct NibbleColor {
 impl<'a> Updatable<'a> for NibbleColor {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
 
 impl<'a> UpdatableRecursively<'a> for NibbleColor {
-    fn update_recursively(&mut self, _state: mutagen::State, arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
 
 impl From<FloatColor> for NibbleColor {
@@ -58,19 +48,11 @@ pub struct ByteColor {
 impl<'a> Updatable<'a> for ByteColor {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
 
 impl<'a> UpdatableRecursively<'a> for ByteColor {
-    fn update_recursively(&mut self, _state: mutagen::State, arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
 
 impl From<image::Rgba<u8>> for ByteColor {
@@ -344,19 +326,11 @@ impl<'a> Mutatable<'a> for BitColor {
 impl<'a> Updatable<'a> for BitColor {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
 
 impl<'a> UpdatableRecursively<'a> for BitColor {
-    fn update_recursively(&mut self, _state: mutagen::State, arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
 
 impl From<ByteColor> for BitColor {
@@ -391,18 +365,18 @@ impl FloatColor {
         let min = r.min(g.min(b));
         let max = r.min(g.min(b));
 
-        if min == max {
+        if abs_diff_eq!(min, max) {
             UNFloat::new(0.0)
         } else {
-            let mut hue = if max == r {
+            let mut hue = if abs_diff_eq!(max, r) {
                 (g - b) / (max - min)
-            } else if max == g {
+            } else if abs_diff_eq!(max, g) {
                 2.0 + (b - r) / (max - min)
             } else {
                 4.0 + (r - g) / (max - min)
             };
 
-            hue = hue * 60.0;
+            hue *= 60.0;
 
             if hue < 0.0 {
                 hue += 360.0;
@@ -460,7 +434,12 @@ impl<'a> Generatable<'a> for FloatColor {
 
 impl<'a> Mutatable<'a> for FloatColor {
     type MutArg = MutArg<'a>;
-    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, state: mutagen::State, arg: MutArg<'a>) {
+    fn mutate_rng<R: Rng + ?Sized>(
+        &mut self,
+        rng: &mut R,
+        _state: mutagen::State,
+        _arg: MutArg<'a>,
+    ) {
         *self = Self::random(rng);
     }
 }
@@ -468,17 +447,9 @@ impl<'a> Mutatable<'a> for FloatColor {
 impl<'a> Updatable<'a> for FloatColor {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
 
 impl<'a> UpdatableRecursively<'a> for FloatColor {
-    fn update_recursively(&mut self, _state: mutagen::State, arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }

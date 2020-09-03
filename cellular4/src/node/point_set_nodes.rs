@@ -5,14 +5,7 @@ use nalgebra::*;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    datatype::{continuous::*, matrices::*, point_sets::*, points::*},
-    mutagen_args::*,
-    node::{
-        constraint_resolver_nodes::*, continuous_nodes::*, discrete_nodes::*, matrix_nodes::*,
-        mutagen_functions::*, point_nodes::*, Node,
-    },
-};
+use crate::prelude::*;
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
@@ -174,7 +167,7 @@ impl<'a> Updatable<'a> for PointSetNodes {
 
                 for x in 0..=8 {
                     for y in 0..=8 {
-                        let ratio = 0.5 / 8 as f32;
+                        let ratio = 0.5 / 8.0;
 
                         edge_vec.push(SNPoint::new_normalised(
                             Point2::new(

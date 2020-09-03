@@ -1,11 +1,7 @@
 use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    datatype::constraint_resolvers::*,
-    mutagen_args::*,
-    node::{discrete_nodes::*, Node},
-};
+use crate::prelude::*;
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Serialize, Deserialize, Debug)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]

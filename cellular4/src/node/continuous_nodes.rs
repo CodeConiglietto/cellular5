@@ -4,16 +4,7 @@ use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively}
 use nalgebra::*;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    datatype::{continuous::*, distance_functions::*, points::*},
-    mutagen_args::*,
-    node::{
-        color_nodes::*, complex_nodes::*, constraint_resolver_nodes::*, coord_map_nodes::*,
-        discrete_nodes::*, distance_function_nodes::*, matrix_nodes::*, mutagen_functions::*,
-        noise_nodes::*, point_nodes::*, Node,
-    },
-    util::*,
-};
+use crate::prelude::*;
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
@@ -101,11 +92,7 @@ impl Node for AngleNodes {
 impl<'a> Updatable<'a> for AngleNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]
@@ -269,11 +256,7 @@ impl Node for SNFloatNodes {
 impl<'a> Updatable<'a> for SNFloatNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]
@@ -505,11 +488,11 @@ impl Node for UNFloatNodes {
                         )
                     };
 
-                let (z_final, escape) = escape_time_system(
+                let (_z_final, escape) = escape_time_system(
                     c,
                     iterations as usize,
                     |z, i| z.powf(power) + z_offset * i as f64,
-                    |z, i| {
+                    |z, _i| {
                         child_distance_function.calculate_point2(
                             Point2::origin(),
                             Point2::new(z.re as f32, z.im as f32),
@@ -543,15 +526,15 @@ impl Node for UNFloatNodes {
                     f64::from(compute_arg.coordinate_set.x.into_inner()),
                 );
 
-                let (z_final, escape) = escape_time_system(
+                let (_z_final, escape) = escape_time_system(
                     c,
                     iterations as usize,
-                    |z, i| {
+                    |z, _i| {
                         let new_point =
                             matrix.transform_point(&Point2::new(z.re as f32, z.im as f32));
                         Complex::new(new_point.x as f64, new_point.y as f64)
                     },
-                    |z, i| {
+                    |z, _i| {
                         child_exit_condition
                             .compute(compute_arg.reborrow().replace_coords(
                                 &SNPoint::new_normalised(
@@ -607,11 +590,5 @@ impl Node for UNFloatNodes {
 impl<'a> Updatable<'a> for UNFloatNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
-        // use UNFloatNodes::*;
-
-        match self {
-            _ => {}
-        }
-    }
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }

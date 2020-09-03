@@ -2,14 +2,7 @@ use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively}
 use nalgebra::*;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    datatype::{constraint_resolvers::*, points::*},
-    mutagen_args::*,
-    node::{
-        constraint_resolver_nodes::*, continuous_nodes::*, mutagen_functions::*,
-        point_set_nodes::*, Node,
-    },
-};
+use crate::prelude::*;
 
 //Note: SNPoints are not normalised in the mathematical sense, each coordinate is simply capped at -1..1
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]
@@ -89,6 +82,8 @@ impl<'a> Updatable<'a> for SNPointNodes {
     fn update(&mut self, _state: mutagen::State, mut arg: UpdArg<'a>) {
         use SNPointNodes::*;
 
+        // TODO Remove when more match arms are added
+        #[allow(clippy::single_match)]
         match self {
             IterativeNormalisedAdd {
                 value,
@@ -100,6 +95,7 @@ impl<'a> Updatable<'a> for SNPointNodes {
                     child_normaliser.compute(arg.reborrow().into()),
                 );
             }
+
             _ => {}
         }
     }

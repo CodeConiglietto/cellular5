@@ -109,6 +109,8 @@ impl SNPoint {
         Self::from_snfloats(theta.to_signed(), rho.to_signed())
     }
 
+    // TODO Refactor this when polar point datatype is added
+    #[allow(clippy::wrong_self_convention)]
     pub fn from_polar(self) -> Self {
         let theta = self.x().to_angle().into_inner();
         let rho = self.y().to_unsigned().into_inner();
@@ -201,7 +203,12 @@ impl<'a> Generatable<'a> for SNPoint {
 
 impl<'a> Mutatable<'a> for SNPoint {
     type MutArg = MutArg<'a>;
-    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, state: mutagen::State, arg: MutArg<'a>) {
+    fn mutate_rng<R: Rng + ?Sized>(
+        &mut self,
+        rng: &mut R,
+        _state: mutagen::State,
+        _arg: MutArg<'a>,
+    ) {
         *self = Self::random(rng);
     }
 }
@@ -209,19 +216,11 @@ impl<'a> Mutatable<'a> for SNPoint {
 impl<'a> Updatable<'a> for SNPoint {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
 
 impl<'a> UpdatableRecursively<'a> for SNPoint {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
 
 #[cfg(test)]

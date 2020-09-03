@@ -1,13 +1,7 @@
-use std::num::Wrapping;
-
 use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
-use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    datatype::{complex::*, discrete::*},
-    mutagen_args::*,
-};
+use crate::prelude::*;
 
 #[derive(
     Generatable,
@@ -38,9 +32,5 @@ impl IterativeResult {
 impl<'a> Updatable<'a> for IterativeResult {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }

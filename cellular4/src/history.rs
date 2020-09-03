@@ -40,11 +40,10 @@ impl History {
             history_steps: (0..size)
                 .map(|_| {
                     let cell_array = init_cell_array(array_width, array_height);
-                    let computed_texture = compute_texture(ctx, cell_array.view());
 
                     HistoryStep {
-                        cell_array: cell_array,
-                        computed_texture: computed_texture,
+                        computed_texture: compute_texture(ctx, cell_array.view()),
+                        cell_array,
                         update_coordinate: CoordinateSet {
                             x: SNFloat::ZERO,
                             y: SNFloat::ZERO,

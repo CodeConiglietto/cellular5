@@ -48,7 +48,7 @@ fn generatable_type(input: syn::DeriveInput) -> Result<TokenStream2> {
     let gen_arg = parse_attrs(&input.attrs, a::TYPE)?
         .get(a::GEN_ARG)
         .cloned()
-        .ok_or_else(|| Error::new(span.clone(), "Missing gen_arg attribute"))?
+        .ok_or_else(|| Error::new(span, "Missing gen_arg attribute"))?
         .to_type()?;
 
     let body = match &input.data {
@@ -60,6 +60,7 @@ fn generatable_type(input: syn::DeriveInput) -> Result<TokenStream2> {
     let ident = input.ident;
 
     Ok(quote! {
+        #[automatically_derived]
         impl<'a> ::mutagen::Generatable<'a> for #ident {
             type GenArg = #gen_arg;
 
@@ -111,7 +112,7 @@ fn generatable_enum(
             let weight = attrs
                 .get(a::GEN_WEIGHT)
                 .cloned()
-                .unwrap_or_else(|| Value::None(span.clone()));
+                .unwrap_or_else(|| Value::None(span));
 
             if attrs.contains_key(a::GEN_PREFERRED) {
                 let w = weight.to_weight()?.unwrap_or_else(|| quote!(0.0));
@@ -131,7 +132,7 @@ fn generatable_enum(
             let ident = &variant.ident;
             let fields = generatable_fields(&variant.fields)?;
             Ok(quote! {
-                    return #enum_ident::#ident #fields;
+                    #enum_ident::#ident #fields
             })
         },
         &format!("Generation for {}", enum_ident),
@@ -197,7 +198,7 @@ fn mutatable_type(input: syn::DeriveInput) -> Result<TokenStream2> {
     let mut_arg = parse_attrs(&input.attrs, a::TYPE)?
         .get(a::MUT_ARG)
         .cloned()
-        .ok_or_else(|| Error::new(span.clone(), "Missing mut_arg attribute"))?
+        .ok_or_else(|| Error::new(span, "Missing mut_arg attribute"))?
         .to_type()?;
 
     let body = match &input.data {
@@ -209,6 +210,7 @@ fn mutatable_type(input: syn::DeriveInput) -> Result<TokenStream2> {
     let ident = input.ident;
 
     Ok(quote! {
+        #[automatically_derived]
         impl<'a> ::mutagen::Mutatable<'a> for #ident {
             type MutArg = #mut_arg;
 
@@ -257,7 +259,7 @@ fn mutatable_enum(
     let mut_reroll_enum = attrs
         .get(a::MUT_REROLL)
         .cloned()
-        .unwrap_or_else(|| Value::None(span.clone()))
+        .unwrap_or_else(|| Value::None(span))
         .to_prob()?;
 
     let variants: Vec<_> = e
@@ -366,14 +368,13 @@ fn mutatable_fields(fields: &[&Field], path: &str, span: Span) -> Result<TokenSt
                 attrs
                     .get(a::MUT_WEIGHT)
                     .cloned()
-                    .unwrap_or_else(|| Value::None(span.clone()))
+                    .unwrap_or_else(|| Value::None(span))
             })
         },
         |field, i| {
             let ident = field_ident(field, i);
             Ok(quote! {
                 ::mutagen::Mutatable::mutate_rng(#ident, rng, state.deepen(), ::std::convert::From::from(::mutagen::Reborrow::reborrow(&mut arg)));
-                return;
             })
         },
         &format!("mutation for {}", path),
@@ -399,6 +400,7 @@ fn updatable_type(input: syn::DeriveInput) -> Result<TokenStream2> {
     let ident = input.ident;
 
     Ok(quote! {
+        #[automatically_derived]
         impl<'a> ::mutagen::UpdatableRecursively<'a> for #ident {
             fn update_recursively(&mut self, state: ::mutagen::State, mut arg: Self::UpdateArg) {
                 ::mutagen::Updatable::update(self, state, ::std::convert::From::from(::mutagen::Reborrow::reborrow(&mut arg)));
@@ -533,7 +535,7 @@ where
         .filter(|(_, (_, weight))| weight.is_some())
         .map(|(i, (choice, _))| {
             let body = body_fn(choice, i)?;
-            Ok(quote! { if roll < cumul_weights[#i] { #body }})
+            Ok(quote! { if roll < cumul_weights[#i] { #body } else })
         })
         .collect::<Result<_>>()?;
 
@@ -556,7 +558,9 @@ where
 
         #checks
 
-        unreachable!("Failed to roll {}. Rolled {}, total weight is {}", #err, roll, total_weight)
+        {
+            unreachable!("Failed to roll {}. Rolled {}, total weight is {}", #err, roll, total_weight)
+        }
     })
 }
 
@@ -588,6 +592,9 @@ struct AttrsData {
 impl Parse for AttrsData {
     fn parse(input: ParseStream) -> Result<Self> {
         let content;
+
+        // Remove when fixed https://github.com/rust-lang/rust-clippy/issues/4637
+        #[allow(clippy::eval_order_dependence)]
         Ok(Self {
             _paren: parenthesized!(content in input),
             values: content.parse_terminated(KeyValue::parse)?,
@@ -634,7 +641,7 @@ impl Value {
             Value::Closure(c) => Err(Error::new(c.span(), "Expected type, found closure")),
             Value::Val(_) => panic!("Internal error: expected type, found value"),
             Value::Type(t) => Ok(quote!(#t)),
-            Value::None(span) => Err(Error::new(span.clone(), "Expected type, found nothing")),
+            Value::None(span) => Err(Error::new(*span, "Expected type, found nothing")),
         }
     }
 

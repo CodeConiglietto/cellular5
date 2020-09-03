@@ -276,9 +276,9 @@ impl<'a> Mutatable<'a> for Image {
 
     fn mutate_rng<R: Rng + ?Sized>(
         &mut self,
-        rng: &mut R,
-        state: mutagen::State,
-        arg: Self::MutArg,
+        _rng: &mut R,
+        _state: mutagen::State,
+        _arg: Self::MutArg,
     ) {
         *self = IMAGE_PRELOADER
             .with(|p| p.try_get_next())
@@ -289,19 +289,11 @@ impl<'a> Mutatable<'a> for Image {
 impl<'a> Updatable<'a> for Image {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: Self::UpdateArg) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update(&mut self, _state: mutagen::State, _arg: Self::UpdateArg) {}
 }
 
 impl<'a> UpdatableRecursively<'a> for Image {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: Self::UpdateArg) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update_recursively(&mut self, _state: mutagen::State, _arg: Self::UpdateArg) {}
 }
 
 #[derive(Debug, Serialize, Deserialize)]

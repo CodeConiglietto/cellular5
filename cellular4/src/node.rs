@@ -21,7 +21,7 @@ pub trait Node {
     fn compute(&self, compute_arg: ComArg) -> Self::Output;
 }
 
-mod mutagen_functions {
+pub mod mutagen_functions {
     use crate::{constants::*, util::*};
 
     pub fn leaf_node_weight(state: &mutagen::State) -> f64 {

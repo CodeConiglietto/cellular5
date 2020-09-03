@@ -1,8 +1,9 @@
 use std::{
     fmt::Debug,
     sync::{
+        atomic::{self, AtomicBool},
         mpsc::{self, Receiver, TryRecvError},
-        Arc, Mutex,
+        Arc,
     },
     thread::{self, JoinHandle},
 };
@@ -14,7 +15,7 @@ where
     T: Debug + Send + 'static,
 {
     child_thread: Option<JoinHandle<()>>,
-    running: Arc<Mutex<bool>>,
+    running: Arc<AtomicBool>,
     receiver: Receiver<T>,
 }
 
@@ -27,7 +28,7 @@ where
         G: Generator<Output = T> + Send + 'static,
     {
         let (sender, receiver) = mpsc::sync_channel(pool_size);
-        let running = Arc::new(Mutex::new(true));
+        let running = Arc::new(AtomicBool::new(true));
         let running_child = Arc::clone(&running);
 
         let child_thread = thread::spawn(move || {
@@ -41,7 +42,7 @@ where
                     break;
                 }
 
-                if !*running_child.lock().unwrap() {
+                if !running_child.load(atomic::Ordering::Relaxed) {
                     break;
                 }
 
@@ -88,8 +89,7 @@ where
 {
     fn drop(&mut self) {
         info!("Shutting down preloader thread");
-        let mut running = self.running.lock().unwrap();
-        if *running {
+        if self.running.load(atomic::Ordering::Relaxed) {
             let child_thread = self.child_thread.take().unwrap();
             debug!(
                 "Parent thread {:?} shutting down child preloader thread {:?}",
@@ -97,7 +97,7 @@ where
                 child_thread.thread().id()
             );
 
-            *running = false;
+            self.running.store(false, atomic::Ordering::Relaxed);
 
             loop {
                 if self.receiver.try_recv().is_err() {

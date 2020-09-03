@@ -95,6 +95,8 @@ vsync: false
 cell_array_history_length: 4
 cell_array_lerp_length: 4
 
+apply_frame_transformations: false
+
 lerp_aggressiveness: 1.0
 
 time_scale_divisor: 16.0

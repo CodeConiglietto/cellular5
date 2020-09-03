@@ -1,4 +1,4 @@
-use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
+use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
 use serde::{Deserialize, Serialize};
 
 use crate::{datatype::continuous::*, mutagen_args::*};

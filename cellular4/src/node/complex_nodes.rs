@@ -1,15 +1,7 @@
 use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    constants::*,
-    datatype::{complex::*, constraint_resolvers::*, continuous::*, discrete::*},
-    mutagen_args::*,
-    node::{
-        constraint_resolver_nodes::*, discrete_nodes::*, iterative_function_nodes::*,
-        mutagen_functions::*, point_nodes::*, point_set_nodes::*, Node,
-    },
-};
+use crate::prelude::*;
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
@@ -71,9 +63,5 @@ impl Node for SNComplexNodes {
 impl<'a> Updatable<'a> for SNComplexNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }

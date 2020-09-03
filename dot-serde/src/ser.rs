@@ -577,7 +577,7 @@ impl<'a, W: Write> ser::SerializeMap for SerializerMap<'a, W> {
         // HACK There's likely a much better way to check that the key is a string without relying on serde_json to stringify it
         // but that's hard, so this'll do for now.
         self.ser.serialize_key(Cow::Owned(
-            serde_json::to_string(key).map_err(|e| <Error as ser::Error>::custom(e))?,
+            serde_json::to_string(key).map_err(<Error as ser::Error>::custom)?,
         ))
     }
 

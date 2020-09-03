@@ -1,14 +1,7 @@
 use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    datatype::{colors::*, continuous::*},
-    mutagen_args::*,
-    node::{
-        color_nodes::*, continuous_nodes::*, coord_map_nodes::*, discrete_nodes::*,
-        mutagen_functions::*, Node,
-    },
-};
+use crate::prelude::*;
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
@@ -234,9 +227,5 @@ impl Node for ColorBlendNodes {
 impl<'a> Updatable<'a> for ColorBlendNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }

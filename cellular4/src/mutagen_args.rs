@@ -76,7 +76,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, ComArg<'a>> for ComArg<'b> {
         ComArg {
             nodes: &self.nodes,
             data: &self.data,
-            coordinate_set: self.coordinate_set.clone(),
+            coordinate_set: self.coordinate_set,
             history: &self.history,
             depth: self.depth,
         }
@@ -98,7 +98,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, UpdArg<'a>> for UpdArg<'b> {
         UpdArg {
             nodes: &mut self.nodes,
             data: &mut self.data,
-            coordinate_set: self.coordinate_set.clone(),
+            coordinate_set: self.coordinate_set,
             history: &self.history,
             depth: self.depth,
             current_t: self.current_t,
@@ -127,13 +127,9 @@ pub struct UpdateState<'a> {
 }
 
 impl<'a> From<GenArg<'a>> for () {
-    fn from(_arg: GenArg<'a>) -> Self {
-        ()
-    }
+    fn from(_arg: GenArg<'a>) -> Self {}
 }
 
 impl<'a> From<MutArg<'a>> for () {
-    fn from(_arg: MutArg<'a>) -> Self {
-        ()
-    }
+    fn from(_arg: MutArg<'a>) -> Self {}
 }

@@ -15,10 +15,7 @@ use serde::{
     Deserialize, Serialize,
 };
 
-use crate::{
-    datatype::{constraint_resolvers::*, continuous::*, points::*},
-    mutagen_args::*,
-};
+use crate::prelude::*;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SNComplex {
@@ -161,7 +158,12 @@ impl<'a> Generatable<'a> for SNComplex {
 
 impl<'a> Mutatable<'a> for SNComplex {
     type MutArg = MutArg<'a>;
-    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, state: mutagen::State, arg: MutArg<'a>) {
+    fn mutate_rng<R: Rng + ?Sized>(
+        &mut self,
+        rng: &mut R,
+        _state: mutagen::State,
+        _arg: MutArg<'a>,
+    ) {
         *self = Self::random(rng);
     }
 }
@@ -169,19 +171,11 @@ impl<'a> Mutatable<'a> for SNComplex {
 impl<'a> Updatable<'a> for SNComplex {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
 
 impl<'a> UpdatableRecursively<'a> for SNComplex {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
 
 #[cfg(test)]

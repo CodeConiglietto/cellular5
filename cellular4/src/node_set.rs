@@ -74,10 +74,16 @@ impl NodeSet {
     }
 }
 
+impl Default for NodeSet {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'a> Updatable<'a> for NodeSet {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: State, arg: Self::UpdateArg) {}
+    fn update(&mut self, _state: State, _arg: Self::UpdateArg) {}
 }
 
 impl Storage<ColorBlendNodes> for NodeSet {

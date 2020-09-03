@@ -1,11 +1,7 @@
 use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    datatype::matrices::*,
-    mutagen_args::*,
-    node::{continuous_nodes::*, mutagen_functions::*, Node},
-};
+use crate::prelude::*;
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
@@ -69,9 +65,5 @@ impl Node for SNFloatMatrix3Nodes {
 impl<'a> Updatable<'a> for SNFloatMatrix3Nodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }

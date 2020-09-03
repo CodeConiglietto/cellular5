@@ -68,7 +68,12 @@ impl<'a> Generatable<'a> for DistanceFunction {
 
 impl<'a> Mutatable<'a> for DistanceFunction {
     type MutArg = MutArg<'a>;
-    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, state: mutagen::State, arg: MutArg<'a>) {
+    fn mutate_rng<R: Rng + ?Sized>(
+        &mut self,
+        rng: &mut R,
+        _state: mutagen::State,
+        _arg: MutArg<'a>,
+    ) {
         *self = Self::random(rng);
     }
 }
@@ -76,9 +81,5 @@ impl<'a> Mutatable<'a> for DistanceFunction {
 impl<'a> Updatable<'a> for DistanceFunction {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: Self::UpdateArg) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update(&mut self, _state: mutagen::State, _arg: Self::UpdateArg) {}
 }

@@ -2,19 +2,7 @@ use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively}
 use serde::{Deserialize, Serialize};
 use std::f32::consts::PI;
 
-use crate::{
-    constants::*,
-    datatype::{
-        complex::*, continuous::*, discrete::*, distance_functions::*, iterative_results::*,
-        points::*,
-    },
-    mutagen_args::*,
-    node::{
-        constraint_resolver_nodes::*, continuous_nodes::*, discrete_nodes::*, matrix_nodes::*,
-        mutagen_functions::*, point_nodes::*, Node,
-    },
-    util::*,
-};
+use crate::prelude::*;
 
 use nalgebra::*;
 
@@ -111,11 +99,11 @@ impl Node for IterativeFunctionNodes {
                         )
                     };
 
-                let (z_final, escape) = escape_time_system(
+                let (z_final, _escape) = escape_time_system(
                     c,
                     iterations as usize,
                     |z, i| z.powf(power) + z_offset * i as f64,
-                    |z, i| {
+                    |z, _i| {
                         child_distance_function.calculate_point2(
                             Point2::origin(),
                             Point2::new(z.re as f32, z.im as f32),
@@ -153,15 +141,15 @@ impl Node for IterativeFunctionNodes {
                     f64::from(compute_arg.coordinate_set.x.into_inner()),
                 );
 
-                let (z_final, escape) = escape_time_system(
+                let (z_final, _escape) = escape_time_system(
                     c,
                     iterations as usize,
-                    |z, i| {
+                    |z, _i| {
                         let new_point =
                             matrix.transform_point(&Point2::new(z.re as f32, z.im as f32));
                         Complex::new(new_point.x as f64, new_point.y as f64)
                     },
-                    |z, i| {
+                    |z, _i| {
                         child_exit_condition
                             .compute(compute_arg.reborrow().replace_coords(
                                 &SNPoint::new_normalised(
@@ -188,9 +176,5 @@ impl Node for IterativeFunctionNodes {
 impl<'a> Updatable<'a> for IterativeFunctionNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }

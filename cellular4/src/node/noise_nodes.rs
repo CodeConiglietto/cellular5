@@ -1,14 +1,7 @@
 use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    constants::*,
-    datatype::{continuous::*, matrices::*, noisefunctions::*},
-    mutagen_args::*,
-    node::{continuous_nodes::*, matrix_nodes::*, Node},
-};
-
-use nalgebra::*;
+use crate::prelude::*;
 
 #[derive(Mutatable, Generatable, Deserialize, Serialize, Debug)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
@@ -98,17 +91,9 @@ impl Node for NoiseNodes {
 impl<'a> Updatable<'a> for NoiseNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
 
 impl<'a> UpdatableRecursively<'a> for NoiseNodes {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }

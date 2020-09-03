@@ -10,7 +10,7 @@ use ndarray::prelude::*;
 use rand::prelude::*;
 use serde::{de::Deserializer, ser::Serializer, Deserialize, Serialize};
 
-use crate::{constants::*, datatype::points::*};
+use crate::prelude::*;
 
 pub struct Buffer<T> {
     array: Array2<T>,
@@ -18,7 +18,7 @@ pub struct Buffer<T> {
 
 impl<T> Buffer<T> {
     pub fn new(array: Array2<T>) -> Self {
-        Self { array: array }
+        Self { array }
     }
 
     pub fn point_to_uint(&self, coords: SNPoint) -> Point2<usize> {
@@ -52,8 +52,7 @@ impl<T: Clone> Buffer<T> {
 
     pub fn draw_dot(&mut self, pos: SNPoint, value: T) {
         let point_uint = self.point_to_uint(pos);
-
-        self[point_uint] = value.clone();
+        self[point_uint] = value;
     }
 }
 
@@ -121,9 +120,9 @@ impl<'a, T: Default + Generatable<'a>> Generatable<'a> for Buffer<T> {
     type GenArg = T::GenArg;
 
     fn generate_rng<R: Rng + ?Sized>(
-        rng: &mut R,
-        state: mutagen::State,
-        arg: Self::GenArg,
+        _rng: &mut R,
+        _state: mutagen::State,
+        _arg: Self::GenArg,
     ) -> Self {
         Self::new(Array2::from_shape_fn(
             (CONSTS.cell_array_width, CONSTS.cell_array_height),
@@ -137,9 +136,9 @@ impl<'a, T: Mutatable<'a>> Mutatable<'a> for Buffer<T> {
 
     fn mutate_rng<R: Rng + ?Sized>(
         &mut self,
-        rng: &mut R,
-        state: mutagen::State,
-        arg: Self::MutArg,
+        _rng: &mut R,
+        _state: mutagen::State,
+        _arg: Self::MutArg,
     ) {
         //TODO: find a way to mutate this that doesn't look like a rainbow static explosion
         // for inner in self.array.iter_mut() {
@@ -151,19 +150,11 @@ impl<'a, T: Mutatable<'a>> Mutatable<'a> for Buffer<T> {
 impl<'a, T: Updatable<'a>> Updatable<'a> for Buffer<T> {
     type UpdateArg = T::UpdateArg;
 
-    fn update(&mut self, _state: mutagen::State, _arg: Self::UpdateArg) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update(&mut self, _state: mutagen::State, _arg: Self::UpdateArg) {}
 }
 
 impl<'a, T: UpdatableRecursively<'a>> UpdatableRecursively<'a> for Buffer<T> {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: Self::UpdateArg) {
-        match self {
-            _ => {}
-        }
-    }
+    fn update_recursively(&mut self, _state: mutagen::State, _arg: Self::UpdateArg) {}
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]

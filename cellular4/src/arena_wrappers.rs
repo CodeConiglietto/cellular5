@@ -25,6 +25,12 @@ impl<T> Metarena<T> {
     }
 }
 
+impl<T> Default for Metarena<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'a, T> Updatable<'a> for Metarena<T>
 where
     T: Updatable<'a, UpdateArg = UpdArg<'a>>,
@@ -170,7 +176,7 @@ where
 {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, state: mutagen::State, mut arg: Self::UpdateArg) {
+    fn update(&mut self, state: mutagen::State, arg: Self::UpdateArg) {
         let (current, children) = arg.nodes.split_at_mut(1);
         let current = &mut current[0];
 
@@ -198,7 +204,7 @@ where
     NodeSet: Storage<T>,
     T: UpdatableRecursively<'a, UpdateArg = UpdArg<'a>>,
 {
-    fn update_recursively(&mut self, state: mutagen::State, mut arg: Self::UpdateArg) {
+    fn update_recursively(&mut self, state: mutagen::State, arg: Self::UpdateArg) {
         let (current, children) = arg.nodes.split_at_mut(1);
         let current = &mut current[0];
 

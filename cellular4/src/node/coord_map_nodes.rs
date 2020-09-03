@@ -2,15 +2,7 @@ use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively}
 use nalgebra::{geometry::Point2, geometry::Rotation2};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    coordinate_set::*,
-    datatype::{continuous::*, points::*},
-    mutagen_args::*,
-    node::{
-        constraint_resolver_nodes::*, continuous_nodes::*, discrete_nodes::*, matrix_nodes::*,
-        mutagen_functions::*, point_nodes::*, point_set_nodes::*, Node,
-    },
-};
+use crate::prelude::*;
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Serialize, Deserialize, Debug)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
@@ -320,6 +312,8 @@ impl<'a> Updatable<'a> for CoordMapNodes {
     type UpdateArg = UpdArg<'a>;
 
     fn update(&mut self, _state: mutagen::State, mut arg: UpdArg<'a>) {
+        // TODO Remove when more match arms are added
+        #[allow(clippy::single_match)]
         match self {
             CoordMapNodes::Tessellate {
                 child_a,

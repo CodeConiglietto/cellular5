@@ -134,7 +134,6 @@ impl State {
     pub fn deepen(self) -> Self {
         Self {
             depth: self.depth + 1,
-            ..self
         }
     }
 }

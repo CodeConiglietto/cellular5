@@ -27,6 +27,8 @@ pub struct Constants {
     pub cell_array_history_length: usize,
     pub cell_array_lerp_length: usize,
 
+    pub apply_frame_transformations: bool,
+
     pub auto_mutate: bool,
     pub auto_mutate_above_cpu_usage: f64,
 

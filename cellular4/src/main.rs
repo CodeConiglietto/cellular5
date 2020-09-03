@@ -745,8 +745,8 @@ impl EventHandler for MyGame {
                     dest_y += dest_offset_y * scale_y * translation_scalar * root_scalar;
                     offset_x += offset_offset_x * scale_x * offset_scalar * root_scalar;
                     offset_y += offset_offset_y * scale_y * offset_scalar * root_scalar;
-                    rotation +=
-                        (1.0 - alpha) * history_step.rotation.into_inner() * PI * rotation_scalar * root_scalar;
+                    rotation +=//Note PI is only subtracted because angles are 0..2PI currently
+                        (1.0 - alpha) * history_step.rotation.into_inner() - PI * rotation_scalar * root_scalar;
 
                     scale_x *= lerp(
                         1.0,

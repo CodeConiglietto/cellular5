@@ -67,7 +67,7 @@ impl Node for NoiseNodes {
             //     child_offset_xy,
             //     child_offset_t,
             //     child_scale_t,
-            // } => 
+            // } =>
             // {
             //     let transformed_point = Point2::from_homogeneous(child_offset_xy.to_homogeneous() * child_matrix.into_inner());
 

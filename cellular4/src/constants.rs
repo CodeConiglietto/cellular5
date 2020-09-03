@@ -28,6 +28,7 @@ pub struct Constants {
     pub cell_array_lerp_length: usize,
 
     pub auto_mutate: bool,
+    pub auto_mutate_above_cpu_usage: f64,
 
     pub lerp_aggressiveness: f32,
 

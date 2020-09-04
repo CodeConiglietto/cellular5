@@ -176,3 +176,7 @@ pub fn compute_texture(ctx: &mut Context, cell_array: ArrayView3<u8>) -> GgImage
     // image.set_filter(ggez::graphics::FilterMode::Nearest);
     image
 }
+
+pub fn lerp(a: f32, b: f32, value: f32) -> f32 {
+    a + (b - a) * value
+}

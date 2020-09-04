@@ -35,10 +35,9 @@ impl UNFloat {
     }
 
     pub fn new_random_clamped(value: f32) -> Self {
-        if value < 0.0 || value > 1.0
-        {
+        if value < 0.0 || value > 1.0 {
             Self::random(&mut rand::thread_rng())
-        } else{
+        } else {
             Self::new_unchecked(value)
         }
     }
@@ -169,10 +168,9 @@ impl SNFloat {
     }
 
     pub fn new_random_clamped(value: f32) -> Self {
-        if value < -1.0 || value > 1.0
-        {
+        if value < -1.0 || value > 1.0 {
             Self::random(&mut rand::thread_rng())
-        } else{
+        } else {
             Self::new_unchecked(value)
         }
     }

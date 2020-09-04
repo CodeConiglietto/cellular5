@@ -758,16 +758,16 @@ impl EventHandler for MyGame {
                         1.0 + lerp(
                             lerp(
                                 1.0,
-                                history_step.from_scale.into_inner().x * 2.0,
-                                from_scale_scalar * root_scalar,
+                                history_step.from_scale.into_inner().x,
+                                from_scale_scalar,
                             ),
                             lerp(
                                 1.0,
-                                history_step.to_scale.into_inner().x * 2.0,
-                                to_scale_scalar * root_scalar,
+                                history_step.to_scale.into_inner().x,
+                                to_scale_scalar,
                             ),
                             alpha,
-                        ),
+                        ) * 2.0,
                         root_scalar,
                     );
 
@@ -776,16 +776,16 @@ impl EventHandler for MyGame {
                         1.0 + lerp(
                             lerp(
                                 1.0,
-                                history_step.from_scale.into_inner().y * 2.0,
-                                from_scale_scalar * root_scalar,
+                                history_step.from_scale.into_inner().y,
+                                from_scale_scalar,
                             ),
                             lerp(
                                 1.0,
-                                history_step.to_scale.into_inner().y * 2.0,
-                                to_scale_scalar * root_scalar,
+                                history_step.to_scale.into_inner().y,
+                                to_scale_scalar,
                             ),
                             alpha,
-                        ),
+                        ) * 2.0,
                         root_scalar,
                     );
                 }

@@ -1,5 +1,6 @@
 use std::{
     fmt::{self, Debug, Formatter},
+    iter,
     ops::{Index, IndexMut},
 };
 
@@ -22,7 +23,7 @@ impl<T> Buffer<T> {
     }
 
     pub fn point_to_uint(&self, coords: SNPoint) -> Point2<usize> {
-        let (width, height) = self.array.dim();
+        let (height, width) = self.array.dim();
 
         Point2::new(
             ((coords.x().to_unsigned().into_inner() * width as f32) as usize).min(width - 1),
@@ -31,7 +32,7 @@ impl<T> Buffer<T> {
     }
 
     pub fn info(&self) -> BufferInfo {
-        let (width, height) = self.array.dim();
+        let (height, width) = self.array.dim();
         BufferInfo { width, height }
     }
 }
@@ -44,7 +45,9 @@ impl<T: Clone> Buffer<T> {
         let to_uint = self.point_to_uint(to);
         let to_bresenham = (to_uint.x as isize, to_uint.y as isize);
 
-        for point_bresenham in Bresenham::new(from_bresenham, to_bresenham) {
+        for point_bresenham in
+            Bresenham::new(from_bresenham, to_bresenham).chain(iter::once(to_bresenham))
+        {
             let point_uint = Point2::new(point_bresenham.0 as usize, point_bresenham.1 as usize);
             self[point_uint] = value.clone();
         }
@@ -76,13 +79,13 @@ impl<T> Index<Point2<usize>> for Buffer<T> {
     type Output = T;
 
     fn index(&self, index: Point2<usize>) -> &Self::Output {
-        &self.array[[index.x, index.y]]
+        &self.array[[index.y, index.x]]
     }
 }
 
 impl<T> IndexMut<Point2<usize>> for Buffer<T> {
     fn index_mut(&mut self, index: Point2<usize>) -> &mut Self::Output {
-        &mut self.array[[index.x, index.y]]
+        &mut self.array[[index.y, index.x]]
     }
 }
 
@@ -125,7 +128,7 @@ impl<'a, T: Default + Generatable<'a>> Generatable<'a> for Buffer<T> {
         _arg: Self::GenArg,
     ) -> Self {
         Self::new(Array2::from_shape_fn(
-            (CONSTS.cell_array_width, CONSTS.cell_array_height),
+            (CONSTS.cell_array_height, CONSTS.cell_array_width),
             |(_y, _x)| T::default(), //generate_rng(rng, state, arg.clone()),
         ))
     }
@@ -168,13 +171,15 @@ impl BufferInfo {
     where
         T: Default,
     {
-        Buffer::new(Array2::default([self.width, self.height]))
+        Buffer::new(Array2::default([self.height, self.width]))
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+
+    use ndarray::array;
 
     #[test]
     fn point_to_uint_tests() {
@@ -189,6 +194,79 @@ mod test {
         assert_eq!(
             buffer.point_to_uint(SNPoint::new(Point2::new(p.0, p.1))),
             Point2::new(expected.0, expected.1)
+        );
+    }
+
+    #[test]
+    fn draw_line_tests() {
+        test_draw_line(
+            (-1.0, -1.0),
+            (-0.01, -0.01),
+            array![
+                [1, 0, 0, 0], // comment for cargo fmt
+                [0, 1, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+            ],
+        );
+
+        test_draw_line(
+            (-1.0, -1.0),
+            (0.0, 0.0),
+            array![
+                [1, 0, 0, 0], // comment for cargo fmt
+                [0, 1, 0, 0],
+                [0, 0, 1, 0],
+                [0, 0, 0, 0],
+            ],
+        );
+
+        test_draw_line(
+            (-1.0, -1.0),
+            (1.0, 1.0),
+            array![
+                [1, 0, 0, 0], // comment for cargo fmt
+                [0, 1, 0, 0],
+                [0, 0, 1, 0],
+                [0, 0, 0, 1],
+            ],
+        );
+
+        test_draw_line(
+            (1.0, -1.0),
+            (1.0, 1.0),
+            array![
+                [0, 0, 0, 1], // comment for cargo fmt
+                [0, 0, 0, 1],
+                [0, 0, 0, 1],
+                [0, 0, 0, 1],
+            ],
+        );
+
+        test_draw_line(
+            (-1.0, 1.0),
+            (1.0, -1.0),
+            array![
+                [0, 0, 0, 1], // comment for cargo fmt
+                [0, 0, 1, 0],
+                [0, 1, 0, 0],
+                [1, 0, 0, 0],
+            ],
+        );
+    }
+
+    fn test_draw_line(from: (f32, f32), to: (f32, f32), expected: Array2<u32>) {
+        let mut buffer = Buffer::new(Array2::from_elem(expected.dim(), 0u32));
+        buffer.draw_line(
+            SNPoint::new(Point2::new(from.0, from.1)),
+            SNPoint::new(Point2::new(to.0, to.1)),
+            1,
+        );
+        assert!(
+            buffer.array == expected,
+            "mismatching arrays:\nGot:\n{}\nExpected:\n{}",
+            &buffer.array,
+            &expected
         );
     }
 }

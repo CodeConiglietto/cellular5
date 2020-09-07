@@ -150,6 +150,13 @@ pub enum SNFloatNodes {
     #[mutagen(gen_weight = leaf_node_weight)]
     FromGametic,
 
+    #[mutagen(gen_weight = pipe_node_weight)]
+    FromGameticNormalised {
+        child_normaliser: Box<SFloatNormaliserNodes>,
+        #[mutagen(skip)]
+        offset_t: Option<f32>,
+    },
+
     #[mutagen(gen_weight = leaf_node_weight)]
     NoiseFunction {
         child: Box<NoiseNodes>,
@@ -220,6 +227,11 @@ impl Node for SNFloatNodes {
             FromGametic => SNFloat::new(
                 (compute_arg.coordinate_set.t - compute_arg.coordinate_set.t.floor()) * 2.0 - 1.0,
             ),
+            FromGameticNormalised {child_normaliser, offset_t} => {
+                let offset_t_value = offset_t.unwrap_or(0.0);
+
+                child_normaliser.compute(compute_arg.reborrow()).normalise(compute_arg.coordinate_set.reborrow().t - offset_t_value)
+            },
             ModifyState { child, child_state } => child.compute(ComArg {
                 coordinate_set: child_state.compute(compute_arg.reborrow()),
                 ..compute_arg.reborrow()
@@ -298,8 +310,12 @@ pub enum UNFloatNodes {
     ColorComponentH { child: Box<FloatColorNodes> },
     #[mutagen(gen_weight = leaf_node_weight)]
     FromGametic,
-    #[mutagen(gen_weight = leaf_node_weight)]
-    FromGameticTriangle,
+    #[mutagen(gen_weight = pipe_node_weight)]
+    FromGameticNormalised {
+        child_normaliser: Box<UFloatNormaliserNodes>,
+        #[mutagen(skip)]
+        offset_t: Option<f32>,
+    },
     #[mutagen(gen_weight = pipe_node_weight)]
     EscapeTimeSystem {
         child_power: Box<NibbleNodes>,
@@ -435,7 +451,11 @@ impl Node for UNFloatNodes {
             }
             ColorComponentH { child } => child.compute(compute_arg.reborrow()).get_hue_unfloat(),
             FromGametic => compute_arg.coordinate_set.get_unfloat_t(),
-            FromGameticTriangle => UNFloat::new_triangle(compute_arg.coordinate_set.t * 0.1),
+            FromGameticNormalised {child_normaliser, offset_t} => {
+                let offset_t_value = offset_t.unwrap_or(0.0);
+
+                child_normaliser.compute(compute_arg.reborrow()).normalise(compute_arg.coordinate_set.reborrow().t - offset_t_value)
+            },
             EscapeTimeSystem {
                 child_power,
                 child_power_ratio,

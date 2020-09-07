@@ -805,7 +805,7 @@ impl EventHandler for MyGame {
 
                     scale_x *= lerp(
                         1.0,
-                        1.0 + lerp(
+                        lerp(
                             lerp(
                                 1.0,
                                 history_step.from_scale.into_inner().x,
@@ -819,7 +819,7 @@ impl EventHandler for MyGame {
 
                     scale_y *= lerp(
                         1.0,
-                        1.0 + lerp(
+                        lerp(
                             lerp(
                                 1.0,
                                 history_step.from_scale.into_inner().y,

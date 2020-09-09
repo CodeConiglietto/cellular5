@@ -279,15 +279,15 @@ impl<'a> Updatable<'a> for PointSetNodes {
                 child_normaliser,
             } => {
                 let n = child_n.compute(arg.reborrow().into()).into_inner().max(1);
+                let rho = child_rho.compute(arg.reborrow().into()).into_inner() / n as f32;
+                let theta_diff = child_theta.compute(arg.reborrow().into());
 
                 value.replace(Arc::new(
                     (0..n)
                         .scan(
                             (SNPoint::zero(), Angle::ZERO),
                             |(ref mut point, ref mut theta), _| {
-                                let new_theta = *theta + child_theta.compute(arg.reborrow().into());
-                                let rho = child_rho.compute(arg.reborrow().into()).into_inner()
-                                    / n as f32;
+                                let new_theta = *theta + theta_diff;
                                 let normaliser = child_normaliser.compute(arg.reborrow().into());
 
                                 let new_point = point.normalised_add(

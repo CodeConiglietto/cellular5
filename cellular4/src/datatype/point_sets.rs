@@ -90,10 +90,7 @@ impl PointSet {
 
 impl Default for PointSet {
     fn default() -> Self {
-        PointSet {
-            points: Arc::new(origin()),
-            generator: PointSetGenerator::Origin,
-        }
+        PointSet::new(Arc::new(origin()), PointSetGenerator::Origin)
     }
 }
 

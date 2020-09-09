@@ -15,7 +15,7 @@ use crate::{
     mutagen_args::*,
 };
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PointSet {
     pub points: Arc<Vec<SNPoint>>,
     pub generator: PointSetGenerator,
@@ -136,6 +136,9 @@ impl<'a> UpdatableRecursively<'a> for PointSet {
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 pub enum PointSetGenerator {
+    // Reasonable default - The Empty set is liable to crash some algorithms
+    Origin,
+
     Moore,
     VonNeumann,
     Uniform { count: Byte },
@@ -145,6 +148,7 @@ pub enum PointSetGenerator {
 impl PointSetGenerator {
     pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
         match rng.gen_range(0, 4) {
+            // Skip Origin
             0 => PointSetGenerator::Moore,
             1 => PointSetGenerator::VonNeumann,
             2 => PointSetGenerator::Uniform {
@@ -160,6 +164,7 @@ impl PointSetGenerator {
 
     pub fn generate_point_set<R: Rng + ?Sized>(&self, rng: &mut R) -> PointSet {
         let points = match self {
+            PointSetGenerator::Origin => vec![SNPoint::zero()],
             PointSetGenerator::Moore => moore(),
             PointSetGenerator::VonNeumann => von_neumann(),
             PointSetGenerator::Uniform { count } => {
@@ -183,6 +188,12 @@ impl PointSetGenerator {
 
     fn load(&self) -> PointSet {
         self.generate_point_set(&mut rand::thread_rng())
+    }
+}
+
+impl Default for PointSetGenerator {
+    fn default() -> Self {
+        PointSetGenerator::Origin
     }
 }
 

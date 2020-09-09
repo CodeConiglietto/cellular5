@@ -51,6 +51,16 @@ pub enum PointSetNodes {
         child_a: Box<SNPointNodes>,
         child_b: Box<SNPointNodes>,
     },
+    #[mutagen(gen_weight = branch_node_weight)]
+    IterativePolarLine {
+        #[mutagen(skip)]
+        value: PointSet,
+        // TODO Replace child_theta and child_rho with a polar coordinate node when they're implemented
+        child_n: Box<ByteNodes>,
+        child_theta: Box<AngleNodes>,
+        child_rho: Box<UNFloatNodes>,
+        child_normaliser: Box<SFloatNormaliserNodes>,
+    },
 }
 
 impl Node for PointSetNodes {
@@ -67,6 +77,7 @@ impl Node for PointSetNodes {
             ShearGrid { value, .. } => value.clone(),
             MatrixGrid { value, .. } => value.clone(),
             Line { value, .. } => value.clone(),
+            IterativePolarLine { value, .. } => value.clone(),
         }
     }
 }
@@ -102,6 +113,7 @@ impl<'a> Updatable<'a> for PointSetNodes {
                     value.generator,
                 );
             }
+
             PointSetNodes::Spreading {
                 ref mut value,
                 child,
@@ -264,6 +276,49 @@ impl<'a> Updatable<'a> for PointSetNodes {
 
                 *value = PointSet::new(Arc::new(edge_vec), value.generator);
             }
+
+            PointSetNodes::IterativePolarLine {
+                ref mut value,
+                child_n,
+                child_rho,
+                child_theta,
+                child_normaliser,
+            } => {
+                let n = child_n.compute(arg.reborrow().into()).into_inner().max(1);
+
+                *value = PointSet::new(
+                    Arc::new(
+                        (0..n)
+                            .scan(
+                                (SNPoint::zero(), Angle::ZERO),
+                                |(ref mut point, ref mut theta), _| {
+                                    let new_theta =
+                                        *theta + child_theta.compute(arg.reborrow().into());
+                                    let rho = child_rho.compute(arg.reborrow().into()).into_inner()
+                                        / n as f32;
+                                    let normaliser =
+                                        child_normaliser.compute(arg.reborrow().into());
+
+                                    let new_point = point.normalised_add(
+                                        SNPoint::from_snfloats(
+                                            SNFloat::new(rho * f32::sin(new_theta.into_inner())),
+                                            SNFloat::new(rho * f32::cos(new_theta.into_inner())),
+                                        ),
+                                        normaliser,
+                                    );
+
+                                    *point = new_point;
+                                    *theta = new_theta;
+
+                                    Some(new_point)
+                                },
+                            )
+                            .collect(),
+                    ),
+                    value.generator,
+                )
+            }
+
             _ => {}
         }
     }

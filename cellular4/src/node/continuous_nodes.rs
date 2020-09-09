@@ -151,6 +151,23 @@ pub enum SNFloatNodes {
     #[mutagen(gen_weight = leaf_node_weight)]
     YRatio,
 
+    #[mutagen(gen_weight = pipe_node_weight)]
+    Relu {
+        child: Box<SNFloatNodes>,
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    Elu {
+        child_alpha: Box<UNFloatNodes>,
+        child: Box<SNFloatNodes>,
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    LeakyRelu {
+        child_alpha: Box<UNFloatNodes>,
+        child: Box<SNFloatNodes>,
+    },
+
     #[mutagen(gen_weight = leaf_node_weight)]
     FromGametic,
 
@@ -228,14 +245,39 @@ impl Node for SNFloatNodes {
             }
             XRatio => compute_arg.coordinate_set.x,
             YRatio => compute_arg.coordinate_set.y,
+
+            Relu { child } => SNFloat::new(child.compute(compute_arg).into_inner().max(0.0)),
+            Elu { child_alpha, child } => {
+                let value = child.compute(compute_arg.reborrow()).into_inner();
+                if value < 0.0 {
+                    SNFloat::ZERO
+                } else {
+                    SNFloat::new(
+                        child_alpha.compute(compute_arg.reborrow()).into_inner()
+                            * (value.exp() - 1.0),
+                    )
+                }
+            }
+            LeakyRelu { child_alpha, child } => {
+                let value = child.compute(compute_arg.reborrow()).into_inner();
+                SNFloat::new(
+                    value.max(child_alpha.compute(compute_arg.reborrow()).into_inner() * value),
+                )
+            }
+
             FromGametic => SNFloat::new(
                 (compute_arg.coordinate_set.t - compute_arg.coordinate_set.t.floor()) * 2.0 - 1.0,
             ),
-            FromGameticNormalised {child_normaliser, offset_t} => {
+            FromGameticNormalised {
+                child_normaliser,
+                offset_t,
+            } => {
                 let offset_t_value = offset_t.unwrap_or(0.0);
 
-                child_normaliser.compute(compute_arg.reborrow()).normalise(compute_arg.coordinate_set.reborrow().t - offset_t_value)
-            },
+                child_normaliser
+                    .compute(compute_arg.reborrow())
+                    .normalise(compute_arg.coordinate_set.reborrow().t - offset_t_value)
+            }
             ModifyState { child, child_state } => child.compute(ComArg {
                 coordinate_set: child_state.compute(compute_arg.reborrow()),
                 ..compute_arg.reborrow()
@@ -455,11 +497,16 @@ impl Node for UNFloatNodes {
             }
             ColorComponentH { child } => child.compute(compute_arg.reborrow()).get_hue_unfloat(),
             FromGametic => compute_arg.coordinate_set.get_unfloat_t(),
-            FromGameticNormalised {child_normaliser, offset_t} => {
+            FromGameticNormalised {
+                child_normaliser,
+                offset_t,
+            } => {
                 let offset_t_value = offset_t.unwrap_or(0.0);
 
-                child_normaliser.compute(compute_arg.reborrow()).normalise(compute_arg.coordinate_set.reborrow().t - offset_t_value)
-            },
+                child_normaliser
+                    .compute(compute_arg.reborrow())
+                    .normalise(compute_arg.coordinate_set.reborrow().t - offset_t_value)
+            }
             EscapeTimeSystem {
                 child_power,
                 child_power_ratio,

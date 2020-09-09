@@ -329,7 +329,11 @@ impl<'a> Updatable<'a> for FloatColorNodes {
             } => {
                 let source = child_point.compute(arg.reborrow().into());
 
-                for dest in child_point_set.compute(arg.reborrow().into()).points.iter() {
+                for dest in child_point_set
+                    .compute(arg.reborrow().into())
+                    .points()
+                    .iter()
+                {
                     arg.coordinate_set.x = dest.x();
                     arg.coordinate_set.y = dest.y();
                     let color = child_color.compute(arg.reborrow().into());
@@ -343,7 +347,11 @@ impl<'a> Updatable<'a> for FloatColorNodes {
                 child_point_set,
                 child_color,
             } => {
-                for dest in child_point_set.compute(arg.reborrow().into()).points.iter() {
+                for dest in child_point_set
+                    .compute(arg.reborrow().into())
+                    .points()
+                    .iter()
+                {
                     arg.coordinate_set.x = dest.x();
                     arg.coordinate_set.y = dest.y();
 
@@ -391,7 +399,7 @@ impl<'a> Updatable<'a> for FloatColorNodes {
                 let set_a = child_a.compute(arg.reborrow().into());
                 let set_b = child_b.compute(arg.reborrow().into());
 
-                for source in set_a.points.iter() {
+                for source in set_a.points().iter() {
                     let dest = set_b.get_closest_point(*source);
 
                     arg.coordinate_set.x = dest.x();
@@ -410,10 +418,10 @@ impl<'a> Updatable<'a> for FloatColorNodes {
             } => {
                 let set = child_set.compute(arg.reborrow().into());
 
-                let index = child_index.compute(arg.reborrow().into()).into_inner() as usize;
+                let index = usize::from(child_index.compute(arg.reborrow().into()).into_inner());
 
-                let source = set.get_at(index % set.len());
-                let dest = set.get_at((index + 1) % set.len());
+                let source = set[index % set.len()];
+                let dest = set[(index + 1) % set.len()];
 
                 arg.coordinate_set.x = dest.x();
                 arg.coordinate_set.y = dest.y();

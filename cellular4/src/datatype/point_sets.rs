@@ -1,5 +1,6 @@
 use std::{
     f32::consts::{PI, SQRT_2},
+    ops::Index,
     sync::Arc,
 };
 
@@ -15,14 +16,15 @@ use crate::{
     mutagen_args::*,
 };
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct PointSet {
-    pub points: Arc<Vec<SNPoint>>,
-    pub generator: PointSetGenerator,
+    points: Arc<Vec<SNPoint>>,
+    generator: PointSetGenerator,
 }
 
 impl PointSet {
     pub fn new(points: Arc<Vec<SNPoint>>, generator: PointSetGenerator) -> Self {
+        assert!(points.len() > 0);
         Self { points, generator }
     }
 
@@ -34,8 +36,8 @@ impl PointSet {
         self.points.iter().map(|p| p.scale_point(scale)).collect()
     }
 
-    pub fn get_at(&self, index: usize) -> SNPoint {
-        self.points[index]
+    pub fn points(&self) -> &[SNPoint] {
+        &*self.points
     }
 
     pub fn len(&self) -> usize {
@@ -44,6 +46,10 @@ impl PointSet {
 
     pub fn is_empty(&self) -> bool {
         self.len() == 0
+    }
+
+    pub fn replace(&mut self, new_points: Arc<Vec<SNPoint>>) {
+        *self = Self::new(new_points, self.generator)
     }
 
     pub fn get_closest_point(&self, other: SNPoint) -> SNPoint {
@@ -79,6 +85,30 @@ impl PointSet {
 
     pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
         PointSetGenerator::random(rng).generate_point_set(rng)
+    }
+}
+
+impl Default for PointSet {
+    fn default() -> Self {
+        PointSet {
+            points: Arc::new(origin()),
+            generator: PointSetGenerator::Origin,
+        }
+    }
+}
+
+impl Index<usize> for PointSet {
+    type Output = SNPoint;
+
+    fn index(&self, idx: usize) -> &Self::Output {
+        &self.points()[idx]
+    }
+}
+
+impl Index<Byte> for PointSet {
+    type Output = SNPoint;
+    fn index(&self, idx: Byte) -> &Self::Output {
+        &self[usize::from(idx.into_inner())]
     }
 }
 
@@ -164,7 +194,7 @@ impl PointSetGenerator {
 
     pub fn generate_point_set<R: Rng + ?Sized>(&self, rng: &mut R) -> PointSet {
         let points = match self {
-            PointSetGenerator::Origin => vec![SNPoint::zero()],
+            PointSetGenerator::Origin => origin(),
             PointSetGenerator::Moore => moore(),
             PointSetGenerator::VonNeumann => von_neumann(),
             PointSetGenerator::Uniform { count } => {
@@ -195,6 +225,10 @@ impl Default for PointSetGenerator {
     fn default() -> Self {
         PointSetGenerator::Origin
     }
+}
+
+fn origin() -> Vec<SNPoint> {
+    vec![SNPoint::zero()]
 }
 
 fn moore() -> Vec<SNPoint> {

@@ -95,23 +95,20 @@ impl<'a> Updatable<'a> for PointSetNodes {
                 let normaliser = child_normaliser.compute(arg.reborrow().into());
                 let compute_arg = ComArg::from(arg.reborrow());
 
-                *value = PointSet::new(
-                    Arc::new(
-                        value
-                            .points
-                            .par_iter()
-                            .map(|p| {
-                                p.normalised_add(
-                                    child
-                                        .compute(compute_arg.clone().replace_coords(p))
-                                        .scale_unfloat(UNFloat::new(0.05)), //magic number makes things translate at a not-insane rate
-                                    normaliser,
-                                )
-                            })
-                            .collect(),
-                    ),
-                    value.generator,
-                );
+                value.replace(Arc::new(
+                    value
+                        .points()
+                        .par_iter()
+                        .map(|p| {
+                            p.normalised_add(
+                                child
+                                    .compute(compute_arg.clone().replace_coords(p))
+                                    .scale_unfloat(UNFloat::new(0.05)), //magic number makes things translate at a not-insane rate
+                                normaliser,
+                            )
+                        })
+                        .collect(),
+                ));
             }
 
             PointSetNodes::Spreading {
@@ -122,27 +119,24 @@ impl<'a> Updatable<'a> for PointSetNodes {
                 let normaliser = child_normaliser.compute(arg.reborrow().into());
                 let compute_arg = ComArg::from(arg.reborrow());
 
-                *value = PointSet::new(
-                    Arc::new(
-                        value
-                            .points
-                            .par_iter()
-                            .map(|p| {
-                                // TODO Attempt to refactor to use normalised_add instead of sawtooth_add
-                                p.normalised_add(
-                                    p.subtract_normalised(value.get_random_point())
-                                        .scale_unfloat(
-                                            child
-                                                .compute(compute_arg.clone().replace_coords(p))
-                                                .multiply(UNFloat::new(0.25)),
-                                        ),
-                                    normaliser,
-                                )
-                            })
-                            .collect(),
-                    ),
-                    value.generator,
-                );
+                value.replace(Arc::new(
+                    value
+                        .points()
+                        .par_iter()
+                        .map(|p| {
+                            // TODO Attempt to refactor to use normalised_add instead of sawtooth_add
+                            p.normalised_add(
+                                p.subtract_normalised(value.get_random_point())
+                                    .scale_unfloat(
+                                        child
+                                            .compute(compute_arg.clone().replace_coords(p))
+                                            .multiply(UNFloat::new(0.25)),
+                                    ),
+                                normaliser,
+                            )
+                        })
+                        .collect(),
+                ));
             }
             PointSetNodes::Polygonal {
                 ref mut value,
@@ -162,7 +156,7 @@ impl<'a> Updatable<'a> for PointSetNodes {
                     );
                 }
 
-                *value = PointSet::new(Arc::new(edge_vec), value.generator);
+                value.replace(Arc::new(edge_vec));
             }
             //TODO: Something is funky here, give it a second pass.
             //TODO: Maybe swap this out for a matrix point grid
@@ -212,7 +206,7 @@ impl<'a> Updatable<'a> for PointSetNodes {
                     }
                 }
 
-                *value = PointSet::new(Arc::new(edge_vec), value.generator);
+                value.replace(Arc::new(edge_vec));
             }
             PointSetNodes::MatrixGrid {
                 ref mut value,
@@ -249,7 +243,7 @@ impl<'a> Updatable<'a> for PointSetNodes {
                     }
                 }
 
-                *value = PointSet::new(Arc::new(edge_vec), value.generator);
+                value.replace(Arc::new(edge_vec));
             }
             PointSetNodes::Line {
                 ref mut value,
@@ -274,7 +268,7 @@ impl<'a> Updatable<'a> for PointSetNodes {
                     edge_vec.push(SNPoint::new(point_a + point_difference * ratio * i as f32));
                 }
 
-                *value = PointSet::new(Arc::new(edge_vec), value.generator);
+                value.replace(Arc::new(edge_vec));
             }
 
             PointSetNodes::IterativePolarLine {
@@ -286,37 +280,32 @@ impl<'a> Updatable<'a> for PointSetNodes {
             } => {
                 let n = child_n.compute(arg.reborrow().into()).into_inner().max(1);
 
-                *value = PointSet::new(
-                    Arc::new(
-                        (0..n)
-                            .scan(
-                                (SNPoint::zero(), Angle::ZERO),
-                                |(ref mut point, ref mut theta), _| {
-                                    let new_theta =
-                                        *theta + child_theta.compute(arg.reborrow().into());
-                                    let rho = child_rho.compute(arg.reborrow().into()).into_inner()
-                                        / n as f32;
-                                    let normaliser =
-                                        child_normaliser.compute(arg.reborrow().into());
+                value.replace(Arc::new(
+                    (0..n)
+                        .scan(
+                            (SNPoint::zero(), Angle::ZERO),
+                            |(ref mut point, ref mut theta), _| {
+                                let new_theta = *theta + child_theta.compute(arg.reborrow().into());
+                                let rho = child_rho.compute(arg.reborrow().into()).into_inner()
+                                    / n as f32;
+                                let normaliser = child_normaliser.compute(arg.reborrow().into());
 
-                                    let new_point = point.normalised_add(
-                                        SNPoint::from_snfloats(
-                                            SNFloat::new(rho * f32::sin(new_theta.into_inner())),
-                                            SNFloat::new(rho * f32::cos(new_theta.into_inner())),
-                                        ),
-                                        normaliser,
-                                    );
+                                let new_point = point.normalised_add(
+                                    SNPoint::from_snfloats(
+                                        SNFloat::new(rho * f32::sin(new_theta.into_inner())),
+                                        SNFloat::new(rho * f32::cos(new_theta.into_inner())),
+                                    ),
+                                    normaliser,
+                                );
 
-                                    *point = new_point;
-                                    *theta = new_theta;
+                                *point = new_point;
+                                *theta = new_theta;
 
-                                    Some(new_point)
-                                },
-                            )
-                            .collect(),
-                    ),
-                    value.generator,
-                )
+                                Some(new_point)
+                            },
+                        )
+                        .collect(),
+                ));
             }
 
             _ => {}

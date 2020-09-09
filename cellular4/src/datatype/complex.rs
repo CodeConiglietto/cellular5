@@ -72,6 +72,10 @@ impl SNComplex {
         SNFloat::new_unchecked(self.value.im as f32)
     }
 
+    pub fn to_angle(self) -> Angle {
+        Angle::new(f64::atan2(self.value.re, self.value.im) as f32)
+    }
+
     pub fn normalised_add(self, other: SNComplex, normaliser: SFloatNormaliser) -> SNComplex {
         SNComplex::new_normalised(self.value + other.into_inner(), normaliser)
     }

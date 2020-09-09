@@ -29,6 +29,9 @@ pub enum AngleNodes {
     FromSNPoint { child: Box<SNPointNodes> },
 
     #[mutagen(gen_weight = pipe_node_weight)]
+    FromSNComplex { child: Box<SNComplexNodes> },
+
+    #[mutagen(gen_weight = pipe_node_weight)]
     FromSNFloat { child: Box<SNFloatNodes> },
 
     #[mutagen(gen_weight = pipe_node_weight)]
@@ -68,6 +71,7 @@ impl Node for AngleNodes {
             // Random => Angle::generate(state),
             Constant { value } => *value,
             FromSNPoint { child } => child.compute(compute_arg.reborrow()).to_angle(),
+            FromSNComplex { child } => child.compute(compute_arg.reborrow()).to_angle(),
             FromSNFloat { child } => child.compute(compute_arg.reborrow()).to_angle(),
             FromUNFloat { child } => child.compute(compute_arg.reborrow()).to_angle(),
             ModifyState { child, child_state } => child.compute(ComArg {

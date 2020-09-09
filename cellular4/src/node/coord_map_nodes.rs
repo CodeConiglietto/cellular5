@@ -35,6 +35,15 @@ pub enum CoordMapNodes {
 
     #[mutagen(gen_weight = leaf_node_weight)]
     FromPolar,
+
+    #[mutagen(gen_weight = leaf_node_weight)]
+    Abs,
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    SelectiveAbs{child_abs_x: Box<BooleanNodes>, child_abs_y: Box<BooleanNodes>},
+    #[mutagen(gen_weight = branch_node_weight)]
+    ForceSign{child_sign_x: Box<BooleanNodes>, child_sign_y: Box<BooleanNodes>},
+
     #[mutagen(gen_weight = branch_node_weight)]
     IfElse {
         predicate: Box<BooleanNodes>,
@@ -134,6 +143,37 @@ impl Node for CoordMapNodes {
                 CoordinateSet {
                     x: p.x(),
                     y: p.y(),
+                    t: compute_arg.coordinate_set.t,
+                }
+            }
+            Abs => {
+                let p = compute_arg.coordinate_set.get_coord_point();
+
+                CoordinateSet {
+                    x: p.x().abs(),
+                    y: p.y().abs(),
+                    t: compute_arg.coordinate_set.t,
+                }
+            }
+            SelectiveAbs {child_abs_x, child_abs_y} => {
+                let p = compute_arg.reborrow().coordinate_set.get_coord_point();
+                let abs_x = child_abs_x.compute(compute_arg.reborrow());
+                let abs_y = child_abs_y.compute(compute_arg.reborrow());
+
+                CoordinateSet {
+                    x: if abs_x.into_inner() {p.x().abs()} else {p.x()},
+                    y: if abs_y.into_inner() {p.y().abs()} else {p.y()},
+                    t: compute_arg.coordinate_set.t,
+                }
+            }
+            ForceSign {child_sign_x, child_sign_y} => {
+                let p = compute_arg.coordinate_set.get_coord_point();
+                let sign_x = child_sign_x.compute(compute_arg.reborrow());
+                let sign_y = child_sign_y.compute(compute_arg.reborrow());
+
+                CoordinateSet {
+                    x: if sign_x.into_inner() {p.x().abs()} else {p.x().abs().invert()},
+                    y: if sign_y.into_inner() {p.y().abs()} else {p.y().abs().invert()},
                     t: compute_arg.coordinate_set.t,
                 }
             }

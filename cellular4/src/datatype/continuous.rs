@@ -175,6 +175,14 @@ impl SNFloat {
         }
     }
 
+    pub fn abs(self) -> Self {
+        Self::new(self.value.abs())
+    }
+
+    pub fn invert(self) -> Self {
+        Self::new(self.value * -1.0)
+    }
+
     pub fn average(self, other: Self) -> Self {
         Self::new((self.into_inner() + other.into_inner()) * 0.5)
     }

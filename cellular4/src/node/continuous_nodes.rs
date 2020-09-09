@@ -1,4 +1,4 @@
-use std::f64::consts::{E, PI};
+use std::f64::consts::PI;
 
 use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
 use nalgebra::*;
@@ -252,7 +252,6 @@ impl Node for SNFloatNodes {
                 if value.into_inner() < 0.0 {
                     SNFloat::new(
                         child_alpha.compute(compute_arg.reborrow()).into_inner()
-                            * (1.0 / (E as f32 - 1.0)) // Normalizing term to ensure result doesn't overflow
                             * (value.into_inner().exp() - 1.0),
                     )
                 } else {

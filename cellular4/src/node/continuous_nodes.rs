@@ -1,4 +1,4 @@
-use std::f64::consts::PI;
+use std::f64::consts::{E, PI};
 
 use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
 use nalgebra::*;
@@ -248,14 +248,15 @@ impl Node for SNFloatNodes {
 
             Relu { child } => SNFloat::new(child.compute(compute_arg).into_inner().max(0.0)),
             Elu { child_alpha, child } => {
-                let value = child.compute(compute_arg.reborrow()).into_inner();
-                if value < 0.0 {
-                    SNFloat::ZERO
-                } else {
+                let value = child.compute(compute_arg.reborrow());
+                if value.into_inner() < 0.0 {
                     SNFloat::new(
                         child_alpha.compute(compute_arg.reborrow()).into_inner()
-                            * (value.exp() - 1.0),
+                            * (1.0 / (E as f32 - 1.0)) // Normalizing term to ensure result doesn't overflow
+                            * (value.into_inner().exp() - 1.0),
                     )
+                } else {
+                    value
                 }
             }
             LeakyRelu { child_alpha, child } => {

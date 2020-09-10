@@ -63,6 +63,18 @@ pub enum FloatColorNodes {
         alpha: Box<UNFloatNodes>,
     },
 
+    #[mutagen(gen_weight = branch_node_weight)]
+    ComplexLAB {
+        l: Box<UNFloatNodes>,
+        child_complex: Box<SNComplexNodes>,
+        alpha: Box<UNFloatNodes>,
+    },
+    #[mutagen(gen_weight = branch_node_weight)]
+    IterativeResultLAB {
+        child_iterative_function: Box<IterativeFunctionNodes>,
+        alpha: Box<UNFloatNodes>,
+    },
+
     #[mutagen(gen_weight = pipe_node_weight)]
     FromBlend { child: Box<ColorBlendNodes> },
 
@@ -235,6 +247,38 @@ impl Node for FloatColorNodes {
                     l.compute(compute_arg.reborrow()).into_inner() * 100.0,
                     a.compute(compute_arg.reborrow()).into_inner() * 127.0,
                     b.compute(compute_arg.reborrow()).into_inner() * 127.0,
+                );
+
+                let rgb: Rgb = lab.into();
+
+                float_color_from_pallette_rgb(
+                    rgb.clamp(),
+                    alpha.compute(compute_arg.reborrow()).into_inner(),
+                )
+            }
+            ComplexLAB { l, child_complex, alpha } => {
+                let complex = child_complex.compute(compute_arg.reborrow());
+
+                let lab = Lab::new(
+                    l.compute(compute_arg.reborrow()).into_inner() * 100.0,
+                    complex.re().into_inner() * 127.0,
+                    complex.im().into_inner() * 127.0,
+                );
+
+                let rgb: Rgb = lab.into();
+
+                float_color_from_pallette_rgb(
+                    rgb.clamp(),
+                    alpha.compute(compute_arg.reborrow()).into_inner(),
+                )
+            }
+            IterativeResultLAB { child_iterative_function, alpha } => {
+                let result = child_iterative_function.compute(compute_arg.reborrow());
+
+                let lab = Lab::new(
+                    result.iter_final.into_inner() as f32 * 100.0 / 255.0,
+                    result.z_final.re().into_inner() * 127.0,
+                    result.z_final.im().into_inner() * 127.0,
                 );
 
                 let rgb: Rgb = lab.into();

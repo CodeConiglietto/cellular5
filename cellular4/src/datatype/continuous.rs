@@ -304,6 +304,7 @@ impl<'a> UpdatableRecursively<'a> for SNFloat {
     fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
 }
 
+//TODO: Normalise between -PI and PI
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default)]
 pub struct Angle {
     value: f32,

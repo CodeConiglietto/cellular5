@@ -279,12 +279,14 @@ impl MyGame {
                 alpha_value: 0.0,
                 local_similarity_value: 0.0,
                 global_similarity_value: 0.0,
+                cpu_usage: 0.0,
             },
             average_update_stat: UpdateStat {
                 activity_value: 0.0,
                 alpha_value: 0.0,
                 local_similarity_value: 0.0,
                 global_similarity_value: 0.0,
+                cpu_usage: 0.0,
             },
 
             node_tree: Generatable::generate_rng(
@@ -408,7 +410,7 @@ impl EventHandler for MyGame {
                             (y + slice_y as usize) as f32 / CONSTS.cell_array_height as f32,
                         )
                         .to_signed(),
-                        t: current_t as f32 / CONSTS.time_scale_divisor,
+                        t: current_t as f32,
                     },
                     history,
                     depth: 0,
@@ -452,6 +454,7 @@ impl EventHandler for MyGame {
                 global_similarity_value: f64::from(
                     1.0 - (global_color.get_average() - current_color.get_average()).abs(),
                 ), // / total_cells as f64
+                cpu_usage: 0.0,//we don't accumulate this here because we set it below
             }
         };
 
@@ -483,6 +486,7 @@ impl EventHandler for MyGame {
                 alpha_value: 0.0,
                 local_similarity_value: 0.0,
                 global_similarity_value: 0.0,
+                cpu_usage: cpu_usage
             };
 
             let _update_state = UpdateState {
@@ -494,8 +498,10 @@ impl EventHandler for MyGame {
                 history,
             };
 
-            dbg!(cpu_usage);
+            let mutation_likelihood = &self.average_update_stat.mutation_likelihood();
+
             dbg!(&self.average_update_stat);
+            dbg!(mutation_likelihood);
 
             if self.tree_dirty
                 || (CONSTS.auto_mutate
@@ -592,11 +598,14 @@ impl EventHandler for MyGame {
                 .root_to_scale_node
                 .compute(step_com_arg.reborrow()); //.average(history_step.to_scale);
 
-            self.next_history_step.root_scalar = self
-                .node_tree
-                .render_nodes
-                .root_scalar_node
-                .compute(step_com_arg.reborrow()); //.average(history_step.root_scalar);
+            self.next_history_step.root_scalar = dbg!(UNFloat::new((
+                // self
+                // .node_tree
+                // .render_nodes
+                // .root_scalar_node
+                // .compute(step_com_arg.reborrow()).average(history_step.root_scalar).into_inner() * 
+                mutation_likelihood.powf(4.0) as f32)
+            ));
 
             self.next_history_step.alpha = self
                 .node_tree
@@ -634,24 +643,24 @@ impl EventHandler for MyGame {
                 .from_scale_scalar_node
                 .compute(step_com_arg.reborrow()); //.average(history_step.from_scale_scalar);
 
-            self.next_history_step.root_scalar = self
-                .node_tree
-                .render_nodes
-                .root_scalar_node
-                .compute(step_com_arg.reborrow())
-                .multiply(UNFloat::new_clamped(
-                    1.0 - self.average_update_stat.activity_value as f32,
-                ))
-                .multiply(UNFloat::new_clamped(
-                    1.0 - self.average_update_stat.alpha_value as f32,
-                ))
-                .multiply(UNFloat::new_clamped(
-                    self.average_update_stat.global_similarity_value as f32,
-                ))
-                .multiply(UNFloat::new_clamped(
-                    1.0 - self.average_update_stat.local_similarity_value as f32,
-                ))
-                .average(history_step.root_scalar);
+            // self.next_history_step.root_scalar = self
+            //     .node_tree
+            //     .render_nodes
+            //     .root_scalar_node
+            //     .compute(step_com_arg.reborrow())
+                // .multiply(UNFloat::new_clamped(
+                //     1.0 - self.average_update_stat.activity_value as f32,
+                // ))
+                // .multiply(UNFloat::new_clamped(
+                //     1.0 - self.average_update_stat.alpha_value as f32,
+                // ))
+                // .multiply(UNFloat::new_clamped(
+                //     self.average_update_stat.global_similarity_value as f32,
+                // ))
+                // .multiply(UNFloat::new_clamped(
+                //     1.0 - self.average_update_stat.local_similarity_value as f32,
+                // ))
+                // .average(history_step.root_scalar);
 
             self.next_history_step.computed_texture =
                 compute_texture(ctx, self.next_history_step.cell_array.view());
@@ -730,67 +739,67 @@ impl EventHandler for MyGame {
 
                 let mut rotation = 0.0;
 
-                if CONSTS.apply_frame_transformations {
+                if CONSTS.apply_frame_transformations || self.tree_dirty {
                     let root_scalar = lerp(
                         prev_history_step.root_scalar.into_inner(),
                         history_step.root_scalar.into_inner(),
-                        lerp_val,
+                        back_lerp_val,
                     );
 
                     let rotation_scalar = lerp(
                         prev_history_step.rotation_scalar.into_inner(),
                         history_step.rotation_scalar.into_inner(),
-                        lerp_val,
+                        back_lerp_val,
                     );
 
                     let translation_scalar = lerp(
                         prev_history_step.translation_scalar.into_inner(),
                         history_step.translation_scalar.into_inner(),
-                        lerp_val,
+                        back_lerp_val,
                     );
 
                     let offset_scalar = lerp(
                         prev_history_step.offset_scalar.into_inner(),
                         history_step.offset_scalar.into_inner(),
-                        lerp_val,
+                        back_lerp_val,
                     );
 
                     let from_scale_scalar = lerp(
                         prev_history_step.from_scale_scalar.into_inner(),
                         history_step.from_scale_scalar.into_inner(),
-                        lerp_val,
+                        back_lerp_val,
                     );
 
                     let to_scale_scalar = lerp(
                         prev_history_step.to_scale_scalar.into_inner(),
                         history_step.to_scale_scalar.into_inner(),
-                        lerp_val,
+                        back_lerp_val,
                     );
 
                     let translation_x = lerp(
                         prev_history_step.translation.into_inner().x,
                         history_step.translation.into_inner().x,
-                        lerp_val,
+                        back_lerp_val,
                     ) * 0.5
                         * CONSTS.initial_window_width;
 
                     let translation_y = lerp(
                         prev_history_step.translation.into_inner().y,
                         history_step.translation.into_inner().y,
-                        lerp_val,
+                        back_lerp_val,
                     ) * 0.5
                         * CONSTS.initial_window_height;
 
                     let offset_translation_x = lerp(
                         prev_history_step.offset.into_inner().x,
                         history_step.offset.into_inner().x,
-                        lerp_val,
+                        back_lerp_val,
                     ) * 0.5;
 
                     let offset_translation_y = lerp(
                         prev_history_step.offset.into_inner().y,
                         history_step.offset.into_inner().y,
-                        lerp_val,
+                        back_lerp_val,
                     ) * 0.5;
 
                     alpha *= lerp(1.0, history_step.alpha.into_inner(), root_scalar);
@@ -800,8 +809,7 @@ impl EventHandler for MyGame {
                     offset_y += offset_translation_y * scale_y * offset_scalar * root_scalar;
 
                     // NOTE PI is only subtracted because angles are 0..2PI currently
-                    rotation += (1.0 - alpha) * history_step.rotation.into_inner()
-                        - PI * rotation_scalar * root_scalar;
+                    rotation += (1.0 - alpha) * (history_step.rotation.into_inner() - PI) * rotation_scalar * root_scalar;
 
                     scale_x *= lerp(
                         1.0,

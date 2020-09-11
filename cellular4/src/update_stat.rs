@@ -3,30 +3,57 @@ use std::{
     ops::{Add, AddAssign, Div},
 };
 
-use crate::constants::CONSTS;
+use rand::prelude::*;
 
 #[derive(Default, Debug, Clone, Copy)]
 pub struct UpdateStat {
     //Update stats are used to determine an approximation of the entropy of the current state
-    //Update stats contain two values:
+    //Update stats contain many values:
     //-Active cell count
     //--If the active cell count is high, we have a lot of change
     //--If the active cell count is low, we have a small amount of change
     //-Neighbour similarity
     //--If all neighbours are similar, we have close to a flat color
     //--If all neighbours are distinct, we have visual noise
+    //-Plus a bunch more, it's decently self explanatory
     pub activity_value: f64,
     pub alpha_value: f64,
     pub local_similarity_value: f64,
     pub global_similarity_value: f64,
+    pub cpu_usage: f64,
 }
 
+//TODO: add more heuristics of undesirability to inform mutation probability
 impl UpdateStat {
     pub fn should_mutate(&self) -> bool {
-        self.activity_value < CONSTS.activity_value_lower_bound
-            || self.alpha_value < CONSTS.alpha_value_lower_bound
-            || self.local_similarity_value > CONSTS.local_similarity_upper_bound
-            || self.global_similarity_value >= CONSTS.global_similarity_upper_bound
+        thread_rng().gen::<f64>() * self.mutation_likelihood() > 0.5
+    }
+
+    // pub fn should_mutate(&self) -> bool {
+        //     self.activity_value < CONSTS.activity_value_lower_bound
+        //         || self.alpha_value < CONSTS.alpha_value_lower_bound
+        //         || self.local_similarity_value > CONSTS.local_similarity_upper_bound
+        //         || self.global_similarity_value >= CONSTS.global_similarity_upper_bound
+        // }
+
+    pub fn mutation_likelihood(&self) -> f64 {
+        (self.flatness() + self.noise() + self.stagnation() + self.transparency()) / 4.0
+    }
+
+    pub fn flatness(&self) -> f64 {
+        ((1.0 - self.activity_value) + self.local_similarity_value + self.global_similarity_value) / 3.0
+    }
+
+    pub fn noise(&self) -> f64 {
+        (self.activity_value + (1.0 - self.local_similarity_value)) / 2.0
+    }
+
+    pub fn stagnation(&self) -> f64 {
+        1.0 - self.activity_value
+    }
+
+    pub fn transparency(&self) -> f64 {
+        1.0 - self.alpha_value
     }
 }
 
@@ -39,6 +66,7 @@ impl Add<UpdateStat> for UpdateStat {
             alpha_value: self.alpha_value + other.alpha_value,
             local_similarity_value: self.local_similarity_value + other.local_similarity_value,
             global_similarity_value: self.global_similarity_value + other.global_similarity_value,
+            cpu_usage: self.cpu_usage + other.cpu_usage,
         }
     }
 }
@@ -52,6 +80,7 @@ impl Div<f64> for UpdateStat {
             alpha_value: self.alpha_value / other,
             local_similarity_value: self.local_similarity_value / other,
             global_similarity_value: self.global_similarity_value / other,
+            cpu_usage: self.cpu_usage / other,
         }
     }
 }

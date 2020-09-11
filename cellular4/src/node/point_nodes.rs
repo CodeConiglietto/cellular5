@@ -15,6 +15,8 @@ pub enum SNPointNodes {
     #[mutagen(gen_weight = leaf_node_weight)]
     Constant { value: SNPoint },
     #[mutagen(gen_weight = pipe_node_weight)]
+    FromComplex { child_complex: Box<SNComplexNodes> },
+    #[mutagen(gen_weight = pipe_node_weight)]
     Invert { child: Box<SNPointNodes> },
     #[mutagen(gen_weight = branch_node_weight)]
     FromSNFloats {
@@ -49,6 +51,7 @@ impl Node for SNPointNodes {
             Zero => SNPoint::zero(),
             Coordinate => compute_arg.coordinate_set.get_coord_point(),
             Constant { value } => *value,
+            FromComplex { child_complex } => SNPoint::from_complex(child_complex.compute(compute_arg)),
             Invert { child } => {
                 let point = child.compute(compute_arg.reborrow()).into_inner();
                 SNPoint::new(Point2::new(point.x * -1.0, point.y * -1.0))

@@ -15,7 +15,7 @@ use serde::{
 };
 
 use crate::{
-    datatype::{constraint_resolvers::*, continuous::*},
+    datatype::{constraint_resolvers::*, continuous::*, complex::*},
     mutagen_args::*,
 };
 
@@ -122,6 +122,14 @@ impl SNPoint {
         Self::from_snfloats(
             SNFloat::new(rho * f32::sin(theta)),
             SNFloat::new(rho * f32::cos(theta)),
+        )
+    }
+
+    // TODO Refactor this when polar point datatype is added
+    pub fn from_complex(value: SNComplex) -> Self {
+        Self::from_snfloats(
+            value.re(),
+            value.im(),
         )
     }
 

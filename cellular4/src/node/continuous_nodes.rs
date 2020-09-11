@@ -178,10 +178,10 @@ pub enum SNFloatNodes {
         offset_t: Option<f32>,
     },
 
-    // #[mutagen(gen_weight = pipe_node_weight)]
-    // NoiseFunction {
-    //     child: Box<NoiseNodes>,
-    // },
+    #[mutagen(gen_weight = pipe_node_weight)]
+    NoiseFunction {
+        child: Box<NoiseNodes>,
+    },
 
     #[mutagen(gen_weight = branch_node_weight)]
     SubDivide {
@@ -282,7 +282,7 @@ impl Node for SNFloatNodes {
                 coordinate_set: child_state.compute(compute_arg.reborrow()),
                 ..compute_arg.reborrow()
             }),
-            // NoiseFunction { child } => child.compute(compute_arg.reborrow()),
+            NoiseFunction { child } => child.compute(compute_arg.reborrow()),
             SubDivide { child_a, child_b } => child_a
                 .compute(compute_arg.reborrow())
                 .subdivide(child_b.compute(compute_arg.reborrow())),

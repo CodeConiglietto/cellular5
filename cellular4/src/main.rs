@@ -477,7 +477,7 @@ impl EventHandler for MyGame {
             let cpu_usage = (next_cpu_t - self.cpu_t).non_idle();
 
             self.average_update_stat =
-                (self.average_update_stat + self.rolling_update_stat_total) / 2.0;
+                ((self.average_update_stat + self.rolling_update_stat_total) / 2.0).clamp_values();
 
             dbg!(timer::fps(ctx));
 

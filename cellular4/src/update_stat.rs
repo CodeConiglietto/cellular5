@@ -24,9 +24,12 @@ pub struct UpdateStat {
 }
 
 //TODO: add more heuristics of undesirability to inform mutation probability
+//Sharpness
+//Colourfulness
+//
 impl UpdateStat {
     pub fn should_mutate(&self) -> bool {
-        thread_rng().gen::<f64>() * self.mutation_likelihood() > 0.5
+        (thread_rng().gen::<f64>() * self.mutation_likelihood()).powf(2.0) > thread_rng().gen::<f64>()
     }
 
     // pub fn should_mutate(&self) -> bool {
@@ -41,19 +44,30 @@ impl UpdateStat {
     }
 
     pub fn flatness(&self) -> f64 {
-        ((1.0 - self.activity_value) + self.local_similarity_value + self.global_similarity_value) / 3.0
+        ((1.0 - self.activity_value).powf(2.0) + self.local_similarity_value.powf(2.0) + self.global_similarity_value.powf(2.0)) / 3.0
     }
 
     pub fn noise(&self) -> f64 {
-        (self.activity_value + (1.0 - self.local_similarity_value)) / 2.0
+        (self.activity_value.powf(2.0) + (1.0 - self.local_similarity_value).powf(2.0)) / 2.0
     }
 
     pub fn stagnation(&self) -> f64 {
-        1.0 - self.activity_value
+        (1.0 - self.activity_value).powf(2.0)
     }
 
     pub fn transparency(&self) -> f64 {
-        1.0 - self.alpha_value
+        (1.0 - self.alpha_value).powf(2.0)
+    }
+
+    //Function for dealing with floating point precision issues.
+    pub fn clamp_values(self) -> UpdateStat {
+        UpdateStat {
+            activity_value: self.activity_value.min(1.0).max(0.0),
+            alpha_value: self.alpha_value.min(1.0).max(0.0),
+            local_similarity_value: self.local_similarity_value.min(1.0).max(0.0),
+            global_similarity_value: self.global_similarity_value.min(1.0).max(0.0),
+            cpu_usage: self.cpu_usage.min(1.0).max(0.0),
+        }
     }
 }
 

@@ -5,7 +5,7 @@ use std::{
 
 use crate::constants::CONSTS;
 
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy, PartialEq)]
 pub struct UpdateStat {
     //Update stats are used to determine an approximation of the entropy of the current state
     //Update stats contain two values:

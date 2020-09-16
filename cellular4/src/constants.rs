@@ -21,6 +21,9 @@ pub struct Constants {
     pub initial_window_height: f32,
     pub vsync: bool,
     pub fullscreen: bool,
+    pub max_log_len: usize,
+    pub log_verbose: bool,
+    pub console_width: usize,
 
     pub cell_array_width: usize,
     pub cell_array_height: usize,

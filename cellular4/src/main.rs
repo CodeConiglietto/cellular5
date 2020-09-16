@@ -16,9 +16,35 @@ use rayon::prelude::*;
 use structopt::StructOpt;
 
 use crate::{
-    arena_wrappers::*, data_set::*, history::*, node_set::*, opts::Opts, prelude::*,
+    arena_wrappers::*, data_set::*, history::*, node_set::*, opts::Opts, prelude::*, term::UI,
     update_stat::UpdateStat,
 };
+
+// Shamelessly copied from the std implementation of dbg!
+// Macro declaration order matters! Keep this BEFORE any code and any module declarations
+macro_rules! ldbg {
+    () => {
+        ::log::trace!("[{}:{}]", ::std::file!(), ::std::line!())
+    };
+
+    ($val:expr) => {
+        match $val {
+            tmp => {
+                ::log::trace!("[{}:{}] {} = {:#?}",
+                              ::std::file!(), ::std::line!(), ::std::stringify!($val), &tmp);
+                tmp
+            }
+        }
+    };
+
+    ($val:expr,) => {
+        $crate::ldbg!($val)
+    };
+
+    ($($val:expr),+ $(,)?) => {
+        ($($crate::ldbg!($val)),+,)
+    };
+}
 
 pub mod arena_wrappers;
 pub mod constants;
@@ -32,13 +58,15 @@ pub mod node_set;
 pub mod opts;
 pub mod preloader;
 pub mod prelude;
+pub mod term;
 pub mod update_stat;
 pub mod util;
 
 fn main() {
     std::env::set_var("RUST_BACKTRACE", "full");
 
-    setup_logging();
+    let ui = UI::new();
+    setup_logging(&ui);
 
     let opts = Opts::from_args();
     let (mut ctx, mut event_loop) = ContextBuilder::new("cellular4", "CodeBunny")
@@ -59,7 +87,7 @@ fn main() {
         .build()
         .expect("Could not create ggez context!");
 
-    let mut my_game = MyGame::new(&mut ctx, opts);
+    let mut my_game = MyGame::new(&mut ctx, ui, opts);
 
     // Eagerly initialize the image preloader rather than waiting for the first time it's used
     IMAGE_PRELOADER.with(|_| ());
@@ -70,14 +98,16 @@ fn main() {
     }
 }
 
-fn setup_logging() {
+fn setup_logging(ui: &UI) {
     let image_error_dispatch = fern::Dispatch::new()
         .level(log::LevelFilter::Off)
         .level_for(datatype::image::MODULE_PATH, log::LevelFilter::Error)
         .chain(fern::log_file("image_errors.log").unwrap());
 
-    fern::Dispatch::new()
-        .format(|out, message, record| {
+    let mut dispatch = fern::Dispatch::new();
+
+    dispatch = if CONSTS.log_verbose {
+        dispatch.format(|out, message, record| {
             out.finish(format_args!(
                 "{}[{}][{}] {}",
                 chrono::Local::now().format("[%Y-%m-%d][%H:%M:%S%.3f]"),
@@ -86,10 +116,17 @@ fn setup_logging() {
                 message
             ))
         })
+    } else {
+        dispatch.format(|out, message, record| {
+            out.finish(format_args!("[{}] {}", record.level(), message))
+        })
+    };
+
+    dispatch
         .level(log::LevelFilter::Info)
         .level_for(module_path!(), log::LevelFilter::Trace)
         .chain(image_error_dispatch)
-        .chain(std::io::stdout())
+        .chain(ui.log_output())
         .apply()
         .unwrap();
 }
@@ -223,10 +260,11 @@ struct MyGame {
     last_render_t: usize,
     cpu_t: CpuInstant,
     rng: DeterministicRng,
+    ui: UI,
 }
 
 impl MyGame {
-    pub fn new(ctx: &mut Context, opts: Opts) -> MyGame {
+    pub fn new(ctx: &mut Context, ui: UI, opts: Opts) -> MyGame {
         if let Some(seed) = opts.seed {
             info!("Manually setting RNG seed");
             *RNG_SEED.lock().unwrap() = seed;
@@ -308,6 +346,7 @@ impl MyGame {
             cpu_t: CpuInstant::now().unwrap(),
             rng,
             history,
+            ui,
         }
     }
 }
@@ -476,7 +515,7 @@ impl EventHandler for MyGame {
             self.average_update_stat =
                 (self.average_update_stat + self.rolling_update_stat_total) / 2.0;
 
-            dbg!(timer::fps(ctx));
+            ldbg!(timer::fps(ctx));
 
             self.rolling_update_stat_total = UpdateStat {
                 activity_value: 0.0,
@@ -494,14 +533,14 @@ impl EventHandler for MyGame {
                 history,
             };
 
-            dbg!(cpu_usage);
-            dbg!(&self.average_update_stat);
+            ldbg!(cpu_usage);
+            ldbg!(&self.average_update_stat);
 
             if self.tree_dirty
                 || (CONSTS.auto_mutate
-                    && (dbg!(cpu_usage >= CONSTS.auto_mutate_above_cpu_usage)
-                        || dbg!(self.average_update_stat.should_mutate())
-                        || dbg!(thread_rng().gen::<usize>() % CONSTS.graph_mutation_divisor) == 0))
+                    && (ldbg!(cpu_usage >= CONSTS.auto_mutate_above_cpu_usage)
+                        || ldbg!(self.average_update_stat.should_mutate())
+                        || ldbg!(thread_rng().gen::<usize>() % CONSTS.graph_mutation_divisor) == 0))
             {
                 info!("====TIC: {} MUTATING TREE====", self.current_t);
                 self.node_tree.root_node.mutate_rng(
@@ -688,6 +727,8 @@ impl EventHandler for MyGame {
             self.cpu_t = next_cpu_t;
         }
 
+        self.ui.draw(&self.average_update_stat);
+
         timer::yield_now();
 
         Ok(())
@@ -846,6 +887,7 @@ impl EventHandler for MyGame {
 
             self.last_render_t = timer::ticks(ctx);
         }
+
         graphics::present(ctx)?;
 
         Ok(())

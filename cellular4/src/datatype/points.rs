@@ -87,6 +87,13 @@ impl SNPoint {
         )
     }
 
+    pub fn normalised_sub(self, other: SNPoint, normaliser: SFloatNormaliser) -> SNPoint {
+        SNPoint::from_snfloats(
+            self.x().normalised_sub(other.x(), normaliser),
+            self.y().normalised_sub(other.y(), normaliser),
+        )
+    }
+
     pub fn scale(self, other: SNFloat) -> SNPoint {
         SNPoint::from_snfloats(self.x().multiply(other), self.y().multiply(other))
     }

@@ -42,7 +42,7 @@ impl CoordinateSet {
         }
     }
 
-    pub fn get_coord_point(self) -> SNPoint {
+    pub fn get_coord_point(&self) -> SNPoint {
         SNPoint::from_snfloats(self.x, self.y)
     }
 
@@ -53,9 +53,5 @@ impl CoordinateSet {
     //todo refactor divisor into constant
     pub fn get_unfloat_t(&self) -> UNFloat {
         UNFloat::new_triangle(self.t / 500.0)
-    }
-
-    pub fn xy(&self) -> SNPoint {
-        SNPoint::from_snfloats(self.x, self.y)
     }
 }

@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque, f32::consts::PI};
 
 use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
 use palette::{encoding::srgb::Srgb, rgb::Rgb, Hsv, Lab, Limited, RgbHue};
@@ -90,6 +90,22 @@ pub enum FloatColorNodes {
     ModifyState {
         child: Box<FloatColorNodes>,
         child_state: Box<CoordMapNodes>,
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    LineAberration {
+        child: Box<FloatColorNodes>,
+        child_rho: Box<UNFloatNodes>,
+        child_theta: Box<AngleNodes>,
+        child_normaliser: Box<SFloatNormaliserNodes>,
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    TriangleAberration {
+        child: Box<FloatColorNodes>,
+        child_rho: Box<UNFloatNodes>,
+        child_theta: Box<AngleNodes>,
+        child_normaliser: Box<SFloatNormaliserNodes>,
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
@@ -296,6 +312,111 @@ impl Node for FloatColorNodes {
                 coordinate_set: child_state.compute(compute_arg.reborrow()),
                 ..compute_arg.reborrow()
             }),
+            LineAberration {
+                child,
+                child_rho,
+                child_theta,
+                child_normaliser,
+            } => {
+                let rho = child_rho.compute(compute_arg.reborrow());
+                let theta = child_theta.compute(compute_arg.reborrow());
+                let normaliser = child_normaliser.compute(compute_arg.reborrow());
+
+                // TODO rewrite this once we have a polar type node
+                let offset = SNPoint::from_snfloats(
+                    SNFloat::new(rho.into_inner() * f32::sin(theta.into_inner())),
+                    SNFloat::new(rho.into_inner() * f32::cos(theta.into_inner())),
+                );
+
+                let middle = compute_arg.coordinate_set.get_coord_point();
+
+                let r = child
+                    .compute(
+                        compute_arg
+                            .reborrow()
+                            .replace_coords(&middle.normalised_add(offset, normaliser)),
+                    )
+                    .r;
+
+                let mid_color = child.compute(compute_arg.reborrow());
+                let g = mid_color.g;
+
+                let b = child
+                    .compute(
+                        compute_arg
+                            .reborrow()
+                            .replace_coords(&middle.normalised_sub(offset, normaliser)),
+                    )
+                    .b;
+
+                let a = mid_color.a;
+
+                FloatColor { r, g, b, a }
+            }
+            TriangleAberration {
+                child,
+                child_rho,
+                child_theta,
+                child_normaliser,
+            } => {
+                let rho = child_rho.compute(compute_arg.reborrow());
+                let theta = child_theta.compute(compute_arg.reborrow());
+                let normaliser = child_normaliser.compute(compute_arg.reborrow());
+
+                let theta_r = theta;
+                let theta_g = theta + Angle::new(2.0 / 3.0 * PI);
+                let theta_b = theta - Angle::new(2.0 / 3.0 * PI);
+
+                // TODO rewrite this once we have a polar type node
+                let middle = compute_arg.coordinate_set.get_coord_point();
+
+                let r = child
+                    .compute(
+                        compute_arg
+                            .reborrow()
+                            .replace_coords(&middle.normalised_add(
+                                SNPoint::from_snfloats(
+                                    SNFloat::new(rho.into_inner() * f32::sin(theta_r.into_inner())),
+                                    SNFloat::new(rho.into_inner() * f32::cos(theta_r.into_inner())),
+                                ),
+                                normaliser,
+                            )),
+                    )
+                    .r;
+
+                let g = child
+                    .compute(
+                        compute_arg
+                            .reborrow()
+                            .replace_coords(&middle.normalised_add(
+                                SNPoint::from_snfloats(
+                                    SNFloat::new(rho.into_inner() * f32::sin(theta_g.into_inner())),
+                                    SNFloat::new(rho.into_inner() * f32::cos(theta_g.into_inner())),
+                                ),
+                                normaliser,
+                            )),
+                    )
+                    .g;
+
+                let b = child
+                    .compute(
+                        compute_arg
+                            .reborrow()
+                            .replace_coords(&middle.normalised_add(
+                                SNPoint::from_snfloats(
+                                    SNFloat::new(rho.into_inner() * f32::sin(theta_b.into_inner())),
+                                    SNFloat::new(rho.into_inner() * f32::cos(theta_b.into_inner())),
+                                ),
+                                normaliser,
+                            )),
+                    )
+                    .b;
+
+                let a = child.compute(compute_arg.reborrow()).a;
+
+                FloatColor { r, g, b, a }
+            }
+
             FromByteColor { child } => FloatColor::from(child.compute(compute_arg.reborrow())),
             IfElse {
                 predicate,
@@ -315,12 +436,24 @@ impl Node for FloatColorNodes {
 
                 color
             }
-            PointDrawingBuffer { buffer, .. } => buffer[compute_arg.coordinate_set.xy()],
-            PointSetLineBuffer { buffer, .. } => buffer[compute_arg.coordinate_set.xy()],
-            IterativePolarLineBuffer { buffer, .. } => buffer[compute_arg.coordinate_set.xy()],
-            PointSetDotBuffer { buffer, .. } => buffer[compute_arg.coordinate_set.xy()],
-            ClosestPointLineBuffer { buffer, .. } => buffer[compute_arg.coordinate_set.xy()],
-            NextPointLineBuffer { buffer, .. } => buffer[compute_arg.coordinate_set.xy()],
+            PointDrawingBuffer { buffer, .. } => {
+                buffer[compute_arg.coordinate_set.get_coord_point()]
+            }
+            PointSetLineBuffer { buffer, .. } => {
+                buffer[compute_arg.coordinate_set.get_coord_point()]
+            }
+            IterativePolarLineBuffer { buffer, .. } => {
+                buffer[compute_arg.coordinate_set.get_coord_point()]
+            }
+            PointSetDotBuffer { buffer, .. } => {
+                buffer[compute_arg.coordinate_set.get_coord_point()]
+            }
+            ClosestPointLineBuffer { buffer, .. } => {
+                buffer[compute_arg.coordinate_set.get_coord_point()]
+            }
+            NextPointLineBuffer { buffer, .. } => {
+                buffer[compute_arg.coordinate_set.get_coord_point()]
+            }
         }
     }
 }

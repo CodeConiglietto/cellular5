@@ -225,6 +225,10 @@ impl SNFloat {
         normaliser.normalise(self.into_inner() + other.into_inner())
     }
 
+    pub fn normalised_sub(self, other: Self, normaliser: SFloatNormaliser) -> Self {
+        normaliser.normalise(self.into_inner() - other.into_inner())
+    }
+
     // pub fn sawtooth_add(self, other: Self) -> Self {
     //     self.sawtooth_add_f32(other.into_inner())
     // }

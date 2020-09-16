@@ -598,13 +598,14 @@ impl EventHandler for MyGame {
                 .root_to_scale_node
                 .compute(step_com_arg.reborrow()); //.average(history_step.to_scale);
 
-            self.next_history_step.root_scalar = dbg!(UNFloat::new((
-                // self
+            self.next_history_step.root_scalar = dbg!(UNFloat::new(
+                // (self
                 // .node_tree
                 // .render_nodes
                 // .root_scalar_node
                 // .compute(step_com_arg.reborrow()).average(history_step.root_scalar).into_inner() * 
-                mutation_likelihood.powf(4.0) as f32)
+                mutation_likelihood.powf(4.0) as f32
+            // )
             ));
 
             self.next_history_step.alpha = self
@@ -714,7 +715,7 @@ impl EventHandler for MyGame {
                 let back_lerp_val = (i as f32 + (1.0 - lerp_sub)) / lerp_len as f32;
                 let alpha = 1.0 - back_lerp_val;
 
-                let lerp_val = (i as f32 + lerp_sub) / lerp_len as f32;
+                let _lerp_val = (i as f32 + lerp_sub) / lerp_len as f32;
 
                 let history_len = self.history.history_steps.len();
 

@@ -158,14 +158,12 @@ fn frac_block(v: f64) -> char {
 
 struct Logs {
     lines: VecDeque<LogLine>,
-    dirty: bool,
 }
 
 impl Logs {
     fn new() -> Self {
         Self {
-            lines: VecDeque::with_capacity(CONSTS.max_log_len),
-            dirty: false,
+            lines: VecDeque::new(),
         }
     }
 }
@@ -193,23 +191,33 @@ impl UI {
     }
 
     pub fn draw(&mut self, update_stat: &UpdateStat) {
-        // NOTE: LOGGING CRITICAL SECTION
-        // logs are locked here, do not call any logging functions or you WILL deadlock.
-        let mut logs = self.logs.lock().unwrap();
+        {
+            // NOTE: LOGGING CRITICAL SECTION
+            // Logs are locked here, do not call any logging functions or you WILL deadlock.
 
-        if !logs.dirty && Some(update_stat) == self.prev_update_stat.as_ref() {
-            return;
-        }
+            let mut logs = self.logs.lock().unwrap();
 
-        logs.dirty = false;
+            if logs.lines.is_empty() && Some(update_stat) == self.prev_update_stat.as_ref() {
+                return;
+            }
 
-        self.prev_update_stat = Some(update_stat.clone());
+            let prev_update_stat = self.prev_update_stat.replace(update_stat.clone());
 
-        print!("{}", clear::All);
-        print!("{}", cursor::Goto(1, 1));
+            if prev_update_stat.is_some() {
+                print!("{}", cursor::Left(CONSTS.console_width as u16));
+                for _ in 0..5 {
+                    print!("{}", cursor::Up(1));
+                    print!("{}", clear::CurrentLine);
+                }
+            }
 
-        for log in logs.lines.iter() {
-            println!("{}", log);
+            for log in logs.lines.iter() {
+                println!("{}", log);
+            }
+
+            logs.lines.clear();
+
+            // NOTE: END LOGGING CRITICAL SECTION
         }
 
         println!("{}", Padded::new(" Heuristics ", "=", CONSTS.console_width));
@@ -225,8 +233,6 @@ impl UI {
         );
 
         io::stdout().lock().flush().unwrap();
-
-        // NOTE: END LOGGING CRITICAL SECTION
     }
 }
 
@@ -240,7 +246,7 @@ fn log_record(logs: &Mutex<Logs>, record: &log::Record) {
     let text = format!("{}", record.args());
 
     // NOTE: LOGGING CRITICAL SECTION
-    // logs are locked here, do not call any logging functions or you WILL deadlock.
+    // Logs are locked here, do not call any logging functions or you WILL deadlock.
     let mut logs = logs.lock().unwrap();
 
     for mut line in text.lines() {
@@ -252,16 +258,10 @@ fn log_record(logs: &Mutex<Logs>, record: &log::Record) {
                 .next()
                 .unwrap_or(line.len());
 
-            if logs.lines.len() >= CONSTS.max_log_len {
-                logs.lines.pop_front();
-            }
-
             logs.lines.push_back(LogLine {
                 level: record.level(),
                 text: line[..n].to_string(),
             });
-
-            logs.dirty = true;
 
             line = &line[n..];
         }

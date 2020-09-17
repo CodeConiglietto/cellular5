@@ -727,8 +727,6 @@ impl EventHandler for MyGame {
             self.cpu_t = next_cpu_t;
         }
 
-        self.ui.draw(&self.average_update_stat);
-
         timer::yield_now();
 
         Ok(())
@@ -889,6 +887,8 @@ impl EventHandler for MyGame {
         }
 
         graphics::present(ctx)?;
+
+        self.ui.draw(&self.average_update_stat);
 
         Ok(())
     }

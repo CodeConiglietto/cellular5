@@ -2,6 +2,7 @@ use std::{
     collections::VecDeque,
     fmt::{self, Display, Formatter},
     io::{self, Write},
+    mem,
     sync::{Arc, Mutex},
 };
 
@@ -166,10 +167,15 @@ impl Logs {
             lines: VecDeque::new(),
         }
     }
+
+    fn clear(&mut self) {
+        self.lines.clear()
+    }
 }
 
 pub struct UI {
     logs: Arc<Mutex<Logs>>,
+    swap_logs: Logs,
     prev_update_stat: Option<UpdateStat>,
 }
 
@@ -177,6 +183,7 @@ impl UI {
     pub fn new() -> Self {
         Self {
             logs: Arc::new(Mutex::new(Logs::new())),
+            swap_logs: Logs::new(),
             prev_update_stat: None,
         }
     }
@@ -191,33 +198,36 @@ impl UI {
     }
 
     pub fn draw(&mut self, update_stat: &UpdateStat) {
+        self.swap_logs.clear();
+
         {
             // NOTE: LOGGING CRITICAL SECTION
             // Logs are locked here, do not call any logging functions or you WILL deadlock.
-
             let mut logs = self.logs.lock().unwrap();
 
-            if logs.lines.is_empty() && Some(update_stat) == self.prev_update_stat.as_ref() {
-                return;
-            }
-
-            let prev_update_stat = self.prev_update_stat.replace(update_stat.clone());
-
-            if prev_update_stat.is_some() {
-                print!("{}", cursor::Left(CONSTS.console_width as u16));
-                for _ in 0..5 {
-                    print!("{}", cursor::Up(1));
-                    print!("{}", clear::CurrentLine);
-                }
-            }
-
-            for log in logs.lines.iter() {
-                println!("{}", log);
-            }
-
-            logs.lines.clear();
+            mem::swap(&mut *logs, &mut self.swap_logs);
 
             // NOTE: END LOGGING CRITICAL SECTION
+        }
+
+        let logs = &self.swap_logs;
+
+        if logs.lines.is_empty() && Some(update_stat) == self.prev_update_stat.as_ref() {
+            return;
+        }
+
+        let prev_update_stat = self.prev_update_stat.replace(update_stat.clone());
+
+        if prev_update_stat.is_some() {
+            print!("{}", cursor::Left(CONSTS.console_width as u16));
+            for _ in 0..5 {
+                print!("{}", cursor::Up(1));
+                print!("{}", clear::CurrentLine);
+            }
+        }
+
+        for log in logs.lines.iter() {
+            println!("{}", log);
         }
 
         println!("{}", Padded::new(" Heuristics ", "=", CONSTS.console_width));
@@ -245,29 +255,31 @@ impl Default for UI {
 fn log_record(logs: &Mutex<Logs>, record: &log::Record) {
     let text = format!("{}", record.args());
 
-    // NOTE: LOGGING CRITICAL SECTION
-    // Logs are locked here, do not call any logging functions or you WILL deadlock.
-    let mut logs = logs.lock().unwrap();
+    {
+        // NOTE: LOGGING CRITICAL SECTION
+        // Logs are locked here, do not call any logging functions or you WILL deadlock.
+        let mut logs = logs.lock().unwrap();
 
-    for mut line in text.lines() {
-        while !line.is_empty() {
-            let n = line
-                .char_indices()
-                .map(|(i, _)| i)
-                .skip_while(|&i| i < CONSTS.console_width)
-                .next()
-                .unwrap_or(line.len());
+        for mut line in text.lines() {
+            while !line.is_empty() {
+                let n = line
+                    .char_indices()
+                    .map(|(i, _)| i)
+                    .skip_while(|&i| i < CONSTS.console_width)
+                    .next()
+                    .unwrap_or(line.len());
 
-            logs.lines.push_back(LogLine {
-                level: record.level(),
-                text: line[..n].to_string(),
-            });
+                logs.lines.push_back(LogLine {
+                    level: record.level(),
+                    text: line[..n].to_string(),
+                });
 
-            line = &line[n..];
+                line = &line[n..];
+            }
         }
-    }
 
-    // NOTE: END LOGGING CRITICAL SECTION
+        // NOTE: END LOGGING CRITICAL SECTION
+    }
 }
 
 #[cfg(test)]

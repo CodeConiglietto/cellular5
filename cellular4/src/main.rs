@@ -454,7 +454,7 @@ impl EventHandler for MyGame {
                 global_similarity_value: f64::from(
                     1.0 - (global_color.get_average() - current_color.get_average()).abs(),
                 ), // / total_cells as f64
-                cpu_usage: 0.0,//we don't accumulate this here because we set it below
+                cpu_usage: 0.0, //we don't accumulate this here because we set it below
             }
         };
 
@@ -486,7 +486,7 @@ impl EventHandler for MyGame {
                 alpha_value: 0.0,
                 local_similarity_value: 0.0,
                 global_similarity_value: 0.0,
-                cpu_usage: cpu_usage
+                cpu_usage: cpu_usage,
             };
 
             let _update_state = UpdateState {
@@ -603,9 +603,8 @@ impl EventHandler for MyGame {
                 // .node_tree
                 // .render_nodes
                 // .root_scalar_node
-                // .compute(step_com_arg.reborrow()).average(history_step.root_scalar).into_inner() * 
-                mutation_likelihood.powf(4.0) as f32
-            // )
+                // .compute(step_com_arg.reborrow()).average(history_step.root_scalar).into_inner() *
+                mutation_likelihood.powf(2.0) as f32 // )
             ));
 
             self.next_history_step.alpha = self
@@ -649,19 +648,19 @@ impl EventHandler for MyGame {
             //     .render_nodes
             //     .root_scalar_node
             //     .compute(step_com_arg.reborrow())
-                // .multiply(UNFloat::new_clamped(
-                //     1.0 - self.average_update_stat.activity_value as f32,
-                // ))
-                // .multiply(UNFloat::new_clamped(
-                //     1.0 - self.average_update_stat.alpha_value as f32,
-                // ))
-                // .multiply(UNFloat::new_clamped(
-                //     self.average_update_stat.global_similarity_value as f32,
-                // ))
-                // .multiply(UNFloat::new_clamped(
-                //     1.0 - self.average_update_stat.local_similarity_value as f32,
-                // ))
-                // .average(history_step.root_scalar);
+            // .multiply(UNFloat::new_clamped(
+            //     1.0 - self.average_update_stat.activity_value as f32,
+            // ))
+            // .multiply(UNFloat::new_clamped(
+            //     1.0 - self.average_update_stat.alpha_value as f32,
+            // ))
+            // .multiply(UNFloat::new_clamped(
+            //     self.average_update_stat.global_similarity_value as f32,
+            // ))
+            // .multiply(UNFloat::new_clamped(
+            //     1.0 - self.average_update_stat.local_similarity_value as f32,
+            // ))
+            // .average(history_step.root_scalar);
 
             self.next_history_step.computed_texture =
                 compute_texture(ctx, self.next_history_step.cell_array.view());
@@ -810,7 +809,10 @@ impl EventHandler for MyGame {
                     offset_y += offset_translation_y * scale_y * offset_scalar * root_scalar;
 
                     // NOTE PI is only subtracted because angles are 0..2PI currently
-                    rotation += (1.0 - alpha) * (history_step.rotation.into_inner() - PI) * rotation_scalar * root_scalar;
+                    rotation += (1.0 - alpha)
+                        * (history_step.rotation.into_inner() - PI)
+                        * rotation_scalar
+                        * root_scalar;
 
                     scale_x *= lerp(
                         1.0,

@@ -316,14 +316,14 @@ impl<'a> Updatable<'a> for PointSetNodes {
                 child_point,
             } => {
                 value.replace(Arc::new(
-                    value.points().iter()
-                        .map(
-                            |point| {
-                                let compute_arg: ComArg<'_> = arg.reborrow().into();
+                    value
+                        .points()
+                        .iter()
+                        .map(|point| {
+                            let compute_arg: ComArg<'_> = arg.reborrow().into();
 
-                                child_point.compute(compute_arg.replace_coords(&point))
-                            },
-                        )
+                            child_point.compute(compute_arg.replace_coords(&point))
+                        })
                         .collect(),
                 ));
             }

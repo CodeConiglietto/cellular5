@@ -101,6 +101,7 @@ pub enum FloatColorNodes {
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
+    // #[mutagen(gen_preferred)]
     TriangleAberration {
         child: Box<FloatColorNodes>,
         child_rho: Box<UNFloatNodes>,
@@ -274,7 +275,11 @@ impl Node for FloatColorNodes {
                     alpha.compute(compute_arg.reborrow()).into_inner(),
                 )
             }
-            ComplexLAB { l, child_complex, alpha } => {
+            ComplexLAB {
+                l,
+                child_complex,
+                alpha,
+            } => {
                 let complex = child_complex.compute(compute_arg.reborrow());
 
                 let lab = Lab::new(
@@ -290,7 +295,10 @@ impl Node for FloatColorNodes {
                     alpha.compute(compute_arg.reborrow()).into_inner(),
                 )
             }
-            IterativeResultLAB { child_iterative_function, alpha } => {
+            IterativeResultLAB {
+                child_iterative_function,
+                alpha,
+            } => {
                 let result = child_iterative_function.compute(compute_arg.reborrow());
 
                 let lab = Lab::new(

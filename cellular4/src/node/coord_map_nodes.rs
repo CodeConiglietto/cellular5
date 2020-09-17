@@ -40,9 +40,15 @@ pub enum CoordMapNodes {
     Abs,
 
     #[mutagen(gen_weight = branch_node_weight)]
-    SelectiveAbs{child_abs_x: Box<BooleanNodes>, child_abs_y: Box<BooleanNodes>},
+    SelectiveAbs {
+        child_abs_x: Box<BooleanNodes>,
+        child_abs_y: Box<BooleanNodes>,
+    },
     #[mutagen(gen_weight = branch_node_weight)]
-    ForceSign{child_sign_x: Box<BooleanNodes>, child_sign_y: Box<BooleanNodes>},
+    ForceSign {
+        child_sign_x: Box<BooleanNodes>,
+        child_sign_y: Box<BooleanNodes>,
+    },
 
     #[mutagen(gen_weight = branch_node_weight)]
     IfElse {
@@ -155,25 +161,47 @@ impl Node for CoordMapNodes {
                     t: compute_arg.coordinate_set.t,
                 }
             }
-            SelectiveAbs {child_abs_x, child_abs_y} => {
+            SelectiveAbs {
+                child_abs_x,
+                child_abs_y,
+            } => {
                 let p = compute_arg.reborrow().coordinate_set.get_coord_point();
                 let abs_x = child_abs_x.compute(compute_arg.reborrow());
                 let abs_y = child_abs_y.compute(compute_arg.reborrow());
 
                 CoordinateSet {
-                    x: if abs_x.into_inner() {p.x().abs()} else {p.x()},
-                    y: if abs_y.into_inner() {p.y().abs()} else {p.y()},
+                    x: if abs_x.into_inner() {
+                        p.x().abs()
+                    } else {
+                        p.x()
+                    },
+                    y: if abs_y.into_inner() {
+                        p.y().abs()
+                    } else {
+                        p.y()
+                    },
                     t: compute_arg.coordinate_set.t,
                 }
             }
-            ForceSign {child_sign_x, child_sign_y} => {
+            ForceSign {
+                child_sign_x,
+                child_sign_y,
+            } => {
                 let p = compute_arg.coordinate_set.get_coord_point();
                 let sign_x = child_sign_x.compute(compute_arg.reborrow());
                 let sign_y = child_sign_y.compute(compute_arg.reborrow());
 
                 CoordinateSet {
-                    x: if sign_x.into_inner() {p.x().abs()} else {p.x().abs().invert()},
-                    y: if sign_y.into_inner() {p.y().abs()} else {p.y().abs().invert()},
+                    x: if sign_x.into_inner() {
+                        p.x().abs()
+                    } else {
+                        p.x().abs().invert()
+                    },
+                    y: if sign_y.into_inner() {
+                        p.y().abs()
+                    } else {
+                        p.y().abs().invert()
+                    },
                     t: compute_arg.coordinate_set.t,
                 }
             }

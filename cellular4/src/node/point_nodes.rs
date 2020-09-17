@@ -51,7 +51,9 @@ impl Node for SNPointNodes {
             Zero => SNPoint::zero(),
             Coordinate => compute_arg.coordinate_set.get_coord_point(),
             Constant { value } => *value,
-            FromComplex { child_complex } => SNPoint::from_complex(child_complex.compute(compute_arg)),
+            FromComplex { child_complex } => {
+                SNPoint::from_complex(child_complex.compute(compute_arg))
+            }
             Invert { child } => {
                 let point = child.compute(compute_arg.reborrow()).into_inner();
                 SNPoint::new(Point2::new(point.x * -1.0, point.y * -1.0))

@@ -15,7 +15,7 @@ use serde::{
 };
 
 use crate::{
-    datatype::{constraint_resolvers::*, continuous::*, complex::*},
+    datatype::{complex::*, constraint_resolvers::*, continuous::*},
     mutagen_args::*,
 };
 
@@ -134,10 +134,7 @@ impl SNPoint {
 
     // TODO Refactor this when polar point datatype is added
     pub fn from_complex(value: SNComplex) -> Self {
-        Self::from_snfloats(
-            value.re(),
-            value.im(),
-        )
+        Self::from_snfloats(value.re(), value.im())
     }
 
     pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {

@@ -26,37 +26,41 @@ pub struct UpdateStat {
 //TODO: add more heuristics of undesirability to inform mutation probability
 //Sharpness
 //Colourfulness
-//
+//How symmetrical it is over the x and y axes
 impl UpdateStat {
     pub fn should_mutate(&self) -> bool {
-        (thread_rng().gen::<f64>() * self.mutation_likelihood()).powf(2.0) > thread_rng().gen::<f64>()
+        (thread_rng().gen::<f64>() * self.mutation_likelihood()).powf(2.0)
+            > thread_rng().gen::<f64>()
     }
 
     // pub fn should_mutate(&self) -> bool {
-        //     self.activity_value < CONSTS.activity_value_lower_bound
-        //         || self.alpha_value < CONSTS.alpha_value_lower_bound
-        //         || self.local_similarity_value > CONSTS.local_similarity_upper_bound
-        //         || self.global_similarity_value >= CONSTS.global_similarity_upper_bound
-        // }
+    //     self.activity_value < CONSTS.activity_value_lower_bound
+    //         || self.alpha_value < CONSTS.alpha_value_lower_bound
+    //         || self.local_similarity_value > CONSTS.local_similarity_upper_bound
+    //         || self.global_similarity_value >= CONSTS.global_similarity_upper_bound
+    // }
 
     pub fn mutation_likelihood(&self) -> f64 {
         (self.flatness() + self.noise() + self.stagnation() + self.transparency()) / 4.0
     }
 
     pub fn flatness(&self) -> f64 {
-        ((1.0 - self.activity_value).powf(2.0) + self.local_similarity_value.powf(2.0) + self.global_similarity_value.powf(2.0)) / 3.0
+        ((1.0 - self.activity_value).powf(4.0)
+            + self.local_similarity_value.powf(4.0)
+            + self.global_similarity_value.powf(4.0))
+            / 3.0
     }
 
     pub fn noise(&self) -> f64 {
-        (self.activity_value.powf(2.0) + (1.0 - self.local_similarity_value).powf(2.0)) / 2.0
+        (self.activity_value.powf(4.0) + (1.0 - self.local_similarity_value).powf(4.0)) / 2.0
     }
 
     pub fn stagnation(&self) -> f64 {
-        (1.0 - self.activity_value).powf(2.0)
+        (1.0 - self.activity_value).powf(4.0)
     }
 
     pub fn transparency(&self) -> f64 {
-        (1.0 - self.alpha_value).powf(2.0)
+        (1.0 - self.alpha_value).powf(4.0)
     }
 
     //Function for dealing with floating point precision issues.

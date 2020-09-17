@@ -11,7 +11,10 @@ pub enum SNComplexNodes {
     #[mutagen(gen_weight = pipe_node_weight)]
     FromSNPoint { child_point: Box<SNPointNodes> },
     #[mutagen(gen_weight = branch_node_weight)]
-    FromSNFloats { child_re: Box<SNFloatNodes>, child_im: Box<SNFloatNodes> },
+    FromSNFloats {
+        child_re: Box<SNFloatNodes>,
+        child_im: Box<SNFloatNodes>,
+    },
     #[mutagen(gen_weight = branch_node_weight)]
     AddNormalised {
         child_a: Box<SNComplexNodes>,
@@ -39,9 +42,10 @@ impl Node for SNComplexNodes {
             FromSNPoint { child_point } => {
                 SNComplex::from_snpoint(child_point.compute(compute_arg))
             }
-            FromSNFloats { child_re, child_im } => {
-                SNComplex::from_snfloats(child_re.compute(compute_arg.reborrow()), child_im.compute(compute_arg.reborrow()))
-            }
+            FromSNFloats { child_re, child_im } => SNComplex::from_snfloats(
+                child_re.compute(compute_arg.reborrow()),
+                child_im.compute(compute_arg.reborrow()),
+            ),
             AddNormalised {
                 child_a,
                 child_b,

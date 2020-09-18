@@ -92,7 +92,7 @@ auto_mutate_above_cpu_usage: 0.9
 
 vsync: false
 
-cell_array_history_length: 4
+cell_array_history_length: 5
 cell_array_lerp_length: 4
 
 apply_frame_transformations: false

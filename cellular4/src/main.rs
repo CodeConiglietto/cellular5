@@ -703,7 +703,7 @@ impl EventHandler for MyGame {
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
-        assert!(CONSTS.cell_array_lerp_length >= CONSTS.cell_array_history_length + 1);
+        assert!(CONSTS.cell_array_history_length > CONSTS.cell_array_lerp_length);
 
         if self.last_render_t != timer::ticks(ctx) {
             let lerp_sub =

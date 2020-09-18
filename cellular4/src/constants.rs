@@ -55,6 +55,7 @@ pub struct Constants {
     pub global_similarity_lower_bound: f64,
 
     pub image_path: String,
+    pub image_download_probability: f64,
 
     //primitive consts
     pub byte_max_value: u64,

@@ -63,7 +63,7 @@ impl Generator for RandomImageLoader {
     type Output = Image;
 
     fn generate(&mut self) -> Self::Output {
-        if self.rng.gen_bool(0.25) {
+        if self.rng.gen_bool(CONSTS.image_download_probability) {
             download_random_image(&mut self.http).unwrap_or_else(|e| {
                 warn!("Failed to download image: {}", e);
                 load_random_image_file(&mut self.rng)

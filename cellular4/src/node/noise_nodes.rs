@@ -8,9 +8,9 @@ use crate::prelude::*;
 pub enum NoiseNodes {
     NoiseFunction {
         noise_function: NoiseFunctions,
-        scale_x_child: Box<UNFloatNodes>,
-        scale_y_child: Box<UNFloatNodes>,
-        scale_t_child: Box<UNFloatNodes>,
+        scale_x_child: Box<ByteNodes>,
+        scale_y_child: Box<ByteNodes>,
+        scale_t_child: Box<ByteNodes>,
     },
     // IterativeMatrixNoiseFunction {//TODO: finish
     //     noise_function: Box<UNFloatNodes>,
@@ -39,18 +39,13 @@ impl Node for NoiseNodes {
                     compute_arg.coordinate_set.x.into_inner() as f64
                         * scale_x_child
                             .compute(compute_arg.reborrow())
-                            .into_inner()
-                            .powf(2.0) as f64
-                        * CONSTS.noise_x_scale_factor,
+                            .into_inner() as f64,
                     compute_arg.coordinate_set.y.into_inner() as f64
                         * scale_y_child
                             .compute(compute_arg.reborrow())
-                            .into_inner()
-                            .powf(2.0) as f64
-                        * CONSTS.noise_y_scale_factor,
+                            .into_inner() as f64,
                     compute_arg.coordinate_set.t as f64
-                        * scale_t_child.compute(compute_arg.reborrow()).into_inner() as f64
-                        * CONSTS.noise_t_scale_factor,
+                        * scale_t_child.compute(compute_arg.reborrow()).into_inner() as f64,
                 ) as f32,
             ),
             // NoiseNodes::IterativeMatrixNoiseFunction {

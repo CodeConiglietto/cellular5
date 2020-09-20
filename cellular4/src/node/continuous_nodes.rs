@@ -202,10 +202,12 @@ pub enum SNFloatNodes {
         child_normaliser: Box<SFloatNormaliserNodes>,
     },
 
+    #[mutagen(gen_weight = pipe_node_weight)]
     ComplexReal {
         child_complex: Box<SNComplexNodes>,
     },
 
+    #[mutagen(gen_weight = pipe_node_weight)]
     ComplexImaginary {
         child_complex: Box<SNComplexNodes>,
     },

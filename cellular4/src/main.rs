@@ -293,6 +293,8 @@ impl MyGame {
                     data: &mut data,
                     depth: 0,
                     current_t: 0,
+                    history: &history,
+                    coordinate_set: history.history_steps[0].update_coordinate,
                 },
             ),
 
@@ -500,6 +502,10 @@ impl EventHandler for MyGame {
             dbg!(&self.average_update_stat);
             dbg!(mutation_likelihood);
 
+            let history_len = self.history.history_steps.len();
+            let history_index = self.current_t.saturating_sub(1) % history_len;
+            let history_step = &self.history.history_steps[history_index];
+
             if self.tree_dirty
                 || (CONSTS.auto_mutate
                     && (
@@ -516,6 +522,8 @@ impl EventHandler for MyGame {
                         data: &mut self.data,
                         depth: 0,
                         current_t,
+                        coordinate_set: history_step.update_coordinate,
+                        history: &self.history,
                     },
                 );
                 self.node_tree.render_nodes.mutate_rng(
@@ -525,6 +533,8 @@ impl EventHandler for MyGame {
                         data: &mut self.data,
                         depth: 0,
                         current_t,
+                        coordinate_set: history_step.update_coordinate,
+                        history: &self.history,
                     },
                 );
                 // // info!("{:#?}", &self.root_node);
@@ -533,10 +543,6 @@ impl EventHandler for MyGame {
                 // }
                 self.tree_dirty = false;
             }
-
-            let history_len = self.history.history_steps.len();
-            let history_index = self.current_t.saturating_sub(1) % history_len;
-            let history_step = &self.history.history_steps[history_index];
 
             // let last_update_state = UpdateState {
             //     coordinate_set: history_step.update_coordinate,
@@ -664,9 +670,7 @@ impl EventHandler for MyGame {
 
             self.node_tree.update_recursively(step_upd_arg.reborrow());
 
-            let max_node_depth = self.nodes.len();
-
-            for depth in 0..max_node_depth {
+            for depth in 0..self.nodes.len() {
                 let (current, children) = self.nodes[depth..].split_first_mut().unwrap();
 
                 let mut step_upd_arg = UpdArg {

@@ -12,6 +12,8 @@ pub struct GenArg<'a> {
     pub data: &'a mut DataSet,
     pub depth: usize,
     pub current_t: usize,
+    pub coordinate_set: CoordinateSet,
+    pub history: &'a History,
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, GenArg<'a>> for GenArg<'b> {
@@ -21,6 +23,8 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, GenArg<'a>> for GenArg<'b> {
             data: &mut self.data,
             depth: self.depth,
             current_t: self.current_t,
+            coordinate_set: self.coordinate_set,
+            history: &self.history,
         }
     }
 }
@@ -39,6 +43,8 @@ pub struct MutArg<'a> {
     pub data: &'a mut DataSet,
     pub depth: usize,
     pub current_t: usize,
+    pub coordinate_set: CoordinateSet,
+    pub history: &'a History,
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, MutArg<'a>> for MutArg<'b> {
@@ -48,6 +54,8 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, MutArg<'a>> for MutArg<'b> {
             data: &mut self.data,
             depth: self.depth,
             current_t: self.current_t,
+            coordinate_set: self.coordinate_set,
+            history: &self.history,
         }
     }
 }
@@ -59,6 +67,8 @@ impl<'a> From<MutArg<'a>> for GenArg<'a> {
             data: arg.data,
             depth: arg.depth,
             current_t: arg.current_t,
+            coordinate_set: arg.coordinate_set,
+            history: arg.history,
         }
     }
 }
@@ -145,6 +155,19 @@ impl<'a> From<UpdArg<'a>> for ComArg<'a> {
             history: arg.history,
             depth: arg.depth,
             current_t: arg.current_t,
+        }
+    }
+}
+
+impl<'a> From<GenArg<'a>> for UpdArg<'a> {
+    fn from(arg: GenArg<'a>) -> Self {
+        Self {
+            nodes: arg.nodes,
+            data: arg.data,
+            depth: arg.depth,
+            current_t: arg.current_t,
+            coordinate_set: arg.coordinate_set,
+            history: arg.history,
         }
     }
 }

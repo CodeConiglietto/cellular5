@@ -102,47 +102,56 @@ where
 impl<'a, T> Generatable<'a> for NodeBox<T>
 where
     NodeSet: Storage<T>,
-    T: Generatable<'a, GenArg = GenArg<'a>>,
+    T: Generatable<'a, GenArg = GenArg<'a>>
+        + Updatable<'a, UpdateArg = UpdArg<'a>>
+        + UpdatableRecursively<'a>,
 {
     type GenArg = GenArg<'a>;
 
     fn generate_rng<R: Rng + ?Sized>(rng: &mut R, arg: Self::GenArg) -> Self {
+        if arg.nodes.is_empty() {
+            dbg!(arg.depth);
+            panic!("No nodesets left to allocate to! Is a node weight mislabeled?");
+        }
+
+        if rng.gen_bool(CONSTS.graph_convergence) {
+            if let Some((child_depth, index)) = arg
+                .nodes
+                .iter()
+                .enumerate()
+                .skip(1)
+                .flat_map(|(d, c)| c.arena().iter().map(move |(idx, _)| (d, idx)))
+                .choose(rng)
+            {
+                let mut child = Self {
+                    index,
+                    depth: arg.depth + child_depth,
+                    _marker: PhantomData,
+                };
+
+                // NOTE This is only called to ensure that the last_updated field is updated
+                // There's probably a better way to do this, probably by ensuring that the nodes
+                // are updated right after mutating and before any compute calls
+                child.update_recursively(arg.into());
+
+                return child;
+            }
+        }
+
         let GenArg {
             nodes,
             data,
             depth,
+            history,
             current_t,
+            coordinate_set,
         } = arg;
-
-        if nodes.is_empty() {
-            dbg!(depth);
-            panic!("No nodesets left to allocate to! Is a node weight mislabeled?");
-        }
 
         let nodes_len = nodes.len();
 
-        if rng.gen_bool(CONSTS.graph_convergence) {
-            if let Some((child_depth, index)) = nodes[1..]
-                .iter()
-                .enumerate()
-                .flat_map(|(d, c)| c.arena().iter().map(move |(idx, _)| (d, idx)))
-                .choose(rng)
-            {
-                nodes[child_depth + 1].arena_mut()[index].last_accessed = arg.current_t;
-
-                return Self {
-                    index,
-                    depth: depth + child_depth + 1,
-                    _marker: PhantomData,
-                };
-            }
-        }
-
         assert_eq!(depth + nodes.len(), crate::node::max_node_depth() + 1);
 
-        // TODO FIX
-        //let depth_skipped: usize = rng.gen_range(0, nodes.len());
-        let depth_skipped = 0usize;
+        let depth_skipped: usize = rng.gen_range(0, nodes.len());
         let (current, children) = nodes[depth_skipped..].split_first_mut().unwrap();
 
         if depth > crate::node::max_node_depth()
@@ -170,6 +179,8 @@ where
                 data,
                 depth: depth + depth_skipped + 1,
                 current_t,
+                history,
+                coordinate_set,
             };
 
             dbg!(crate::node::mutagen_functions::leaf_node_weight(&test_arg));
@@ -187,6 +198,8 @@ where
                     data,
                     depth: depth + depth_skipped + 1,
                     current_t,
+                    history,
+                    coordinate_set,
                 },
             ),
             last_accessed: current_t,
@@ -203,7 +216,10 @@ where
 impl<'a, T> Mutatable<'a> for NodeBox<T>
 where
     NodeSet: Storage<T>,
-    T: Mutatable<'a, MutArg = MutArg<'a>> + Generatable<'a, GenArg = GenArg<'a>>,
+    T: Mutatable<'a, MutArg = MutArg<'a>>
+        + Generatable<'a, GenArg = GenArg<'a>>
+        + Updatable<'a, UpdateArg = UpdArg<'a>>
+        + UpdatableRecursively<'a>,
 {
     type MutArg = MutArg<'a>;
 
@@ -211,16 +227,7 @@ where
         let depth_skipped = self.depth - arg.depth;
 
         if rng.gen_bool(CONSTS.node_regenerate_chance) {
-            dbg!("REGENERATING");
-            *self = Self::generate_rng(
-                rng,
-                GenArg {
-                    nodes: &mut arg.nodes[depth_skipped..],
-                    data: arg.data,
-                    depth: self.depth,
-                    current_t: arg.current_t,
-                },
-            );
+            *self = Self::generate_rng(rng, arg.into());
         } else {
             let (current, children) = arg.nodes[depth_skipped..].split_first_mut().unwrap();
 
@@ -231,6 +238,8 @@ where
                     data: arg.data,
                     depth: self.depth + 1,
                     current_t: arg.current_t,
+                    history: arg.history,
+                    coordinate_set: arg.coordinate_set,
                 },
             );
         }

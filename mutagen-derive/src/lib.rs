@@ -401,8 +401,8 @@ fn updatable_type(input: syn::DeriveInput) -> Result<TokenStream2> {
         #[automatically_derived]
         impl<'a> ::mutagen::UpdatableRecursively<'a> for #ident {
             fn update_recursively(&mut self, mut arg: Self::UpdateArg) {
-                ::mutagen::Updatable::update(self, ::std::convert::From::from(::mutagen::Reborrow::reborrow(&mut arg)));
                 #body
+                ::mutagen::Updatable::update(self, ::std::convert::From::from(::mutagen::Reborrow::reborrow(&mut arg)));
             }
         }
     })

@@ -179,6 +179,7 @@ pub enum SNFloatNodes {
     },
 
     #[mutagen(gen_weight = pipe_node_weight)]
+    // #[mutagen(gen_preferred)]
     NoiseFunction {
         child: Box<NoiseNodes>,
     },

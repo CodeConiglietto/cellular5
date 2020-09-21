@@ -4,6 +4,7 @@ use std::marker::PhantomData;
 use crate::{constants::*, mutagen_args::*, node::*, node_set::*};
 
 use generational_arena::*;
+use serde::{Serialize, Deserialize};
 use mutagen::*;
 use rand::seq::IteratorRandom;
 
@@ -57,7 +58,7 @@ pub struct ArenaSlot<T> {
     last_accessed: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct NodeBox<T> {
     index: Index,
     depth: usize,

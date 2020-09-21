@@ -507,7 +507,8 @@ impl EventHandler for MyGame {
                 || (CONSTS.auto_mutate
                     && (dbg!(cpu_usage >= CONSTS.auto_mutate_above_cpu_usage)
                         || dbg!(self.average_update_stat.should_mutate())
-                        || dbg!(thread_rng().gen::<usize>() % CONSTS.graph_mutation_divisor) == 0))
+                        // || dbg!(thread_rng().gen::<usize>() % CONSTS.graph_mutation_divisor) == 0
+                    ))
             {
                 info!("====TIC: {} MUTATING TREE====", self.current_t);
                 self.node_tree.root_node.mutate_rng(

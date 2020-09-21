@@ -7,6 +7,7 @@ pub use crate::{
         point_sets::*, points::*,
     },
     mutagen_args::*,
+    arena_wrappers::*,
     node::{
         automata_nodes::*, color_blend_nodes::*, color_nodes::*, complex_nodes::*,
         constraint_resolver_nodes::*, continuous_nodes::*, coord_map_nodes::*, discrete_nodes::*,

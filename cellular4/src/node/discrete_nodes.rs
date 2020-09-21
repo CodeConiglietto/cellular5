@@ -223,9 +223,7 @@ impl<'a> Updatable<'a> for BooleanNodes {
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum NibbleNodes {
     #[mutagen(gen_weight = leaf_node_weight)]
-    Constant {
-        value: Nibble,
-    },
+    Constant { value: Nibble },
     // #[mutagen(gen_weight = leaf_node_weight)]
     // Random,
     #[mutagen(gen_weight = branch_node_weight)]
@@ -255,12 +253,10 @@ pub enum NibbleNodes {
         c: NodeBox<BooleanNodes>,
         d: NodeBox<BooleanNodes>,
     },
-    FromByteModulo {
-        child: NodeBox<ByteNodes>,
-    },
-    FromByteDivide {
-        child: NodeBox<ByteNodes>,
-    },
+    #[mutagen(gen_weight = pipe_node_weight)]
+    FromByteModulo { child: NodeBox<ByteNodes> },
+    #[mutagen(gen_weight = pipe_node_weight)]
+    FromByteDivide { child: NodeBox<ByteNodes> },
     #[mutagen(gen_weight = leaf_node_weight)]
     FromGametic,
     #[mutagen(gen_weight = branch_node_weight)]

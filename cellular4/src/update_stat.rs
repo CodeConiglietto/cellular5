@@ -1,6 +1,6 @@
 use std::{
     iter::Sum,
-    ops::{Add, AddAssign, Div},
+    ops::{Add, AddAssign, Div, Mul},
 };
 
 use rand::prelude::*;
@@ -29,7 +29,7 @@ pub struct UpdateStat {
 //How symmetrical it is over the x and y axes
 impl UpdateStat {
     pub fn should_mutate(&self) -> bool {
-        (thread_rng().gen::<f64>() * self.mutation_likelihood()).powf(2.0)
+        (thread_rng().gen::<f64>() * self.mutation_likelihood()).powf(4.0)
             > thread_rng().gen::<f64>()
     }
 
@@ -99,6 +99,20 @@ impl Div<f64> for UpdateStat {
             local_similarity_value: self.local_similarity_value / other,
             global_similarity_value: self.global_similarity_value / other,
             cpu_usage: self.cpu_usage / other,
+        }
+    }
+}
+
+impl Mul<f64> for UpdateStat {
+    type Output = UpdateStat;
+
+    fn mul(self, other: f64) -> UpdateStat {
+        UpdateStat {
+            activity_value: self.activity_value * other,
+            alpha_value: self.alpha_value * other,
+            local_similarity_value: self.local_similarity_value * other,
+            global_similarity_value: self.global_similarity_value * other,
+            cpu_usage: self.cpu_usage * other,
         }
     }
 }

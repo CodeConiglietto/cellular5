@@ -149,10 +149,10 @@ where
             dbg!(children.len());
             dbg!(crate::node::max_node_depth());
 
-            panic!("IT HAPPENED");
+            panic!("SOMETHING'S HAPPENED");
         }
 
-        if children.is_empty() {
+        if children.is_empty() && cfg!(debug_assertions) {
             dbg!("THIS BETTER GEN A LEAF NODE OR WE HITTIN PANIC TOWN");
             dbg!(depth);
             dbg!(depth_skipped);

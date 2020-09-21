@@ -163,6 +163,7 @@ pub enum SNFloatNodes {
     },
 
     #[mutagen(gen_weight = pipe_node_weight)]
+    // #[mutagen(gen_preferred)]
     NoiseFunction { child: NodeBox<NoiseNodes> },
 
     #[mutagen(gen_weight = branch_node_weight)]
@@ -184,10 +185,12 @@ pub enum SNFloatNodes {
         child_normaliser: NodeBox<SFloatNormaliserNodes>,
     },
 
+    #[mutagen(gen_weight = pipe_node_weight)]
     ComplexReal {
         child_complex: NodeBox<SNComplexNodes>,
     },
 
+    #[mutagen(gen_weight = pipe_node_weight)]
     ComplexImaginary {
         child_complex: NodeBox<SNComplexNodes>,
     },

@@ -39,7 +39,7 @@ impl Node for NoiseNodes {
                 compute_arg.coordinate_set.y.into_inner() as f64
                     * scale_y_child.compute(compute_arg.reborrow()).into_inner() as f64,
                 compute_arg.coordinate_set.t as f64
-                    * scale_t_child.compute(compute_arg.reborrow()).into_inner() as f64,
+                    * (scale_t_child.compute(compute_arg.reborrow()).into_inner() / 4) as f64,
             ) as f32),
             // NoiseNodes::IterativeMatrixNoiseFunction {
             //     noise_function,

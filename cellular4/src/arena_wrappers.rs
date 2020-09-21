@@ -41,7 +41,7 @@ where
 
     fn update(&mut self, arg: Self::UpdateArg) {
         self.value
-            .retain(|_index, value| value.last_accessed + 1 >= arg.current_t);
+            .retain(|_index, value| value.last_accessed + 50 >= arg.current_t);
     }
 }
 impl<'a, T> UpdatableRecursively<'a> for Metarena<T>
@@ -84,6 +84,8 @@ where
                 "NODE SHOULD BE CULLED BUT IS GETTING COMPUTED {:?}",
                 std::any::type_name::<T>()
             );
+            dbg!(slot.last_accessed);
+            dbg!(arg.current_t);
         }
 
         slot.value.compute(ComArg {
@@ -126,6 +128,8 @@ where
                 .flat_map(|(d, c)| c.arena().iter().map(move |(idx, _)| (d, idx)))
                 .choose(rng)
             {
+                nodes[child_depth + 1].arena_mut()[index].last_accessed = arg.current_t;
+
                 return Self {
                     index,
                     depth: depth + child_depth + 1,
@@ -136,7 +140,9 @@ where
 
         assert_eq!(depth + nodes.len(), crate::node::max_node_depth() + 1);
 
-        let depth_skipped: usize = rng.gen_range(0, nodes.len());
+        // TODO FIX
+        //let depth_skipped: usize = rng.gen_range(0, nodes.len());
+        let depth_skipped = 0usize;
         let (current, children) = nodes[depth_skipped..].split_first_mut().unwrap();
 
         if depth > crate::node::max_node_depth()
@@ -205,6 +211,7 @@ where
         let depth_skipped = self.depth - arg.depth;
 
         if rng.gen_bool(CONSTS.node_regenerate_chance) {
+            dbg!("REGENERATING");
             *self = Self::generate_rng(
                 rng,
                 GenArg {

@@ -23,12 +23,8 @@ pub struct NodeSet {
     byte_nodes: Metarena<ByteNodes>,
     uint_nodes: Metarena<UIntNodes>,
     sint_nodes: Metarena<SIntNodes>,
-    //distance_function
-    distance_function_nodes: Metarena<DistanceFunctionNodes>,
     //matrix
     snfloat_matrix3_nodes: Metarena<SNFloatMatrix3Nodes>,
-    //noise
-    noise_nodes: Metarena<NoiseNodes>,
     //point
     snpoint_nodes: Metarena<SNPointNodes>,
     //point_set
@@ -164,16 +160,6 @@ impl Storage<ByteNodes> for NodeSet {
     }
 }
 
-impl Storage<DistanceFunctionNodes> for NodeSet {
-    fn arena(&self) -> &Arena<ArenaSlot<DistanceFunctionNodes>> {
-        &self.distance_function_nodes.value
-    }
-
-    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<DistanceFunctionNodes>> {
-        &mut self.distance_function_nodes.value
-    }
-}
-
 impl Storage<SNFloatMatrix3Nodes> for NodeSet {
     fn arena(&self) -> &Arena<ArenaSlot<SNFloatMatrix3Nodes>> {
         &self.snfloat_matrix3_nodes.value
@@ -181,16 +167,6 @@ impl Storage<SNFloatMatrix3Nodes> for NodeSet {
 
     fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<SNFloatMatrix3Nodes>> {
         &mut self.snfloat_matrix3_nodes.value
-    }
-}
-
-impl Storage<NoiseNodes> for NodeSet {
-    fn arena(&self) -> &Arena<ArenaSlot<NoiseNodes>> {
-        &self.noise_nodes.value
-    }
-
-    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<NoiseNodes>> {
-        &mut self.noise_nodes.value
     }
 }
 

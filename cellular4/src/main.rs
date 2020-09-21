@@ -502,8 +502,9 @@ impl EventHandler for MyGame {
 
             if self.tree_dirty
                 || (CONSTS.auto_mutate
-                    && (dbg!(cpu_usage >= CONSTS.auto_mutate_above_cpu_usage)
-                        || dbg!(self.average_update_stat.should_mutate())
+                    && (
+                        dbg!(cpu_usage >= CONSTS.auto_mutate_above_cpu_usage)
+                            || dbg!(self.average_update_stat.should_mutate())
                         // || dbg!(thread_rng().gen::<usize>() % CONSTS.graph_mutation_divisor) == 0
                     ))
             {
@@ -665,16 +666,15 @@ impl EventHandler for MyGame {
 
             let max_node_depth = self.nodes.len();
 
-            for i in 0..max_node_depth {
-                let (nodes_a, children) = self.nodes.split_at_mut(i + 1);
-                let current = &mut nodes_a[i];
+            for depth in 0..max_node_depth {
+                let (current, children) = self.nodes[depth..].split_first_mut().unwrap();
 
                 let mut step_upd_arg = UpdArg {
                     coordinate_set: self.next_history_step.update_coordinate,
                     history: &self.history,
                     nodes: children,
                     data: &mut self.data,
-                    depth: 0,
+                    depth,
                     current_t,
                 };
 

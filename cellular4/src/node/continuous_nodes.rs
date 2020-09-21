@@ -162,10 +162,24 @@ pub enum SNFloatNodes {
         offset_t: Option<f32>,
     },
 
-    #[mutagen(gen_weight = pipe_node_weight)]
-    // #[mutagen(gen_preferred)]
-    NoiseFunction { child: NodeBox<NoiseNodes> },
+    #[mutagen(gen_weight = branch_node_weight)]
+    NoiseFunction {
+        noise_function: NoiseFunctions,
+        scale_x_child: NodeBox<ByteNodes>,
+        scale_y_child: NodeBox<ByteNodes>,
+        scale_t_child: NodeBox<ByteNodes>,
+    },
 
+    // IterativeMatrixNoiseFunction {//TODO: finish
+    //     noise_function:NodeBox<UNFloatNodes>,
+    //     child_matrix:NodeBox<SNFloatMatrix3Nodes>,
+    //     iterated_matrix: SNFloatMatrix3,
+    //     #[mutagen(skip)]
+    //     offset_xy: Point2<f32>,
+    //     child_offset_t:NodeBox<SNFloatNodes>,
+    //     #[mutagen(skip)]
+    //     t_offset: f32,
+    // },
     #[mutagen(gen_weight = branch_node_weight)]
     SubDivide {
         child_a: NodeBox<SNFloatNodes>,
@@ -267,7 +281,51 @@ impl Node for SNFloatNodes {
                 coordinate_set: child_state.compute(compute_arg.reborrow()),
                 ..compute_arg.reborrow()
             }),
-            NoiseFunction { child } => child.compute(compute_arg.reborrow()),
+
+            NoiseFunction {
+                noise_function,
+                scale_x_child,
+                scale_y_child,
+                scale_t_child,
+            } => SNFloat::new_clamped(noise_function.compute(
+                compute_arg.coordinate_set.x.into_inner() as f64
+                    * scale_x_child.compute(compute_arg.reborrow()).into_inner() as f64,
+                compute_arg.coordinate_set.y.into_inner() as f64
+                    * scale_y_child.compute(compute_arg.reborrow()).into_inner() as f64,
+                compute_arg.coordinate_set.t as f64
+                    * (scale_t_child.compute(compute_arg.reborrow()).into_inner() / 4) as f64,
+            ) as f32),
+            // IterativeMatrixNoiseFunction {
+            //     noise_function,
+            //     child_matrix,
+            //     iterated_matrix,
+            //     child_offset_xy,
+            //     child_offset_t,
+            //     child_scale_t,
+            // } =>
+            // {
+            //     let transformed_point = Point2::from_homogeneous(child_offset_xy.to_homogeneous() * child_matrix.into_inner());
+
+            //     SNFloat::new_clamped(
+            //         noise_function.compute(
+            //             compute_arg.coordinate_set.x.into_inner() as f64
+            //                 * scale_x_child
+            //                     .compute(compute_arg.reborrow())
+            //                     .into_inner()
+            //                     .powf(2.0) as f64
+            //                 * CONSTS.noise_x_scale_factor,
+            //             compute_arg.coordinate_set.y.into_inner() as f64
+            //                 * scale_y_child
+            //                     .compute(compute_arg.reborrow())
+            //                     .into_inner()
+            //                     .powf(2.0) as f64
+            //                 * CONSTS.noise_y_scale_factor,
+            //             compute_arg.coordinate_set.t as f64
+            //                 * scale_t_child.compute(compute_arg.reborrow()).into_inner() as f64
+            //                 * CONSTS.noise_t_scale_factor,
+            //         ) as f32,
+            //     )
+            // }
             SubDivide { child_a, child_b } => child_a
                 .compute(compute_arg.reborrow())
                 .subdivide(child_b.compute(compute_arg.reborrow())),
@@ -378,9 +436,13 @@ pub enum UNFloatNodes {
         child_a: NodeBox<UNFloatNodes>,
         child_b: NodeBox<NibbleNodes>,
     },
-    #[mutagen(gen_weight = pipe_node_weight)]
-    Distance {
-        child_function: NodeBox<DistanceFunctionNodes>,
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    DistanceFunction {
+        value: DistanceFunction,
+        child_a: NodeBox<SNPointNodes>,
+        child_b: NodeBox<SNPointNodes>,
+        child_normaliser: NodeBox<UFloatNormaliserNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     Average {
@@ -612,7 +674,18 @@ impl Node for UNFloatNodes {
             SubDivideTriangle { child_a, child_b } => child_a
                 .compute(compute_arg.reborrow())
                 .subdivide_triangle(child_b.compute(compute_arg.reborrow())),
-            Distance { child_function } => child_function.compute(compute_arg.reborrow()),
+
+            DistanceFunction {
+                value,
+                child_a,
+                child_b,
+                child_normaliser,
+            } => value.calculate_normalised(
+                child_a.compute(compute_arg.reborrow()),
+                child_b.compute(compute_arg.reborrow()),
+                child_normaliser.compute(compute_arg.reborrow()),
+            ),
+
             Average { child_a, child_b } => UNFloat::new(
                 (child_a.compute(compute_arg.reborrow()).into_inner()
                     + child_b.compute(compute_arg.reborrow()).into_inner())

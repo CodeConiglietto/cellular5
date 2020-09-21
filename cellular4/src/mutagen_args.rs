@@ -29,7 +29,7 @@ impl<'a> mutagen::State for GenArg<'a> {}
 
 impl<'a> MutagenArg for GenArg<'a> {
     fn depth(&self) -> usize {
-        self.depth - 1 // Subtract 1 since NodeBox adds 1 earlier than the mutagen code will see it
+        self.depth.saturating_sub(1) // Subtract 1 since NodeBox adds 1 earlier than the mutagen code will see it
     }
 }
 
@@ -67,7 +67,7 @@ impl<'a> mutagen::State for MutArg<'a> {}
 
 impl<'a> MutagenArg for MutArg<'a> {
     fn depth(&self) -> usize {
-        self.depth - 1 // Subtract 1 since NodeBox adds 1 earlier than the mutagen code will see it
+        self.depth.saturating_sub(1) // Subtract 1 since NodeBox adds 1 earlier than the mutagen code will see it
     }
 }
 
@@ -109,7 +109,7 @@ impl<'a> mutagen::State for ComArg<'a> {}
 
 impl<'a> MutagenArg for ComArg<'a> {
     fn depth(&self) -> usize {
-        self.depth - 1 // Subtract 1 since NodeBox adds 1 earlier than the mutagen code will see it
+        self.depth.saturating_sub(1) // Subtract 1 since NodeBox adds 1 earlier than the mutagen code will see it
     }
 }
 
@@ -153,7 +153,7 @@ impl<'a> mutagen::State for UpdArg<'a> {}
 
 impl<'a> MutagenArg for UpdArg<'a> {
     fn depth(&self) -> usize {
-        self.depth - 1 // Subtract 1 since NodeBox adds 1 earlier than the mutagen code will see it
+        self.depth.saturating_sub(1) // Subtract 1 since NodeBox adds 1 earlier than the mutagen code will see it
     }
 }
 

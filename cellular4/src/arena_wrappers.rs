@@ -79,7 +79,7 @@ where
 
         let slot = &current.arena()[self.index];
 
-        if slot.last_accessed + 1 < arg.current_t {
+        if slot.last_accessed + 1 < arg.current_t && cfg!(debug_assertions) {
             warn!(
                 "NODE SHOULD BE CULLED BUT IS GETTING COMPUTED {:?}",
                 std::any::type_name::<T>()

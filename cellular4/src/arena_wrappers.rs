@@ -1,11 +1,13 @@
-use rand::prelude::*;
 use std::marker::PhantomData;
 
-use crate::{constants::*, mutagen_args::*, node::*, node_set::*};
-
 use generational_arena::*;
+use log::warn;
 use mutagen::*;
+use rand::prelude::*;
 use rand::seq::IteratorRandom;
+use serde::{Deserialize, Serialize};
+
+use crate::{constants::*, mutagen_args::*, node::*, node_set::*};
 
 pub trait Storage<T> {
     fn arena(&self) -> &Arena<ArenaSlot<T>>;
@@ -19,7 +21,7 @@ pub struct Metarena<T> {
 
 impl<T> Metarena<T> {
     pub fn new() -> Metarena<T> {
-        Metarena {
+        Self {
             value: Arena::new(),
         }
     }
@@ -37,17 +39,17 @@ where
 {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: State, arg: Self::UpdateArg) {
+    fn update(&mut self, arg: Self::UpdateArg) {
         self.value
-            .retain(|_index, value| value.last_accessed == arg.current_t);
+            .retain(|_index, value| value.last_accessed + 1 >= arg.current_t);
     }
 }
 impl<'a, T> UpdatableRecursively<'a> for Metarena<T>
 where
     T: Updatable<'a, UpdateArg = UpdArg<'a>>,
 {
-    fn update_recursively(&mut self, state: State, arg: Self::UpdateArg) {
-        self.update(state, arg)
+    fn update_recursively(&mut self, arg: Self::UpdateArg) {
+        self.update(arg)
     }
 }
 
@@ -57,7 +59,7 @@ pub struct ArenaSlot<T> {
     last_accessed: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct NodeBox<T> {
     index: Index,
     depth: usize,
@@ -71,10 +73,27 @@ where
 {
     type Output = T::Output;
 
-    fn compute(&self, mut compute_arg: ComArg) -> Self::Output {
-        compute_arg.nodes[self.depth].arena()[self.index]
-            .value
-            .compute(compute_arg.reborrow())
+    fn compute(&self, arg: ComArg) -> Self::Output {
+        let depth_skipped = self.depth - arg.depth;
+        let (current, children) = arg.nodes[depth_skipped..].split_first().unwrap();
+
+        let slot = &current.arena()[self.index];
+
+        if slot.last_accessed + 1 < arg.current_t {
+            warn!(
+                "NODE SHOULD BE CULLED BUT IS GETTING COMPUTED {:?}",
+                std::any::type_name::<T>()
+            );
+        }
+
+        slot.value.compute(ComArg {
+            nodes: children,
+            data: arg.data,
+            depth: self.depth + 1,
+            coordinate_set: arg.coordinate_set,
+            history: arg.history,
+            current_t: arg.current_t,
+        })
     }
 }
 
@@ -85,11 +104,7 @@ where
 {
     type GenArg = GenArg<'a>;
 
-    fn generate_rng<R: Rng + ?Sized>(
-        rng: &mut R,
-        state: mutagen::State,
-        arg: Self::GenArg,
-    ) -> Self {
+    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, arg: Self::GenArg) -> Self {
         let GenArg {
             nodes,
             data,
@@ -97,40 +112,83 @@ where
             current_t,
         } = arg;
 
-        let (current, children) = nodes.split_at_mut(1);
-        let current = &mut current[0];
+        if nodes.is_empty() {
+            dbg!(depth);
+            panic!("No nodesets left to allocate to! Is a node weight mislabeled?");
+        }
 
-        let (depth, index) = if rng.gen_bool(CONSTS.graph_convergence) {
-            children
+        let nodes_len = nodes.len();
+
+        if rng.gen_bool(CONSTS.graph_convergence) {
+            if let Some((child_depth, index)) = nodes[1..]
                 .iter()
                 .enumerate()
-                .flat_map(|(d, c)| c.arena().iter().map(move |(idx, _)| (depth + d, idx)))
+                .flat_map(|(d, c)| c.arena().iter().map(move |(idx, _)| (d, idx)))
                 .choose(rng)
-        } else {
-            None
+            {
+                return Self {
+                    index,
+                    depth: depth + child_depth + 1,
+                    _marker: PhantomData,
+                };
+            }
         }
-        .unwrap_or_else(move || {
-            (
-                depth,
-                current.arena_mut().insert(ArenaSlot {
-                    value: T::generate_rng(
-                        rng,
-                        state,
-                        GenArg {
-                            nodes: children,
-                            data,
-                            depth: depth + 1,
-                            current_t,
-                        },
-                    ),
-                    last_accessed: current_t,
-                }),
-            )
+
+        assert_eq!(depth + nodes.len(), crate::node::max_node_depth() + 1);
+
+        let depth_skipped: usize = rng.gen_range(0, nodes.len());
+        let (current, children) = nodes[depth_skipped..].split_first_mut().unwrap();
+
+        if depth > crate::node::max_node_depth()
+            || depth + depth_skipped > crate::node::max_node_depth()
+            || depth + depth_skipped + 1 + children.len() != crate::node::max_node_depth() + 1
+        {
+            dbg!(depth);
+            dbg!(depth_skipped);
+            dbg!(nodes_len);
+            dbg!(children.len());
+            dbg!(crate::node::max_node_depth());
+
+            panic!("IT HAPPENED");
+        }
+
+        if children.is_empty() {
+            dbg!("THIS BETTER GEN A LEAF NODE OR WE HITTIN PANIC TOWN");
+            dbg!(depth);
+            dbg!(depth_skipped);
+            dbg!(crate::node::max_node_depth());
+            dbg!(std::any::type_name::<T>());
+
+            let test_arg = GenArg {
+                nodes: children,
+                data,
+                depth: depth + depth_skipped + 1,
+                current_t,
+            };
+
+            dbg!(crate::node::mutagen_functions::leaf_node_weight(&test_arg));
+            dbg!(crate::node::mutagen_functions::pipe_node_weight(&test_arg));
+            dbg!(crate::node::mutagen_functions::branch_node_weight(
+                &test_arg
+            ));
+        }
+
+        let index = current.arena_mut().insert(ArenaSlot {
+            value: T::generate_rng(
+                rng,
+                GenArg {
+                    nodes: children,
+                    data,
+                    depth: depth + depth_skipped + 1,
+                    current_t,
+                },
+            ),
+            last_accessed: current_t,
         });
 
         Self {
             index,
-            depth,
+            depth: depth + depth_skipped,
             _marker: PhantomData,
         }
     }
@@ -143,25 +201,28 @@ where
 {
     type MutArg = MutArg<'a>;
 
-    fn mutate_rng<R: Rng + ?Sized>(
-        &mut self,
-        rng: &mut R,
-        state: mutagen::State,
-        arg: Self::MutArg,
-    ) {
+    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, arg: Self::MutArg) {
+        let depth_skipped = self.depth - arg.depth;
+
         if rng.gen_bool(CONSTS.node_regenerate_chance) {
-            *self = Self::generate_rng(rng, state, arg.into());
+            *self = Self::generate_rng(
+                rng,
+                GenArg {
+                    nodes: &mut arg.nodes[depth_skipped..],
+                    data: arg.data,
+                    depth: self.depth,
+                    current_t: arg.current_t,
+                },
+            );
         } else {
-            let (current, children) = arg.nodes.split_at_mut(1);
-            let current = &mut current[0];
+            let (current, children) = arg.nodes[depth_skipped..].split_first_mut().unwrap();
 
             current.arena_mut()[self.index].value.mutate_rng(
                 rng,
-                state,
                 MutArg {
                     nodes: children,
                     data: arg.data,
-                    depth: arg.depth + 1,
+                    depth: self.depth + 1,
                     current_t: arg.current_t,
                 },
             );
@@ -176,25 +237,22 @@ where
 {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, state: mutagen::State, arg: Self::UpdateArg) {
-        let (current, children) = arg.nodes.split_at_mut(1);
-        let current = &mut current[0];
+    fn update(&mut self, arg: Self::UpdateArg) {
+        let depth_skipped = self.depth - arg.depth;
+        let (current, children) = arg.nodes[depth_skipped..].split_first_mut().unwrap();
 
         let node = &mut current.arena_mut()[self.index];
 
         if node.last_accessed != arg.current_t {
             node.last_accessed = arg.current_t;
-            node.value.update(
-                state,
-                UpdArg {
-                    nodes: children,
-                    data: arg.data,
-                    depth: arg.depth + 1,
-                    coordinate_set: arg.coordinate_set,
-                    history: arg.history,
-                    current_t: arg.current_t,
-                },
-            );
+            node.value.update(UpdArg {
+                nodes: children,
+                data: arg.data,
+                depth: self.depth + 1,
+                coordinate_set: arg.coordinate_set,
+                history: arg.history,
+                current_t: arg.current_t,
+            });
         }
     }
 }
@@ -204,25 +262,22 @@ where
     NodeSet: Storage<T>,
     T: UpdatableRecursively<'a, UpdateArg = UpdArg<'a>>,
 {
-    fn update_recursively(&mut self, state: mutagen::State, arg: Self::UpdateArg) {
-        let (current, children) = arg.nodes.split_at_mut(1);
-        let current = &mut current[0];
+    fn update_recursively(&mut self, arg: Self::UpdateArg) {
+        let depth_skipped = self.depth - arg.depth;
+        let (current, children) = arg.nodes[depth_skipped..].split_first_mut().unwrap();
 
         let node = &mut current.arena_mut()[self.index];
 
         if node.last_accessed != arg.current_t {
             node.last_accessed = arg.current_t;
-            node.value.update_recursively(
-                state,
-                UpdArg {
-                    nodes: children,
-                    data: arg.data,
-                    depth: arg.depth + 1,
-                    coordinate_set: arg.coordinate_set,
-                    history: arg.history,
-                    current_t: arg.current_t,
-                },
-            );
+            node.value.update_recursively(UpdArg {
+                nodes: children,
+                data: arg.data,
+                depth: self.depth + 1,
+                coordinate_set: arg.coordinate_set,
+                history: arg.history,
+                current_t: arg.current_t,
+            });
         }
     }
 }

@@ -118,7 +118,7 @@ struct RenderNodes {
 impl<'a> Updatable<'a> for RenderNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update(&mut self, _arg: UpdArg<'a>) {}
 }
 
 #[derive(Debug, Generatable, Mutatable, UpdatableRecursively)]
@@ -200,7 +200,7 @@ struct NodeTree {
 impl<'a> Updatable<'a> for NodeTree {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update(&mut self, _arg: UpdArg<'a>) {}
 }
 
 struct MyGame {
@@ -243,10 +243,7 @@ impl MyGame {
             CONSTS.cell_array_history_length,
         );
 
-        let mut nodes: Vec<_> = (0..CONSTS
-            .max_branch_depth
-            .max(CONSTS.max_pipe_depth.max(CONSTS.max_leaf_depth))
-            + 1)
+        let mut nodes: Vec<_> = (0..=node::max_node_depth())
             .map(|_| NodeSet::new())
             .collect();
         let mut data = DataSet::new();
@@ -291,7 +288,6 @@ impl MyGame {
 
             node_tree: Generatable::generate_rng(
                 &mut rng,
-                mutagen::State::default(),
                 GenArg {
                     nodes: &mut nodes,
                     data: &mut data,
@@ -404,6 +400,7 @@ impl EventHandler for MyGame {
                 root_node.compute(ComArg {
                     nodes,
                     data,
+                    current_t,
                     coordinate_set: CoordinateSet {
                         x: UNFloat::new(x as f32 / CONSTS.cell_array_width as f32).to_signed(),
                         y: UNFloat::new(
@@ -512,7 +509,6 @@ impl EventHandler for MyGame {
                 info!("====TIC: {} MUTATING TREE====", self.current_t);
                 self.node_tree.root_node.mutate_rng(
                     &mut self.rng,
-                    mutagen::State::default(),
                     MutArg {
                         nodes: &mut self.nodes,
                         data: &mut self.data,
@@ -522,7 +518,6 @@ impl EventHandler for MyGame {
                 );
                 self.node_tree.render_nodes.mutate_rng(
                     &mut self.rng,
-                    mutagen::State::default(),
                     MutArg {
                         nodes: &mut self.nodes,
                         data: &mut self.data,
@@ -665,8 +660,7 @@ impl EventHandler for MyGame {
             self.next_history_step.computed_texture =
                 compute_texture(ctx, self.next_history_step.cell_array.view());
 
-            self.node_tree
-                .update_recursively(mutagen::State::default(), step_upd_arg.reborrow());
+            self.node_tree.update_recursively(step_upd_arg.reborrow());
 
             let max_node_depth = self.nodes.len();
 
@@ -683,7 +677,7 @@ impl EventHandler for MyGame {
                     current_t,
                 };
 
-                current.update_recursively(mutagen::State::default(), step_upd_arg.reborrow());
+                current.update_recursively(step_upd_arg.reborrow());
             }
 
             // Rotate the buffers by swapping

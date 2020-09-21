@@ -44,7 +44,7 @@ impl Node for SFloatNormaliserNodes {
 impl<'a> Updatable<'a> for SFloatNormaliserNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, mut _arg: UpdArg<'a>) {}
+    fn update(&mut self, mut _arg: UpdArg<'a>) {}
 }
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Serialize, Deserialize, Debug)]
@@ -88,5 +88,5 @@ impl Node for UFloatNormaliserNodes {
 impl<'a> Updatable<'a> for UFloatNormaliserNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, mut _arg: UpdArg<'a>) {}
+    fn update(&mut self, mut _arg: UpdArg<'a>) {}
 }

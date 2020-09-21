@@ -13,10 +13,10 @@ pub enum AngleNodes {
     FromGametic,
 
     #[mutagen(gen_weight = pipe_node_weight)]
-    ArcSin { theta: Box<SNFloatNodes> },
+    ArcSin { theta: NodeBox<SNFloatNodes> },
 
     #[mutagen(gen_weight = pipe_node_weight)]
-    ArcCos { theta: Box<SNFloatNodes> },
+    ArcCos { theta: NodeBox<SNFloatNodes> },
 
     // #[mutagen(gen_weight = leaf_node_weight)]
     // #[mutagen(mut_reroll = 0.9)]
@@ -26,27 +26,27 @@ pub enum AngleNodes {
     #[mutagen(gen_weight = leaf_node_weight)]
     Constant { value: Angle },
     #[mutagen(gen_weight = pipe_node_weight)]
-    FromSNPoint { child: Box<SNPointNodes> },
+    FromSNPoint { child: NodeBox<SNPointNodes> },
 
     #[mutagen(gen_weight = pipe_node_weight)]
-    FromSNComplex { child: Box<SNComplexNodes> },
+    FromSNComplex { child: NodeBox<SNComplexNodes> },
 
     #[mutagen(gen_weight = pipe_node_weight)]
-    FromSNFloat { child: Box<SNFloatNodes> },
+    FromSNFloat { child: NodeBox<SNFloatNodes> },
 
     #[mutagen(gen_weight = pipe_node_weight)]
-    FromUNFloat { child: Box<UNFloatNodes> },
+    FromUNFloat { child: NodeBox<UNFloatNodes> },
 
     #[mutagen(gen_weight = branch_node_weight)]
     ModifyState {
-        child: Box<AngleNodes>,
-        child_state: Box<CoordMapNodes>,
+        child: NodeBox<AngleNodes>,
+        child_state: NodeBox<CoordMapNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     IfElse {
-        predicate: Box<BooleanNodes>,
-        child_a: Box<AngleNodes>,
-        child_b: Box<AngleNodes>,
+        predicate: NodeBox<BooleanNodes>,
+        child_a: NodeBox<AngleNodes>,
+        child_b: NodeBox<AngleNodes>,
     },
 }
 
@@ -96,54 +96,40 @@ impl Node for AngleNodes {
 impl<'a> Updatable<'a> for AngleNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update(&mut self, _arg: UpdArg<'a>) {}
 }
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum SNFloatNodes {
     #[mutagen(gen_weight = pipe_node_weight)]
-    Sin {
-        child: Box<AngleNodes>,
-    },
+    Sin { child: NodeBox<AngleNodes> },
 
     #[mutagen(gen_weight = pipe_node_weight)]
-    Cos {
-        child: Box<AngleNodes>,
-    },
+    Cos { child: NodeBox<AngleNodes> },
 
     // #[mutagen(gen_weight = leaf_node_weight)]
     // Random,
     #[mutagen(gen_weight = leaf_node_weight)]
-    Constant {
-        value: SNFloat,
-    },
+    Constant { value: SNFloat },
 
     #[mutagen(gen_weight = pipe_node_weight)]
-    FromAngle {
-        child: Box<AngleNodes>,
-    },
+    FromAngle { child: NodeBox<AngleNodes> },
 
     #[mutagen(gen_weight = pipe_node_weight)]
-    FromUNFloat {
-        child: Box<UNFloatNodes>,
-    },
+    FromUNFloat { child: NodeBox<UNFloatNodes> },
 
     #[mutagen(gen_weight = branch_node_weight)]
     Multiply {
-        child_a: Box<SNFloatNodes>,
-        child_b: Box<SNFloatNodes>,
+        child_a: NodeBox<SNFloatNodes>,
+        child_b: NodeBox<SNFloatNodes>,
     },
 
     #[mutagen(gen_weight = pipe_node_weight)]
-    Abs {
-        child: Box<SNFloatNodes>,
-    },
+    Abs { child: NodeBox<SNFloatNodes> },
 
     #[mutagen(gen_weight = pipe_node_weight)]
-    Invert {
-        child: Box<SNFloatNodes>,
-    },
+    Invert { child: NodeBox<SNFloatNodes> },
 
     #[mutagen(gen_weight = leaf_node_weight)]
     XRatio,
@@ -152,20 +138,18 @@ pub enum SNFloatNodes {
     YRatio,
 
     #[mutagen(gen_weight = pipe_node_weight)]
-    Relu {
-        child: Box<SNFloatNodes>,
-    },
+    Relu { child: NodeBox<SNFloatNodes> },
 
     #[mutagen(gen_weight = branch_node_weight)]
     Elu {
-        child_alpha: Box<UNFloatNodes>,
-        child: Box<SNFloatNodes>,
+        child_alpha: NodeBox<UNFloatNodes>,
+        child: NodeBox<SNFloatNodes>,
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
     LeakyRelu {
-        child_alpha: Box<UNFloatNodes>,
-        child: Box<SNFloatNodes>,
+        child_alpha: NodeBox<UNFloatNodes>,
+        child: NodeBox<SNFloatNodes>,
     },
 
     #[mutagen(gen_weight = leaf_node_weight)]
@@ -173,48 +157,46 @@ pub enum SNFloatNodes {
 
     #[mutagen(gen_weight = pipe_node_weight)]
     FromGameticNormalised {
-        child_normaliser: Box<SFloatNormaliserNodes>,
+        child_normaliser: NodeBox<SFloatNormaliserNodes>,
         #[mutagen(skip)]
         offset_t: Option<f32>,
     },
 
     #[mutagen(gen_weight = pipe_node_weight)]
-    NoiseFunction {
-        child: Box<NoiseNodes>,
-    },
+    NoiseFunction { child: NodeBox<NoiseNodes> },
 
     #[mutagen(gen_weight = branch_node_weight)]
     SubDivide {
-        child_a: Box<SNFloatNodes>,
-        child_b: Box<NibbleNodes>,
+        child_a: NodeBox<SNFloatNodes>,
+        child_b: NodeBox<NibbleNodes>,
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
     ModifyState {
-        child: Box<SNFloatNodes>,
-        child_state: Box<CoordMapNodes>,
+        child: NodeBox<SNFloatNodes>,
+        child_state: NodeBox<CoordMapNodes>,
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
     NormalisedAdd {
-        child_a: Box<SNFloatNodes>,
-        child_b: Box<SNFloatNodes>,
-        child_normaliser: Box<SFloatNormaliserNodes>,
+        child_a: NodeBox<SNFloatNodes>,
+        child_b: NodeBox<SNFloatNodes>,
+        child_normaliser: NodeBox<SFloatNormaliserNodes>,
     },
 
     ComplexReal {
-        child_complex: Box<SNComplexNodes>,
+        child_complex: NodeBox<SNComplexNodes>,
     },
 
     ComplexImaginary {
-        child_complex: Box<SNComplexNodes>,
+        child_complex: NodeBox<SNComplexNodes>,
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
     IfElse {
-        predicate: Box<BooleanNodes>,
-        child_a: Box<SNFloatNodes>,
-        child_b: Box<SNFloatNodes>,
+        predicate: NodeBox<BooleanNodes>,
+        child_a: NodeBox<SNFloatNodes>,
+        child_b: NodeBox<SNFloatNodes>,
     },
 }
 
@@ -314,7 +296,7 @@ impl Node for SNFloatNodes {
 impl<'a> Updatable<'a> for SNFloatNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update(&mut self, _arg: UpdArg<'a>) {}
 }
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]
@@ -325,106 +307,106 @@ pub enum UNFloatNodes {
     #[mutagen(gen_weight = leaf_node_weight)]
     Constant { value: UNFloat },
     #[mutagen(gen_weight = pipe_node_weight)]
-    FromAngle { child: Box<AngleNodes> },
+    FromAngle { child: NodeBox<AngleNodes> },
     #[mutagen(gen_weight = pipe_node_weight)]
-    FromSNFloat { child: Box<SNFloatNodes> },
+    FromSNFloat { child: NodeBox<SNFloatNodes> },
     #[mutagen(gen_weight = pipe_node_weight)]
-    AbsSNFloat { child: Box<SNFloatNodes> },
+    AbsSNFloat { child: NodeBox<SNFloatNodes> },
     #[mutagen(gen_weight = pipe_node_weight)]
-    SquareSNFloat { child: Box<SNFloatNodes> },
+    SquareSNFloat { child: NodeBox<SNFloatNodes> },
     #[mutagen(gen_weight = branch_node_weight)]
     Multiply {
-        child_a: Box<UNFloatNodes>,
-        child_b: Box<UNFloatNodes>,
+        child_a: NodeBox<UNFloatNodes>,
+        child_b: NodeBox<UNFloatNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     CircularAdd {
-        child_a: Box<UNFloatNodes>,
-        child_b: Box<UNFloatNodes>,
+        child_a: NodeBox<UNFloatNodes>,
+        child_b: NodeBox<UNFloatNodes>,
     },
     #[mutagen(gen_weight = pipe_node_weight)]
-    InvertNormalised { child: Box<UNFloatNodes> },
+    InvertNormalised { child: NodeBox<UNFloatNodes> },
     #[mutagen(gen_weight = branch_node_weight)]
     ColorAverage {
-        child: Box<FloatColorNodes>,
-        child_r: Box<BooleanNodes>,
-        child_g: Box<BooleanNodes>,
-        child_b: Box<BooleanNodes>,
-        child_a: Box<BooleanNodes>,
+        child: NodeBox<FloatColorNodes>,
+        child_r: NodeBox<BooleanNodes>,
+        child_g: NodeBox<BooleanNodes>,
+        child_b: NodeBox<BooleanNodes>,
+        child_a: NodeBox<BooleanNodes>,
     },
     #[mutagen(gen_weight = pipe_node_weight)]
-    ColorComponentH { child: Box<FloatColorNodes> },
+    ColorComponentH { child: NodeBox<FloatColorNodes> },
     #[mutagen(gen_weight = leaf_node_weight)]
     FromGametic,
     #[mutagen(gen_weight = pipe_node_weight)]
     FromGameticNormalised {
-        child_normaliser: Box<UFloatNormaliserNodes>,
+        child_normaliser: NodeBox<UFloatNormaliserNodes>,
         #[mutagen(skip)]
         offset_t: Option<f32>,
     },
     #[mutagen(gen_weight = pipe_node_weight)]
     EscapeTimeSystem {
-        child_power: Box<NibbleNodes>,
-        child_power_ratio: Box<UNFloatNodes>,
-        child_offset: Box<SNPointNodes>,
-        child_scale: Box<SNPointNodes>,
-        child_iterations: Box<ByteNodes>,
-        child_exponentiate: Box<BooleanNodes>,
+        child_power: NodeBox<NibbleNodes>,
+        child_power_ratio: NodeBox<UNFloatNodes>,
+        child_offset: NodeBox<SNPointNodes>,
+        child_scale: NodeBox<SNPointNodes>,
+        child_iterations: NodeBox<ByteNodes>,
+        child_exponentiate: NodeBox<BooleanNodes>,
         child_distance_function: DistanceFunction,
-        child_exit_normaliser: Box<UFloatNormaliserNodes>,
+        child_exit_normaliser: NodeBox<UFloatNormaliserNodes>,
     },
     #[mutagen(gen_weight = pipe_node_weight)]
     IterativeMatrix {
-        child_matrix: Box<SNFloatMatrix3Nodes>,
-        child_iterations: Box<ByteNodes>,
-        child_exit_condition: Box<BooleanNodes>,
-        child_normaliser: Box<SFloatNormaliserNodes>,
-        child_exit_normaliser: Box<UFloatNormaliserNodes>,
+        child_matrix: NodeBox<SNFloatMatrix3Nodes>,
+        child_iterations: NodeBox<ByteNodes>,
+        child_exit_condition: NodeBox<BooleanNodes>,
+        child_normaliser: NodeBox<SFloatNormaliserNodes>,
+        child_exit_normaliser: NodeBox<UFloatNormaliserNodes>,
     },
     // #[mutagen(gen_weight = leaf_node_weight)]
     // LastRotation,
     #[mutagen(gen_weight = branch_node_weight)]
     SubDivideSawtooth {
-        child_a: Box<UNFloatNodes>,
-        child_b: Box<NibbleNodes>,
+        child_a: NodeBox<UNFloatNodes>,
+        child_b: NodeBox<NibbleNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     SubDivideTriangle {
-        child_a: Box<UNFloatNodes>,
-        child_b: Box<NibbleNodes>,
+        child_a: NodeBox<UNFloatNodes>,
+        child_b: NodeBox<NibbleNodes>,
     },
     #[mutagen(gen_weight = pipe_node_weight)]
     Distance {
-        child_function: Box<DistanceFunctionNodes>,
+        child_function: NodeBox<DistanceFunctionNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     Average {
-        child_a: Box<UNFloatNodes>,
-        child_b: Box<UNFloatNodes>,
+        child_a: NodeBox<UNFloatNodes>,
+        child_b: NodeBox<UNFloatNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     ModifyState {
-        child: Box<UNFloatNodes>,
-        child_state: Box<CoordMapNodes>,
+        child: NodeBox<UNFloatNodes>,
+        child_state: NodeBox<CoordMapNodes>,
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
     SawtoothAdd {
-        child_a: Box<UNFloatNodes>,
-        child_b: Box<UNFloatNodes>,
+        child_a: NodeBox<UNFloatNodes>,
+        child_b: NodeBox<UNFloatNodes>,
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
     TriangleAdd {
-        child_a: Box<UNFloatNodes>,
-        child_b: Box<UNFloatNodes>,
+        child_a: NodeBox<UNFloatNodes>,
+        child_b: NodeBox<UNFloatNodes>,
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
     IfElse {
-        predicate: Box<BooleanNodes>,
-        child_a: Box<UNFloatNodes>,
-        child_b: Box<UNFloatNodes>,
+        predicate: NodeBox<BooleanNodes>,
+        child_a: NodeBox<UNFloatNodes>,
+        child_b: NodeBox<UNFloatNodes>,
     },
 }
 
@@ -661,5 +643,5 @@ impl Node for UNFloatNodes {
 impl<'a> Updatable<'a> for UNFloatNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update(&mut self, _arg: UpdArg<'a>) {}
 }

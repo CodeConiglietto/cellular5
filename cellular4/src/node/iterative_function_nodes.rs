@@ -12,25 +12,27 @@ pub enum IterativeFunctionNodes {
     #[mutagen(gen_weight = leaf_node_weight)]
     Constant { value: IterativeResult },
     #[mutagen(gen_weight = pipe_node_weight)]
-    Invert { child: Box<IterativeFunctionNodes> },
+    Invert {
+        child: NodeBox<IterativeFunctionNodes>,
+    },
     #[mutagen(gen_weight = branch_node_weight)]
     EscapeTimeSystem {
-        child_power: Box<NibbleNodes>,
-        child_power_ratio: Box<UNFloatNodes>,
-        child_offset: Box<SNPointNodes>,
-        child_scale: Box<SNPointNodes>,
-        child_iterations: Box<ByteNodes>,
-        child_exponentiate: Box<BooleanNodes>,
+        child_power: NodeBox<NibbleNodes>,
+        child_power_ratio: NodeBox<UNFloatNodes>,
+        child_offset: NodeBox<SNPointNodes>,
+        child_scale: NodeBox<SNPointNodes>,
+        child_iterations: NodeBox<ByteNodes>,
+        child_exponentiate: NodeBox<BooleanNodes>,
         child_distance_function: DistanceFunction,
-        child_exit_normaliser: Box<SFloatNormaliserNodes>,
+        child_exit_normaliser: NodeBox<SFloatNormaliserNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     IterativeMatrix {
-        child_matrix: Box<SNFloatMatrix3Nodes>,
-        child_iterations: Box<ByteNodes>,
-        child_exit_condition: Box<BooleanNodes>,
-        child_normaliser: Box<SFloatNormaliserNodes>,
-        child_exit_normaliser: Box<SFloatNormaliserNodes>,
+        child_matrix: NodeBox<SNFloatMatrix3Nodes>,
+        child_iterations: NodeBox<ByteNodes>,
+        child_exit_condition: NodeBox<BooleanNodes>,
+        child_normaliser: NodeBox<SFloatNormaliserNodes>,
+        child_exit_normaliser: NodeBox<SFloatNormaliserNodes>,
     },
 }
 
@@ -176,5 +178,5 @@ impl Node for IterativeFunctionNodes {
 impl<'a> Updatable<'a> for IterativeFunctionNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update(&mut self, _arg: UpdArg<'a>) {}
 }

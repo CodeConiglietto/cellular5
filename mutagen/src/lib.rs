@@ -57,14 +57,6 @@
 //!   Boo(NotGeneratable),
 //! }
 //!
-//! fn depth_at_least_2(state: &mutagen::State) -> f64 {
-//!   if state.depth >= 2 {
-//!     1.0
-//!   } else {
-//!     0.0
-//!   }
-//! }
-//!
 //! #[derive(Mutatable)]
 //! #[mutagen(mut_arg = type ())]
 //! struct Boz {
@@ -125,18 +117,22 @@ use std::{ops::DerefMut, rc::Rc, sync::Arc};
 
 use rand::Rng;
 
-#[derive(Clone, Copy, Default)]
-pub struct State {
-    pub depth: usize,
-}
+/// A trait denoting that the type may be used as an argument to the other various mutagen traits
+/// You should also implement [crate::Reborrow]
+pub trait State: Sized {
+    /// This function will be called in the derived impls whenever they recurse down a struct or struct enum
+    /// The default implementation does nothing - types can implement this.
+    fn deepen(&mut self) {}
 
-impl State {
-    pub fn deepen(self) -> Self {
-        Self {
-            depth: self.depth + 1,
-        }
+    /// Trivial utility method that applies `deepen()` and returns self.
+    /// Types shouldn't need to implement this
+    fn deepened(mut self) -> Self {
+        self.deepen();
+        self
     }
 }
+
+impl State for () {}
 
 /// A trait denoting that the type may be randomly generated
 ///
@@ -146,34 +142,34 @@ pub trait Generatable<'a>: Sized {
 
     /// Convenience shorthand for `Self::generate_rng(&mut rand::thread_rng())`
     fn generate(arg: Self::GenArg) -> Self {
-        Self::generate_rng(&mut rand::thread_rng(), State::default(), arg)
+        Self::generate_rng(&mut rand::thread_rng(), arg)
     }
 
     /// The main required method for generation
-    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, state: State, arg: Self::GenArg) -> Self;
+    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, arg: Self::GenArg) -> Self;
 }
 
 impl<'a, T: Generatable<'a>> Generatable<'a> for Box<T> {
     type GenArg = T::GenArg;
 
-    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, state: State, arg: Self::GenArg) -> Self {
-        Box::new(T::generate_rng(rng, state, arg))
+    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, arg: Self::GenArg) -> Self {
+        Box::new(T::generate_rng(rng, arg))
     }
 }
 
 impl<'a, T: Generatable<'a>> Generatable<'a> for Rc<T> {
     type GenArg = T::GenArg;
 
-    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, state: State, arg: Self::GenArg) -> Self {
-        Rc::new(T::generate_rng(rng, state, arg))
+    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, arg: Self::GenArg) -> Self {
+        Rc::new(T::generate_rng(rng, arg))
     }
 }
 
 impl<'a, T: Generatable<'a>> Generatable<'a> for Arc<T> {
     type GenArg = T::GenArg;
 
-    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, state: State, arg: Self::GenArg) -> Self {
-        Arc::new(T::generate_rng(rng, state, arg))
+    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, arg: Self::GenArg) -> Self {
+        Arc::new(T::generate_rng(rng, arg))
     }
 }
 
@@ -192,17 +188,17 @@ pub trait Mutatable<'a> {
     type MutArg: 'a;
 
     fn mutate(&mut self, arg: Self::MutArg) {
-        self.mutate_rng(&mut rand::thread_rng(), State::default(), arg)
+        self.mutate_rng(&mut rand::thread_rng(), arg)
     }
 
-    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, state: State, arg: Self::MutArg);
+    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, arg: Self::MutArg);
 }
 
 impl<'a, T: Mutatable<'a>> Mutatable<'a> for Box<T> {
     type MutArg = T::MutArg;
 
-    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, state: State, arg: Self::MutArg) {
-        self.deref_mut().mutate_rng(rng, state, arg)
+    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, arg: Self::MutArg) {
+        self.deref_mut().mutate_rng(rng, arg)
     }
 }
 
@@ -215,14 +211,14 @@ impl<'a, T: Mutatable<'a>> Mutatable<'a> for Box<T> {
 pub trait Updatable<'a> {
     type UpdateArg: 'a;
 
-    fn update(&mut self, state: State, arg: Self::UpdateArg);
+    fn update(&mut self, arg: Self::UpdateArg);
 }
 
 impl<'a, T: Updatable<'a>> Updatable<'a> for Box<T> {
     type UpdateArg = T::UpdateArg;
 
-    fn update(&mut self, state: State, arg: Self::UpdateArg) {
-        self.deref_mut().update(state, arg)
+    fn update(&mut self, arg: Self::UpdateArg) {
+        self.deref_mut().update(arg)
     }
 }
 
@@ -230,12 +226,12 @@ impl<'a, T: Updatable<'a>> Updatable<'a> for Box<T> {
 /// [`update_recursively()`](crate::UpdatableRecursively::update_recursively)
 /// while recursing down to members
 pub trait UpdatableRecursively<'a>: Updatable<'a> {
-    fn update_recursively(&mut self, state: State, arg: Self::UpdateArg);
+    fn update_recursively(&mut self, arg: Self::UpdateArg);
 }
 
 impl<'a, T: UpdatableRecursively<'a>> UpdatableRecursively<'a> for Box<T> {
-    fn update_recursively(&mut self, state: State, arg: Self::UpdateArg) {
-        self.deref_mut().update_recursively(state, arg)
+    fn update_recursively(&mut self, arg: Self::UpdateArg) {
+        self.deref_mut().update_recursively(arg)
     }
 }
 

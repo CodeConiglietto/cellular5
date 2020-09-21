@@ -3,14 +3,14 @@ use serde::{Deserialize, Serialize};
 
 use crate::prelude::*;
 
-#[derive(Mutatable, Generatable, Serialize, Deserialize, Debug)]
+#[derive(Mutatable, Generatable, UpdatableRecursively, Serialize, Deserialize, Debug)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum DistanceFunctionNodes {
     Constant {
         value: DistanceFunction,
-        child_a: Box<SNPointNodes>,
-        child_b: Box<SNPointNodes>,
-        child_normaliser: Box<UFloatNormaliserNodes>,
+        child_a: NodeBox<SNPointNodes>,
+        child_b: NodeBox<SNPointNodes>,
+        child_normaliser: NodeBox<UFloatNormaliserNodes>,
     },
 }
 
@@ -38,9 +38,5 @@ impl Node for DistanceFunctionNodes {
 impl<'a> Updatable<'a> for DistanceFunctionNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
-}
-
-impl<'a> UpdatableRecursively<'a> for DistanceFunctionNodes {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update(&mut self, _arg: UpdArg<'a>) {}
 }

@@ -9,26 +9,28 @@ pub enum SNComplexNodes {
     #[mutagen(gen_weight = leaf_node_weight)]
     Constant { value: SNComplex },
     #[mutagen(gen_weight = pipe_node_weight)]
-    FromSNPoint { child_point: Box<SNPointNodes> },
+    FromSNPoint { child_point: NodeBox<SNPointNodes> },
     #[mutagen(gen_weight = branch_node_weight)]
     FromSNFloats {
-        child_re: Box<SNFloatNodes>,
-        child_im: Box<SNFloatNodes>,
+        child_re: NodeBox<SNFloatNodes>,
+        child_im: NodeBox<SNFloatNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     AddNormalised {
-        child_a: Box<SNComplexNodes>,
-        child_b: Box<SNComplexNodes>,
+        child_a: NodeBox<SNComplexNodes>,
+        child_b: NodeBox<SNComplexNodes>,
         child_normaliser: SFloatNormaliser,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     MultiplyNormalised {
-        child_a: Box<SNComplexNodes>,
-        child_b: Box<SNComplexNodes>,
+        child_a: NodeBox<SNComplexNodes>,
+        child_b: NodeBox<SNComplexNodes>,
         child_normaliser: SFloatNormaliser,
     },
     #[mutagen(gen_weight = pipe_node_weight)]
-    FromIterativeResult { child: Box<IterativeFunctionNodes> },
+    FromIterativeResult {
+        child: NodeBox<IterativeFunctionNodes>,
+    },
 }
 
 impl Node for SNComplexNodes {
@@ -72,5 +74,5 @@ impl Node for SNComplexNodes {
 impl<'a> Updatable<'a> for SNComplexNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update(&mut self, _arg: UpdArg<'a>) {}
 }

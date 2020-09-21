@@ -10,25 +10,25 @@ pub enum SNFloatMatrix3Nodes {
     Identity,
     #[mutagen(gen_weight = branch_node_weight)]
     Translation {
-        child_a: Box<SNFloatNodes>,
-        child_b: Box<SNFloatNodes>,
+        child_a: NodeBox<SNFloatNodes>,
+        child_b: NodeBox<SNFloatNodes>,
     },
     #[mutagen(gen_weight = pipe_node_weight)]
-    Rotation { child: Box<AngleNodes> },
+    Rotation { child: NodeBox<AngleNodes> },
     #[mutagen(gen_weight = branch_node_weight)]
     Scaling {
-        child_a: Box<SNFloatNodes>,
-        child_b: Box<SNFloatNodes>,
+        child_a: NodeBox<SNFloatNodes>,
+        child_b: NodeBox<SNFloatNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     Shear {
-        child_a: Box<SNFloatNodes>,
-        child_b: Box<SNFloatNodes>,
+        child_a: NodeBox<SNFloatNodes>,
+        child_b: NodeBox<SNFloatNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     Multiply {
-        child_a: Box<SNFloatMatrix3Nodes>,
-        child_b: Box<SNFloatMatrix3Nodes>,
+        child_a: NodeBox<SNFloatMatrix3Nodes>,
+        child_b: NodeBox<SNFloatMatrix3Nodes>,
     },
 }
 
@@ -65,5 +65,5 @@ impl Node for SNFloatMatrix3Nodes {
 impl<'a> Updatable<'a> for SNFloatMatrix3Nodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update(&mut self, _arg: UpdArg<'a>) {}
 }

@@ -18,11 +18,11 @@ pub struct NibbleColor {
 impl<'a> Updatable<'a> for NibbleColor {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update(&mut self, _arg: UpdArg<'a>) {}
 }
 
 impl<'a> UpdatableRecursively<'a> for NibbleColor {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update_recursively(&mut self, _arg: UpdArg<'a>) {}
 }
 
 impl From<FloatColor> for NibbleColor {
@@ -48,11 +48,11 @@ pub struct ByteColor {
 impl<'a> Updatable<'a> for ByteColor {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update(&mut self, _arg: UpdArg<'a>) {}
 }
 
 impl<'a> UpdatableRecursively<'a> for ByteColor {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update_recursively(&mut self, _arg: UpdArg<'a>) {}
 }
 
 impl From<image::Rgba<u8>> for ByteColor {
@@ -293,11 +293,7 @@ impl BitColor {
 impl<'a> Generatable<'a> for BitColor {
     type GenArg = GenArg<'a>;
 
-    fn generate_rng<R: Rng + ?Sized>(
-        rng: &mut R,
-        _state: mutagen::State,
-        _arg: GenArg<'a>,
-    ) -> Self {
+    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, _arg: GenArg<'a>) -> Self {
         Self::random(rng)
     }
 }
@@ -305,12 +301,7 @@ impl<'a> Generatable<'a> for BitColor {
 impl<'a> Mutatable<'a> for BitColor {
     type MutArg = MutArg<'a>;
 
-    fn mutate_rng<R: Rng + ?Sized>(
-        &mut self,
-        rng: &mut R,
-        _state: mutagen::State,
-        _arg: MutArg<'a>,
-    ) {
+    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, _arg: MutArg<'a>) {
         let mut components = self.to_components();
 
         for component in components.iter_mut() {
@@ -326,11 +317,11 @@ impl<'a> Mutatable<'a> for BitColor {
 impl<'a> Updatable<'a> for BitColor {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update(&mut self, _arg: UpdArg<'a>) {}
 }
 
 impl<'a> UpdatableRecursively<'a> for BitColor {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update_recursively(&mut self, _arg: UpdArg<'a>) {}
 }
 
 impl From<ByteColor> for BitColor {
@@ -423,23 +414,14 @@ impl From<BitColor> for FloatColor {
 impl<'a> Generatable<'a> for FloatColor {
     type GenArg = GenArg<'a>;
 
-    fn generate_rng<R: Rng + ?Sized>(
-        rng: &mut R,
-        _state: mutagen::State,
-        _arg: GenArg<'a>,
-    ) -> Self {
+    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, _arg: GenArg<'a>) -> Self {
         Self::random(rng)
     }
 }
 
 impl<'a> Mutatable<'a> for FloatColor {
     type MutArg = MutArg<'a>;
-    fn mutate_rng<R: Rng + ?Sized>(
-        &mut self,
-        rng: &mut R,
-        _state: mutagen::State,
-        _arg: MutArg<'a>,
-    ) {
+    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, _arg: MutArg<'a>) {
         *self = Self::random(rng);
     }
 }
@@ -447,9 +429,9 @@ impl<'a> Mutatable<'a> for FloatColor {
 impl<'a> Updatable<'a> for FloatColor {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update(&mut self, _arg: UpdArg<'a>) {}
 }
 
 impl<'a> UpdatableRecursively<'a> for FloatColor {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update_recursively(&mut self, _arg: UpdArg<'a>) {}
 }

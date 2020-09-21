@@ -260,11 +260,7 @@ impl<'de> Deserialize<'de> for Image {
 impl<'a> Generatable<'a> for Image {
     type GenArg = GenArg<'a>;
 
-    fn generate_rng<R: Rng + ?Sized>(
-        _rng: &mut R,
-        _state: mutagen::State,
-        _arg: GenArg<'a>,
-    ) -> Self {
+    fn generate_rng<R: Rng + ?Sized>(_rng: &mut R, _arg: GenArg<'a>) -> Self {
         IMAGE_PRELOADER
             .with(|p| p.try_get_next())
             .unwrap_or_else(|| FALLBACK_IMAGE.clone())
@@ -274,12 +270,7 @@ impl<'a> Generatable<'a> for Image {
 impl<'a> Mutatable<'a> for Image {
     type MutArg = MutArg<'a>;
 
-    fn mutate_rng<R: Rng + ?Sized>(
-        &mut self,
-        _rng: &mut R,
-        _state: mutagen::State,
-        _arg: Self::MutArg,
-    ) {
+    fn mutate_rng<R: Rng + ?Sized>(&mut self, _rng: &mut R, _arg: Self::MutArg) {
         *self = IMAGE_PRELOADER
             .with(|p| p.try_get_next())
             .unwrap_or_else(|| FALLBACK_IMAGE.clone());
@@ -289,11 +280,11 @@ impl<'a> Mutatable<'a> for Image {
 impl<'a> Updatable<'a> for Image {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: Self::UpdateArg) {}
+    fn update(&mut self, _arg: Self::UpdateArg) {}
 }
 
 impl<'a> UpdatableRecursively<'a> for Image {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: Self::UpdateArg) {}
+    fn update_recursively(&mut self, _arg: Self::UpdateArg) {}
 }
 
 #[derive(Debug, Serialize, Deserialize)]

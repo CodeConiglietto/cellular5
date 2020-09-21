@@ -1,24 +1,23 @@
 use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
-use serde::{Deserialize, Serialize};
 
 use crate::prelude::*;
 
-#[derive(Mutatable, Generatable, Deserialize, Serialize, Debug)]
+#[derive(Mutatable, Generatable, UpdatableRecursively, Debug)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum NoiseNodes {
     NoiseFunction {
         noise_function: NoiseFunctions,
-        scale_x_child: Box<ByteNodes>,
-        scale_y_child: Box<ByteNodes>,
-        scale_t_child: Box<ByteNodes>,
+        scale_x_child: NodeBox<ByteNodes>,
+        scale_y_child: NodeBox<ByteNodes>,
+        scale_t_child: NodeBox<ByteNodes>,
     },
     // IterativeMatrixNoiseFunction {//TODO: finish
-    //     noise_function: Box<UNFloatNodes>,
-    //     child_matrix: Box<SNFloatMatrix3Nodes>,
+    //     noise_function:NodeBox<UNFloatNodes>,
+    //     child_matrix:NodeBox<SNFloatMatrix3Nodes>,
     //     iterated_matrix: SNFloatMatrix3,
     //     #[mutagen(skip)]
     //     offset_xy: Point2<f32>,
-    //     child_offset_t: Box<SNFloatNodes>,
+    //     child_offset_t:NodeBox<SNFloatNodes>,
     //     #[mutagen(skip)]
     //     t_offset: f32,
     // },
@@ -34,20 +33,14 @@ impl Node for NoiseNodes {
                 scale_x_child,
                 scale_y_child,
                 scale_t_child,
-            } => SNFloat::new_clamped(
-                noise_function.compute(
-                    compute_arg.coordinate_set.x.into_inner() as f64
-                        * scale_x_child
-                            .compute(compute_arg.reborrow())
-                            .into_inner() as f64,
-                    compute_arg.coordinate_set.y.into_inner() as f64
-                        * scale_y_child
-                            .compute(compute_arg.reborrow())
-                            .into_inner() as f64,
-                    compute_arg.coordinate_set.t as f64
-                        * scale_t_child.compute(compute_arg.reborrow()).into_inner() as f64,
-                ) as f32,
-            ),
+            } => SNFloat::new_clamped(noise_function.compute(
+                compute_arg.coordinate_set.x.into_inner() as f64
+                    * scale_x_child.compute(compute_arg.reborrow()).into_inner() as f64,
+                compute_arg.coordinate_set.y.into_inner() as f64
+                    * scale_y_child.compute(compute_arg.reborrow()).into_inner() as f64,
+                compute_arg.coordinate_set.t as f64
+                    * scale_t_child.compute(compute_arg.reborrow()).into_inner() as f64,
+            ) as f32),
             // NoiseNodes::IterativeMatrixNoiseFunction {
             //     noise_function,
             //     child_matrix,
@@ -86,9 +79,5 @@ impl Node for NoiseNodes {
 impl<'a> Updatable<'a> for NoiseNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
-}
-
-impl<'a> UpdatableRecursively<'a> for NoiseNodes {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update(&mut self, _arg: UpdArg<'a>) {}
 }

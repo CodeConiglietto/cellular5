@@ -8,26 +8,26 @@ use crate::prelude::*;
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum CoordMapNodes {
     #[mutagen(gen_weight = pipe_node_weight)]
-    Replace { child: Box<SNPointNodes> },
+    Replace { child: NodeBox<SNPointNodes> },
 
     #[mutagen(gen_weight = branch_node_weight)]
     Shift {
-        x: Box<SNFloatNodes>,
-        y: Box<SNFloatNodes>,
-        child_normaliser: Box<SFloatNormaliserNodes>,
+        x: NodeBox<SNFloatNodes>,
+        y: NodeBox<SNFloatNodes>,
+        child_normaliser: NodeBox<SFloatNormaliserNodes>,
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
     Scale {
-        x: Box<SNFloatNodes>,
-        y: Box<SNFloatNodes>,
-        child_normaliser: Box<SFloatNormaliserNodes>,
+        x: NodeBox<SNFloatNodes>,
+        y: NodeBox<SNFloatNodes>,
+        child_normaliser: NodeBox<SFloatNormaliserNodes>,
     },
 
     #[mutagen(gen_weight = pipe_node_weight)]
     Rotation {
-        child_angle: Box<AngleNodes>,
-        child_normaliser: Box<SFloatNormaliserNodes>,
+        child_angle: NodeBox<AngleNodes>,
+        child_normaliser: NodeBox<SFloatNormaliserNodes>,
     },
 
     #[mutagen(gen_weight = leaf_node_weight)]
@@ -41,44 +41,44 @@ pub enum CoordMapNodes {
 
     #[mutagen(gen_weight = branch_node_weight)]
     SelectiveAbs {
-        child_abs_x: Box<BooleanNodes>,
-        child_abs_y: Box<BooleanNodes>,
+        child_abs_x: NodeBox<BooleanNodes>,
+        child_abs_y: NodeBox<BooleanNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     ForceSign {
-        child_sign_x: Box<BooleanNodes>,
-        child_sign_y: Box<BooleanNodes>,
+        child_sign_x: NodeBox<BooleanNodes>,
+        child_sign_y: NodeBox<BooleanNodes>,
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
     IfElse {
-        predicate: Box<BooleanNodes>,
-        child_a: Box<CoordMapNodes>,
-        child_b: Box<CoordMapNodes>,
+        predicate: NodeBox<BooleanNodes>,
+        child_a: NodeBox<CoordMapNodes>,
+        child_b: NodeBox<CoordMapNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     ApplyMatrix {
-        child_matrix: Box<SNFloatMatrix3Nodes>,
-        child_normaliser: Box<SFloatNormaliserNodes>,
+        child_matrix: NodeBox<SNFloatMatrix3Nodes>,
+        child_normaliser: NodeBox<SFloatNormaliserNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     Tessellate {
-        child_a: Box<SNPointNodes>,
-        child_b: Box<SNPointNodes>,
-        child_scale: Box<SNPointNodes>,
-        child_normaliser: Box<SFloatNormaliserNodes>,
+        child_a: NodeBox<SNPointNodes>,
+        child_b: NodeBox<SNPointNodes>,
+        child_scale: NodeBox<SNPointNodes>,
+        child_normaliser: NodeBox<SFloatNormaliserNodes>,
         point_a: SNPoint,
         point_b: SNPoint,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     TessellatePerPoint {
-        child_a: Box<SNPointNodes>,
-        child_b: Box<SNPointNodes>,
+        child_a: NodeBox<SNPointNodes>,
+        child_b: NodeBox<SNPointNodes>,
     },
     #[mutagen(gen_weight = pipe_node_weight)]
-    TesellatePolarTwoClosestPointSet { child: Box<PointSetNodes> },
+    TesellatePolarTwoClosestPointSet { child: NodeBox<PointSetNodes> },
     #[mutagen(gen_weight = pipe_node_weight)]
-    TesellateClosestPointSet { child: Box<PointSetNodes> },
+    TesellateClosestPointSet { child: NodeBox<PointSetNodes> },
 }
 
 impl Node for CoordMapNodes {
@@ -379,7 +379,7 @@ impl Node for CoordMapNodes {
 impl<'a> Updatable<'a> for CoordMapNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, mut arg: UpdArg<'a>) {
+    fn update(&mut self, mut arg: UpdArg<'a>) {
         // TODO Remove when more match arms are added
         #[allow(clippy::single_match)]
         match self {

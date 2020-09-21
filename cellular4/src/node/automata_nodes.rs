@@ -7,9 +7,9 @@ use crate::prelude::*;
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum BinaryAutomataNodes {
     Majority {
-        child: Box<BooleanNodes>,
-        point_set: Box<PointSetNodes>,
-        child_normaliser: Box<SFloatNormaliserNodes>,
+        child: NodeBox<BooleanNodes>,
+        point_set: NodeBox<PointSetNodes>,
+        child_normaliser: NodeBox<SFloatNormaliserNodes>,
     },
 }
 
@@ -58,5 +58,5 @@ impl Node for BinaryAutomataNodes {
 impl<'a> Updatable<'a> for BinaryAutomataNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update(&mut self, _arg: UpdArg<'a>) {}
 }

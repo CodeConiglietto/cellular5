@@ -130,23 +130,14 @@ impl<'de> Deserialize<'de> for PointSet {
 impl<'a> Generatable<'a> for PointSet {
     type GenArg = GenArg<'a>;
 
-    fn generate_rng<R: Rng + ?Sized>(
-        rng: &mut R,
-        _state: mutagen::State,
-        _arg: GenArg<'a>,
-    ) -> Self {
+    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, _arg: GenArg<'a>) -> Self {
         Self::random(rng)
     }
 }
 
 impl<'a> Mutatable<'a> for PointSet {
     type MutArg = MutArg<'a>;
-    fn mutate_rng<R: Rng + ?Sized>(
-        &mut self,
-        rng: &mut R,
-        _state: mutagen::State,
-        _arg: MutArg<'a>,
-    ) {
+    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, _arg: MutArg<'a>) {
         *self = Self::random(rng);
     }
 }
@@ -154,11 +145,11 @@ impl<'a> Mutatable<'a> for PointSet {
 impl<'a> Updatable<'a> for PointSet {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update(&mut self, _arg: UpdArg<'a>) {}
 }
 
 impl<'a> UpdatableRecursively<'a> for PointSet {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update_recursively(&mut self, _arg: UpdArg<'a>) {}
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug)]
@@ -198,7 +189,7 @@ impl PointSetGenerator {
                 uniform(rng, count.into_inner().max(2) as usize)
             }
             PointSetGenerator::Poisson { count, radius } => {
-                let normaliser = SFloatNormaliser::generate_rng(rng, mutagen::State::default(), ());
+                let normaliser = SFloatNormaliser::generate_rng(rng, ());
 
                 poisson(
                     rng,

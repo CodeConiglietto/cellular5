@@ -10,105 +10,105 @@ pub enum ColorBlendNodes {
     Gray,
 
     #[mutagen(gen_weight = pipe_node_weight)]
-    Invert { child: Box<FloatColorNodes> },
+    Invert { child: NodeBox<FloatColorNodes> },
 
     #[mutagen(gen_weight = branch_node_weight)]
     Dissolve {
-        color_a: Box<FloatColorNodes>,
-        color_b: Box<FloatColorNodes>,
-        value: Box<UNFloatNodes>,
+        color_a: NodeBox<FloatColorNodes>,
+        color_b: NodeBox<FloatColorNodes>,
+        value: NodeBox<UNFloatNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     Overlay {
-        color_a: Box<FloatColorNodes>,
-        color_b: Box<FloatColorNodes>,
+        color_a: NodeBox<FloatColorNodes>,
+        color_b: NodeBox<FloatColorNodes>,
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
     ScreenDodge {
-        color_a: Box<FloatColorNodes>,
-        color_b: Box<FloatColorNodes>,
+        color_a: NodeBox<FloatColorNodes>,
+        color_b: NodeBox<FloatColorNodes>,
     },
 
     // #[mutagen(gen_weight = branch_node_weight)]
     // ColorDodge {
-    //     color_a: Box<FloatColorNodes>,
-    //     color_b: Box<FloatColorNodes>,
-    //     value: Box<UNFloatNodes>,
+    //     color_a:NodeBox<FloatColorNodes>,
+    //     color_b:NodeBox<FloatColorNodes>,
+    //     value:NodeBox<UNFloatNodes>,
     // },
 
     // #[mutagen(gen_weight = branch_node_weight)]
     // LinearDodge {
-    //     color_a: Box<FloatColorNodes>,
-    //     color_b: Box<FloatColorNodes>,
-    //     value: Box<UNFloatNodes>,
+    //     color_a:NodeBox<FloatColorNodes>,
+    //     color_b:NodeBox<FloatColorNodes>,
+    //     value:NodeBox<UNFloatNodes>,
     // },
 
     // #[mutagen(gen_weight = branch_node_weight)]
     // Multiply {
-    //     color_a: Box<FloatColorNodes>,
-    //     color_b: Box<FloatColorNodes>,
-    //     value: Box<UNFloatNodes>,
+    //     color_a:NodeBox<FloatColorNodes>,
+    //     color_b:NodeBox<FloatColorNodes>,
+    //     value:NodeBox<UNFloatNodes>,
     // },
 
     // #[mutagen(gen_weight = branch_node_weight)]
     // ColorBurn {
-    //     color_a: Box<FloatColorNodes>,
-    //     color_b: Box<FloatColorNodes>,
-    //     value: Box<UNFloatNodes>,
+    //     color_a:NodeBox<FloatColorNodes>,
+    //     color_b:NodeBox<FloatColorNodes>,
+    //     value:NodeBox<UNFloatNodes>,
     // },
 
     // #[mutagen(gen_weight = branch_node_weight)]
     // LinearBurn {
-    //     color_a: Box<FloatColorNodes>,
-    //     color_b: Box<FloatColorNodes>,
-    //     value: Box<UNFloatNodes>,
+    //     color_a:NodeBox<FloatColorNodes>,
+    //     color_b:NodeBox<FloatColorNodes>,
+    //     value:NodeBox<UNFloatNodes>,
     // },
 
     // #[mutagen(gen_weight = branch_node_weight)]
     // VividLight {
-    //     color_a: Box<FloatColorNodes>,
-    //     color_b: Box<FloatColorNodes>,
-    //     value: Box<UNFloatNodes>,
+    //     color_a:NodeBox<FloatColorNodes>,
+    //     color_b:NodeBox<FloatColorNodes>,
+    //     value:NodeBox<UNFloatNodes>,
     // },
 
     // #[mutagen(gen_weight = branch_node_weight)]
     // LinearLight {
-    //     color_a: Box<FloatColorNodes>,
-    //     color_b: Box<FloatColorNodes>,
-    //     value: Box<UNFloatNodes>,
+    //     color_a:NodeBox<FloatColorNodes>,
+    //     color_b:NodeBox<FloatColorNodes>,
+    //     value:NodeBox<UNFloatNodes>,
     // },
 
     // #[mutagen(gen_weight = branch_node_weight)]
     // Subtract {
-    //     color_a: Box<FloatColorNodes>,
-    //     color_b: Box<FloatColorNodes>,
-    //     value: Box<UNFloatNodes>,
+    //     color_a:NodeBox<FloatColorNodes>,
+    //     color_b:NodeBox<FloatColorNodes>,
+    //     value:NodeBox<UNFloatNodes>,
     // },
 
     // #[mutagen(gen_weight = branch_node_weight)]
     // Divide {
-    //     color_a: Box<FloatColorNodes>,
-    //     color_b: Box<FloatColorNodes>,
-    //     value: Box<UNFloatNodes>,
+    //     color_a:NodeBox<FloatColorNodes>,
+    //     color_b:NodeBox<FloatColorNodes>,
+    //     value:NodeBox<UNFloatNodes>,
     // },
 
     // #[mutagen(gen_weight = branch_node_weight)]
     // Lerp {
-    //     color_a: Box<FloatColorNodes>,
-    //     color_b: Box<FloatColorNodes>,
-    //     value: Box<UNFloatNodes>,
+    //     color_a:NodeBox<FloatColorNodes>,
+    //     color_b:NodeBox<FloatColorNodes>,
+    //     value:NodeBox<UNFloatNodes>,
     // },
     #[mutagen(gen_weight = branch_node_weight)]
     ModifyState {
-        child: Box<ColorBlendNodes>,
-        child_state: Box<CoordMapNodes>,
+        child: NodeBox<ColorBlendNodes>,
+        child_state: NodeBox<CoordMapNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     IfElse {
-        predicate: Box<BooleanNodes>,
-        child_a: Box<ColorBlendNodes>,
-        child_b: Box<ColorBlendNodes>,
+        predicate: NodeBox<BooleanNodes>,
+        child_a: NodeBox<ColorBlendNodes>,
+        child_b: NodeBox<ColorBlendNodes>,
     },
 }
 
@@ -227,5 +227,5 @@ impl Node for ColorBlendNodes {
 impl<'a> Updatable<'a> for ColorBlendNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update(&mut self, _arg: UpdArg<'a>) {}
 }

@@ -1,4 +1,5 @@
 pub use crate::{
+    arena_wrappers::NodeBox,
     constants::*,
     coordinate_set::*,
     datatype::{

@@ -66,7 +66,6 @@ fn generatable_type(input: syn::DeriveInput) -> Result<TokenStream2> {
 
             fn generate_rng<R: ::mutagen::rand::Rng + ?Sized>(
                 rng: &mut R,
-                state: ::mutagen::State,
                 mut arg: Self::GenArg,
             ) -> Self {
                 #body
@@ -118,7 +117,7 @@ fn generatable_enum(
                 let w = weight.to_weight()?.unwrap_or_else(|| quote!(0.0));
 
                 let c: TokenStream2 = quote! {
-                    |state| {
+                    |arg| {
                         (#w) * 10000.0
                     }
                 };
@@ -154,7 +153,7 @@ fn generatable_fields(fields: &Fields) -> Result<TokenStream2> {
                         })
                     } else {
                         Ok(quote! {
-                            #name: ::mutagen::Generatable::generate_rng(rng, state.deepen(), ::std::convert::From::from(::mutagen::Reborrow::reborrow(&mut arg)))
+                            #name: ::mutagen::Generatable::generate_rng(rng, ::mutagen::State::deepened(::std::convert::From::from(::mutagen::Reborrow::reborrow(&mut arg))))
                         })
                     }
                 })
@@ -173,7 +172,7 @@ fn generatable_fields(fields: &Fields) -> Result<TokenStream2> {
                         })
                     } else {
                         Ok(quote! {
-                            ::mutagen::Generatable::generate_rng(rng, state.deepen(), ::std::convert::From::from(::mutagen::Reborrow::reborrow(&mut arg)))
+                            ::mutagen::Generatable::generate_rng(rng, ::mutagen::State::deepened(::std::convert::From::from(::mutagen::Reborrow::reborrow(&mut arg))))
                         })
                     }
                 })
@@ -217,7 +216,6 @@ fn mutatable_type(input: syn::DeriveInput) -> Result<TokenStream2> {
             fn mutate_rng<R: ::mutagen::rand::Rng + ?Sized>(
                 &mut self,
                 rng: &mut R,
-                state: ::mutagen::State,
                 mut arg: Self::MutArg
             ) {
                 #body
@@ -285,7 +283,7 @@ fn mutatable_enum(
                 quote! {
                     #enum_ident::#ident #bindings => {
                         if rng.sample(::rand::distributions::Bernoulli::new(#mut_reroll).unwrap()) {
-                            *self = ::mutagen::Generatable::generate_rng(rng, state, ::std::convert::From::from(::mutagen::Reborrow::reborrow(&mut arg)));
+                            *self = ::mutagen::Generatable::generate_rng(rng, ::std::convert::From::from(::mutagen::Reborrow::reborrow(&mut arg)));
                         } else {
                             #fields_body
                         }
@@ -374,7 +372,7 @@ fn mutatable_fields(fields: &[&Field], path: &str, span: Span) -> Result<TokenSt
         |field, i| {
             let ident = field_ident(field, i);
             Ok(quote! {
-                ::mutagen::Mutatable::mutate_rng(#ident, rng, state.deepen(), ::std::convert::From::from(::mutagen::Reborrow::reborrow(&mut arg)));
+                ::mutagen::Mutatable::mutate_rng(#ident, rng, ::mutagen::State::deepened(::std::convert::From::from(::mutagen::Reborrow::reborrow(&mut arg))));
             })
         },
         &format!("mutation for {}", path),
@@ -402,8 +400,8 @@ fn updatable_type(input: syn::DeriveInput) -> Result<TokenStream2> {
     Ok(quote! {
         #[automatically_derived]
         impl<'a> ::mutagen::UpdatableRecursively<'a> for #ident {
-            fn update_recursively(&mut self, state: ::mutagen::State, mut arg: Self::UpdateArg) {
-                ::mutagen::Updatable::update(self, state, ::std::convert::From::from(::mutagen::Reborrow::reborrow(&mut arg)));
+            fn update_recursively(&mut self, mut arg: Self::UpdateArg) {
+                ::mutagen::Updatable::update(self, ::std::convert::From::from(::mutagen::Reborrow::reborrow(&mut arg)));
                 #body
             }
         }
@@ -480,7 +478,7 @@ fn updatable_fields(fields: &[&Field], _path: &str, _span: Span) -> Result<Token
            } else {
                let ident = field_ident(field, i);
                Ok(quote! {
-                   ::mutagen::UpdatableRecursively::update_recursively(#ident, state.deepen(), ::std::convert::From::from(::mutagen::Reborrow::reborrow(&mut arg)));
+                   ::mutagen::UpdatableRecursively::update_recursively(#ident, ::mutagen::State::deepened(::std::convert::From::from(::mutagen::Reborrow::reborrow(&mut arg))));
                })
            }
        })
@@ -663,7 +661,7 @@ impl Value {
 
                 Ok(Some(quote! {
                 {
-                    let value = #ident (&state);
+                    let value = #ident (&arg);
                     assert!(value >= 0.0, "{} returned invalid weight {}", #ident_s, value);
                     value
                 }
@@ -671,7 +669,7 @@ impl Value {
             }
             Value::Closure(c) => Ok(Some(quote! {
                 {
-                    let value = (#c)(state);
+                    let value = (#c)(arg);
                     assert!(value >= 0.0, "Closure returned invalid weight {}", value);
                     value
                 }
@@ -705,7 +703,7 @@ impl Value {
 
                 Ok(Some(quote! {
                     {
-                        let value = #ident (&state);
+                        let value = #ident (&arg);
                         assert!(value >= 0.0, "{} returned invalid probability {}", #ident_s, value);
                         value
                     }
@@ -713,7 +711,7 @@ impl Value {
             }
             Value::Closure(c) => Ok(Some(quote! {
                 {
-                    let value = (#c)(state);
+                    let value = (#c)(arg);
                     assert!(value >= 0.0, "Closure returned invalid probability {}", value);
                     value
                 }

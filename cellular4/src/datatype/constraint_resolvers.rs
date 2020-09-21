@@ -34,7 +34,7 @@ impl SFloatNormaliser {
 impl<'a> Updatable<'a> for SFloatNormaliser {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, mut _arg: UpdArg<'a>) {}
+    fn update(&mut self, mut _arg: UpdArg<'a>) {}
 }
 
 #[derive(
@@ -65,7 +65,7 @@ impl UFloatNormaliser {
 impl<'a> Updatable<'a> for UFloatNormaliser {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, mut _arg: UpdArg<'a>) {}
+    fn update(&mut self, mut _arg: UpdArg<'a>) {}
 }
 
 fn non_normal_to_default(value: f32) -> f32 {

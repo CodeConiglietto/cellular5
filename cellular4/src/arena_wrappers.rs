@@ -4,7 +4,7 @@ use generational_arena::*;
 use log::warn;
 use mutagen::*;
 use rand::prelude::*;
-use rand::seq::IteratorRandom;
+use rand::{distributions::weighted::WeightedIndex, seq::IteratorRandom};
 use serde::{Deserialize, Serialize};
 
 use crate::{constants::*, mutagen_args::*, node::*, node_set::*};
@@ -151,7 +151,10 @@ where
 
         assert_eq!(depth + nodes.len(), crate::node::max_node_depth() + 1);
 
-        let depth_skipped: usize = rng.gen_range(0, nodes.len());
+        let depth_skipped = WeightedIndex::new((0..nodes.len()).map(|i| 1.0 / (i + 1) as f32))
+            .unwrap()
+            .sample(rng);
+
         let (current, children) = nodes[depth_skipped..].split_first_mut().unwrap();
 
         if depth > crate::node::max_node_depth()

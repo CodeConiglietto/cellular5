@@ -177,7 +177,7 @@ where
             dbg!(crate::node::max_node_depth());
             dbg!(std::any::type_name::<T>());
 
-            let test_arg = GenArg {
+            let mut test_arg = GenArg {
                 nodes: children,
                 data,
                 depth: depth + depth_skipped + 1,
@@ -186,10 +186,14 @@ where
                 coordinate_set,
             };
 
-            dbg!(crate::node::mutagen_functions::leaf_node_weight(&test_arg));
-            dbg!(crate::node::mutagen_functions::pipe_node_weight(&test_arg));
+            dbg!(crate::node::mutagen_functions::leaf_node_weight(
+                test_arg.reborrow()
+            ));
+            dbg!(crate::node::mutagen_functions::pipe_node_weight(
+                test_arg.reborrow()
+            ));
             dbg!(crate::node::mutagen_functions::branch_node_weight(
-                &test_arg
+                test_arg.reborrow()
             ));
         }
 

@@ -28,7 +28,7 @@ pub fn max_node_depth() -> usize {
 pub mod mutagen_functions {
     use super::*;
 
-    pub fn leaf_node_weight<T: MutagenArg>(arg: &T) -> f64 {
+    pub fn leaf_node_weight<T: MutagenArg>(arg: T) -> f64 {
         debug_assert!(arg.depth() <= max_node_depth());
 
         if arg.depth() < CONSTS.min_leaf_depth || arg.depth() > CONSTS.max_leaf_depth {
@@ -42,7 +42,7 @@ pub mod mutagen_functions {
         }
     }
 
-    pub fn pipe_node_weight<T: MutagenArg>(arg: &T) -> f64 {
+    pub fn pipe_node_weight<T: MutagenArg>(arg: T) -> f64 {
         debug_assert!(arg.depth() <= max_node_depth());
 
         if arg.depth() < CONSTS.min_pipe_depth || arg.depth() > CONSTS.max_pipe_depth {
@@ -56,7 +56,7 @@ pub mod mutagen_functions {
         }
     }
 
-    pub fn branch_node_weight<T: MutagenArg>(arg: &T) -> f64 {
+    pub fn branch_node_weight<T: MutagenArg>(arg: T) -> f64 {
         debug_assert!(arg.depth() <= max_node_depth());
 
         if arg.depth() < CONSTS.min_branch_depth || arg.depth() > CONSTS.max_branch_depth {
@@ -77,6 +77,7 @@ pub mod mutagen_functions {
     mod tests {
         use super::*;
 
+        #[derive(Copy)]
         struct TestArg {
             depth: usize,
         }
@@ -93,9 +94,9 @@ pub mod mutagen_functions {
                 let arg = TestArg { depth };
 
                 assert!(
-                    leaf_node_weight(&arg) > 0.0
-                        || pipe_node_weight(&arg) > 0.0
-                        || branch_node_weight(&arg) > 0.0
+                    leaf_node_weight(arg) > 0.0
+                        || pipe_node_weight(arg) > 0.0
+                        || branch_node_weight(arg) > 0.0
                 );
             }
         }
@@ -106,9 +107,9 @@ pub mod mutagen_functions {
                 depth: max_node_depth(),
             };
 
-            assert!(leaf_node_weight(&arg) > 0.0);
-            assert_eq!(pipe_node_weight(&arg), 0.0);
-            assert_eq!(branch_node_weight(&arg), 0.0);
+            assert!(leaf_node_weight(arg) > 0.0);
+            assert_eq!(pipe_node_weight(arg), 0.0);
+            assert_eq!(branch_node_weight(arg), 0.0);
         }
     }
 }

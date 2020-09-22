@@ -117,7 +117,7 @@ fn generatable_enum(
                 let w = weight.to_weight()?.unwrap_or_else(|| quote!(0.0));
 
                 let c: TokenStream2 = quote! {
-                    |arg| {
+                    |mut arg: Self::GenArg| {
                         (#w) * 10000.0
                     }
                 };
@@ -661,7 +661,7 @@ impl Value {
 
                 Ok(Some(quote! {
                 {
-                    let value = #ident (&arg);
+                    let value = #ident (::mutagen::Reborrow::reborrow(&mut arg));
                     assert!(value >= 0.0, "{} returned invalid weight {}", #ident_s, value);
                     value
                 }
@@ -669,7 +669,7 @@ impl Value {
             }
             Value::Closure(c) => Ok(Some(quote! {
                 {
-                    let value = (#c)(arg);
+                    let value = (#c)(::mutagen::Reborrow::reborrow(&mut arg));
                     assert!(value >= 0.0, "Closure returned invalid weight {}", value);
                     value
                 }
@@ -703,7 +703,7 @@ impl Value {
 
                 Ok(Some(quote! {
                     {
-                        let value = #ident (&arg);
+                        let value = #ident (::mutagen::Reborrow::reborrow(&mut arg));
                         assert!(value >= 0.0, "{} returned invalid probability {}", #ident_s, value);
                         value
                     }
@@ -711,7 +711,7 @@ impl Value {
             }
             Value::Closure(c) => Ok(Some(quote! {
                 {
-                    let value = (#c)(arg);
+                    let value = (#c)(::mutagen::Reborrow::reborrow(&mut arg));
                     assert!(value >= 0.0, "Closure returned invalid probability {}", value);
                     value
                 }

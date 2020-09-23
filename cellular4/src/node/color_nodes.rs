@@ -64,7 +64,7 @@ pub enum FloatColorNodes {
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
-    #[mutagen(gen_preferred)]
+    // #[mutagen(gen_preferred)]
     ComplexLAB {
         l: NodeBox<UNFloatNodes>,
         child_complex: NodeBox<SNComplexNodes>,

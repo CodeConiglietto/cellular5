@@ -29,7 +29,7 @@ pub struct UpdateStat {
 //How symmetrical it is over the x and y axes
 impl UpdateStat {
     pub fn should_mutate(&self) -> bool {
-        (thread_rng().gen::<f64>() * self.mutation_likelihood()).powf(4.0) * 0.01
+        (thread_rng().gen::<f64>() * self.mutation_likelihood()).powf(4.0) * 0.001
             > thread_rng().gen::<f64>()
     }
 

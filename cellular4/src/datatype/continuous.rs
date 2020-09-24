@@ -21,6 +21,7 @@ impl UNFloat {
         Self { value }
     }
 
+    #[track_caller]
     pub fn new(value: f32) -> Self {
         assert!(
             value >= 0.0 && value <= 1.0,
@@ -144,6 +145,7 @@ impl SNFloat {
         Self { value }
     }
 
+    #[track_caller]
     pub fn new(value: f32) -> Self {
         assert!(
             value >= -1.0 && value <= 1.0,
@@ -301,6 +303,7 @@ impl Angle {
         Self { value }
     }
 
+    #[track_caller]
     pub fn new(value: f32) -> Self {
         let normalised = match value.partial_cmp(&0.0).unwrap() {
             Ordering::Greater => (value / (2.0 * PI)).fract() * (2.0 * PI),

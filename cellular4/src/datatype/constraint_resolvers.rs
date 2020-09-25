@@ -13,7 +13,7 @@ pub enum SFloatNormaliser {
     TanH,
     Clamp,
     Fractional,
-    // Random,
+    Random,
 }
 
 impl SFloatNormaliser {
@@ -26,7 +26,7 @@ impl SFloatNormaliser {
             TanH => SNFloat::new_tanh(non_normal_to_default(value)),
             Clamp => SNFloat::new_clamped(non_normal_to_default(value)),
             Fractional => SNFloat::new_fractional(non_normal_to_default(value)),
-            // Random => SNFloat::new_random_clamped(non_normal_to_default(value)),
+            Random => SNFloat::new_random_clamped(non_normal_to_default(value)),
         }
     }
 }
@@ -43,10 +43,11 @@ impl<'a> Updatable<'a> for SFloatNormaliser {
 #[mutagen(gen_arg = type (), mut_arg = type ())]
 pub enum UFloatNormaliser {
     //TODO: Add sigmoid function
+    #[mutagen(gen_preferred)]
     Sawtooth,
     Triangle,
     Clamp,
-    // Random,
+    Random,
 }
 
 impl UFloatNormaliser {
@@ -57,7 +58,7 @@ impl UFloatNormaliser {
             Sawtooth => UNFloat::new_sawtooth(non_normal_to_default(value)),
             Triangle => UNFloat::new_triangle(non_normal_to_default(value)),
             Clamp => UNFloat::new_clamped(non_normal_to_default(value)),
-            // Random => UNFloat::new_random_clamped(non_normal_to_default(value)),
+            Random => UNFloat::new_random_clamped(non_normal_to_default(value)),
         }
     }
 }

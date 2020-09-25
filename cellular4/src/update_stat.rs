@@ -29,7 +29,7 @@ pub struct UpdateStat {
 //How symmetrical it is over the x and y axes
 impl UpdateStat {
     pub fn should_mutate(&self) -> bool {
-        (thread_rng().gen::<f64>() * self.mutation_likelihood()).powf(4.0) * 0.001
+        (thread_rng().gen::<f64>() * self.mutation_likelihood()).powf(4.0) * 0.1
             > thread_rng().gen::<f64>()
     }
 
@@ -46,9 +46,10 @@ impl UpdateStat {
 
     pub fn flatness(&self) -> f64 {
         ((1.0 - self.activity_value).powf(4.0)
-            + self.local_similarity_value.powf(4.0)
+            // + self.local_similarity_value.powf(4.0)
             + self.global_similarity_value.powf(4.0))
-            / 3.0
+            // / 3.0
+            / 2.0
     }
 
     pub fn noise(&self) -> f64 {

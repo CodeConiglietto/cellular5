@@ -6,6 +6,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::prelude::*;
 
+use nalgebra::*;
+
 #[derive(Generatable, UpdatableRecursively, Mutatable, Debug, Serialize, Deserialize)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum FloatColorNodes {
@@ -64,7 +66,7 @@ pub enum FloatColorNodes {
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
-    // #[mutagen(gen_preferred)]
+    #[mutagen(gen_preferred)]
     ComplexLAB {
         l: NodeBox<UNFloatNodes>,
         child_complex: NodeBox<SNComplexNodes>,
@@ -175,6 +177,15 @@ pub enum FloatColorNodes {
         child_set: NodeBox<PointSetNodes>,
         child_index: NodeBox<ByteNodes>,
         child_color: NodeBox<FloatColorNodes>,
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    // #[mutagen(gen_preferred)]
+    DucksFractal {
+        child_offset: NodeBox<SNPointNodes>,
+        child_scale: NodeBox<SNPointNodes>,
+        child_iterations: NodeBox<ByteNodes>,
+        child_magnitude_normaliser: NodeBox<UFloatNormaliserNodes>,
     },
 }
 
@@ -461,6 +472,93 @@ impl Node for FloatColorNodes {
             }
             NextPointLineBuffer { buffer, .. } => {
                 buffer[compute_arg.coordinate_set.get_coord_point()]
+            }
+
+            DucksFractal {//TODO make gooderer
+                child_offset,
+                child_scale,
+                child_iterations,
+                child_magnitude_normaliser,
+            } => {
+                let offset = child_offset.compute(compute_arg.reborrow()).into_inner();
+                let scale = child_scale.compute(compute_arg.reborrow()).into_inner();
+                let iterations = //50;
+                128 - (128 - compute_arg.coordinate_set.get_byte_t().into_inner() as i32).abs();
+                // 1 + child_iterations
+                //     .compute(compute_arg.reborrow())
+                //     .into_inner()
+                //     / 4;
+
+                // x and y are swapped intentionally
+                let c = Complex::new(
+                    f64::from(//0.001 *
+                        (1.0 - compute_arg.coordinate_set.get_unfloat_t().into_inner()) * 
+                    // scale.y * 
+                    compute_arg.coordinate_set.y.into_inner()// - 0.5
+                ),
+                    f64::from(//0.001 *
+                        (1.0 - compute_arg.coordinate_set.get_unfloat_t().into_inner()) * 
+                    // scale.x * 
+                    compute_arg.coordinate_set.x.into_inner()// - 0.5
+                ),
+                );
+
+                let c_offset =
+                        Complex::new(
+                            // compute_arg.coordinate_set.get_unfloat_t().into_inner() as f64
+                            // f64::from(scale.y) *
+                            // f64::from(offset.y)
+                            0.0
+                            ,
+                            // f64::from(scale.x) *
+                            // f64::from(offset.x)
+                            // compute_arg.coordinate_set.get_unfloat_t().into_inner() as f64
+                            0.0
+                            ,
+                        );
+
+                let mut magnitude = 0.0;
+
+                let (z_final, _escape) = escape_time_system(
+                    c// + c_offset
+                    ,
+                    iterations as usize,
+                    |z, _i| (
+                        // if z.im > 0.0 { z } else { z.conj() } 
+                        z.abs() + c).ln(),
+                    |z, _i| {
+                        magnitude += z.norm();
+                        false
+                    },
+                );
+
+                // magnitude /= iterations as f64;
+
+                // IterativeResult::new(
+                //     SNComplex::new_normalised(
+                //         z_final,
+                //         child_exit_normaliser.compute(compute_arg.reborrow()),
+                //     ),
+                //     Byte::new(iterations),
+                // )
+                
+                let rgb: Rgb = Hsv::<Srgb, _>::from_components((
+                    RgbHue::from_degrees(
+                        // magnitude as f32,
+                            // child_magnitude_normaliser.compute(compute_arg.reborrow()).normalise(magnitude as f32).into_inner()
+                    UFloatNormaliser::Sawtooth.normalise(//compute_arg.coordinate_set.get_unfloat_t().into_inner() + 
+                    magnitude as f32).into_inner()
+                            
+                            * 360.0,
+                    ),
+                    1.0 as f32,
+                    // child_magnitude_normaliser.compute(compute_arg.reborrow()).normalise(magnitude as f32).into_inner(),
+                    // UFloatNormaliser::Sawtooth.normalise(magnitude as f32).into_inner()
+                    0.5,
+                ))
+                .into();
+
+                float_color_from_pallette_rgb(rgb, 1.0)
             }
         }
     }

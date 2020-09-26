@@ -1,10 +1,10 @@
-use std::{f32::consts::PI, fs};
+use std::fs;
 
 use cpu_monitor::CpuInstant;
 use ggez::{
     conf::{FullscreenType, WindowMode, WindowSetup},
     event::{self, EventHandler, KeyCode, KeyMods},
-    graphics::{self, Color as GgColor, DrawParam, Image as GgImage, WHITE},
+    graphics,
     input::keyboard,
     timer, Context, ContextBuilder, GameResult,
 };
@@ -96,38 +96,11 @@ fn setup_logging() {
 
 #[derive(Debug, Generatable, Mutatable, UpdatableRecursively)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
-struct RenderNodes {
-    compute_offset_node: NodeBox<CoordMapNodes>,
-
-    root_rotation_node: NodeBox<AngleNodes>,
-    root_translation_node: NodeBox<SNPointNodes>,
-    root_offset_node: NodeBox<SNPointNodes>,
-    root_from_scale_node: NodeBox<SNPointNodes>,
-    root_to_scale_node: NodeBox<SNPointNodes>,
-
-    root_scalar_node: NodeBox<UNFloatNodes>,
-    root_alpha_node: NodeBox<UNFloatNodes>,
-
-    rotation_scalar_node: NodeBox<UNFloatNodes>,
-    translation_scalar_node: NodeBox<UNFloatNodes>,
-    offset_scalar_node: NodeBox<UNFloatNodes>,
-    from_scale_scalar_node: NodeBox<UNFloatNodes>,
-    to_scale_scalar_node: NodeBox<UNFloatNodes>,
-}
-
-impl<'a> Updatable<'a> for RenderNodes {
-    type UpdateArg = UpdArg<'a>;
-
-    fn update(&mut self, _arg: UpdArg<'a>) {}
-}
-
-#[derive(Debug, Generatable, Mutatable, UpdatableRecursively)]
-#[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 struct NodeTree {
-    //The root node for the tree that computes the next screen state
+    /// The root node for the tree that computes the next screen state
     root_node: NodeBox<FloatColorNodes>,
-    //Nodes for computing parameters for the next draw param
-    render_nodes: RenderNodes,
+    root_frame_renderer: NodeBox<FrameRendererNodes>,
+    compute_offset_node: NodeBox<CoordMapNodes>,
 }
 
 // impl NodeTree {
@@ -249,28 +222,11 @@ impl MyGame {
         let mut data = DataSet::new();
 
         MyGame {
-            next_history_step: HistoryStep {
-                cell_array: init_cell_array(CONSTS.cell_array_width, CONSTS.cell_array_height),
-                computed_texture: GgImage::solid(ctx, 1, WHITE).unwrap(),
-                update_coordinate: CoordinateSet {
-                    x: SNFloat::ZERO,
-                    y: SNFloat::ZERO,
-                    t: 0.0,
-                },
-                rotation: Angle::ZERO,
-                translation: SNPoint::zero(),
-                offset: SNPoint::zero(),
-                from_scale: SNPoint::zero(),
-                to_scale: SNPoint::zero(),
-
-                root_scalar: UNFloat::default(),
-                alpha: UNFloat::default(),
-                rotation_scalar: UNFloat::default(),
-                translation_scalar: UNFloat::default(),
-                offset_scalar: UNFloat::default(),
-                from_scale_scalar: UNFloat::default(),
-                to_scale_scalar: UNFloat::default(),
-            },
+            next_history_step: HistoryStep::new(
+                ctx,
+                CONSTS.cell_array_width,
+                CONSTS.cell_array_height,
+            ),
             rolling_update_stat_total: UpdateStat {
                 activity_value: 0.0,
                 alpha_value: 0.0,
@@ -526,7 +482,7 @@ impl EventHandler for MyGame {
                         history: &self.history,
                     },
                 );
-                self.node_tree.render_nodes.mutate_rng(
+                self.node_tree.root_frame_renderer.mutate_rng(
                     &mut self.rng,
                     MutArg {
                         nodes: &mut self.nodes,
@@ -560,7 +516,6 @@ impl EventHandler for MyGame {
 
             self.next_history_step.update_coordinate = self
                 .node_tree
-                .render_nodes
                 .compute_offset_node
                 .compute(last_update_arg.into());
 
@@ -574,77 +529,6 @@ impl EventHandler for MyGame {
             };
 
             let mut step_com_arg: ComArg = step_upd_arg.reborrow().into();
-
-            self.next_history_step.rotation = self
-                .node_tree
-                .render_nodes
-                .root_rotation_node
-                .compute(step_com_arg.reborrow()); //.average(history_step.rotation);
-            self.next_history_step.translation = self
-                .node_tree
-                .render_nodes
-                .root_translation_node
-                .compute(step_com_arg.reborrow()); //.average(history_step.translation);
-            self.next_history_step.offset = self
-                .node_tree
-                .render_nodes
-                .root_offset_node
-                .compute(step_com_arg.reborrow()); //.average(history_step.offset);
-            self.next_history_step.from_scale = self
-                .node_tree
-                .render_nodes
-                .root_from_scale_node
-                .compute(step_com_arg.reborrow()); //.average(history_step.from_scale);
-            self.next_history_step.to_scale = self
-                .node_tree
-                .render_nodes
-                .root_to_scale_node
-                .compute(step_com_arg.reborrow()); //.average(history_step.to_scale);
-
-            self.next_history_step.root_scalar = dbg!(UNFloat::new(
-                // (self
-                // .node_tree
-                // .render_nodes
-                // .root_scalar_node
-                // .compute(step_com_arg.reborrow()).average(history_step.root_scalar).into_inner() *
-                mutation_likelihood.powf(2.0) as f32 // )
-            ));
-
-            self.next_history_step.alpha = self
-                .node_tree
-                .render_nodes
-                .root_alpha_node
-                .compute(step_com_arg.reborrow()); //.average(history_step.alpha);
-
-            self.next_history_step.rotation_scalar = self
-                .node_tree
-                .render_nodes
-                .rotation_scalar_node
-                .compute(step_com_arg.reborrow()); //.average(history_step.rotation_scalar);
-
-            self.next_history_step.translation_scalar = self
-                .node_tree
-                .render_nodes
-                .translation_scalar_node
-                .compute(step_com_arg.reborrow()); //.average(history_step.translation_scalar);
-
-            self.next_history_step.offset_scalar = self
-                .node_tree
-                .render_nodes
-                .offset_scalar_node
-                .compute(step_com_arg.reborrow()); //.average(history_step.offset_scalar);
-
-            self.next_history_step.to_scale_scalar = self
-                .node_tree
-                .render_nodes
-                .to_scale_scalar_node
-                .compute(step_com_arg.reborrow()); //.average(history_step.to_scale_scalar);
-
-            self.next_history_step.from_scale_scalar = self
-                .node_tree
-                .render_nodes
-                .from_scale_scalar_node
-                .compute(step_com_arg.reborrow()); //.average(history_step.from_scale_scalar);
 
             // self.next_history_step.root_scalar = self
             //     .node_tree
@@ -664,6 +548,15 @@ impl EventHandler for MyGame {
             //     1.0 - self.average_update_stat.local_similarity_value as f32,
             // ))
             // .average(history_step.root_scalar);
+
+            self.next_history_step.root_scalar = dbg!(UNFloat::new(
+                // (self
+                // .node_tree
+                // .render_nodes
+                // .root_scalar_node
+                // .compute(step_com_arg.reborrow()).average(history_step.root_scalar).into_inner() *
+                mutation_likelihood.powf(2.0) as f32 // )
+            ));
 
             self.next_history_step.computed_texture =
                 compute_texture(ctx, self.next_history_step.cell_array.view());
@@ -705,160 +598,21 @@ impl EventHandler for MyGame {
         assert!(CONSTS.cell_array_history_length > CONSTS.cell_array_lerp_length);
 
         if self.last_render_t != timer::ticks(ctx) {
-            let lerp_sub =
-                (timer::ticks(ctx) % CONSTS.tics_per_update) as f32 / CONSTS.tics_per_update as f32;
+            let renderer = self.node_tree.root_frame_renderer.compute(ComArg {
+                coordinate_set: self.next_history_step.update_coordinate,
+                history: &self.history,
+                nodes: &self.nodes,
+                data: &self.data,
+                depth: 0,
+                current_t: self.current_t,
+            });
 
-            let lerp_len = CONSTS.cell_array_lerp_length;
+            renderer.draw(ctx, &self.history, self.current_t)?;
 
-            for i in 0..lerp_len {
-                //let transparency = if i == 0 {1.0} else {if i == 1 {0.5} else {0.0}};
-                let back_lerp_val = (i as f32 + (1.0 - lerp_sub)) / lerp_len as f32;
-                let alpha = 1.0 - back_lerp_val;
-
-                let _lerp_val = (i as f32 + lerp_sub) / lerp_len as f32;
-
-                let history_len = self.history.history_steps.len();
-
-                let prev_history_index =
-                    (self.current_t + i + history_len - lerp_len - 1) % history_len;
-                let history_index = (prev_history_index + 1) % history_len;
-
-                let prev_history_step = &self.history.history_steps[prev_history_index];
-                let history_step = &self.history.history_steps[history_index];
-
-                let mut alpha =
-                    (1.0 - ((alpha * 2.0) - 1.0).abs()) / CONSTS.cell_array_lerp_length as f32;
-
-                let mut dest_x = CONSTS.initial_window_width * 0.5;
-                let mut dest_y = CONSTS.initial_window_height * 0.5;
-
-                let mut offset_x = 0.5;
-                let mut offset_y = 0.5;
-
-                let mut scale_x = CONSTS.initial_window_width / CONSTS.cell_array_width as f32;
-                let mut scale_y = CONSTS.initial_window_height / CONSTS.cell_array_height as f32;
-
-                let mut rotation = 0.0;
-
-                if CONSTS.apply_frame_transformations || self.tree_dirty {
-                    let root_scalar = lerp(
-                        prev_history_step.root_scalar.into_inner(),
-                        history_step.root_scalar.into_inner(),
-                        back_lerp_val,
-                    );
-
-                    let rotation_scalar = lerp(
-                        prev_history_step.rotation_scalar.into_inner(),
-                        history_step.rotation_scalar.into_inner(),
-                        back_lerp_val,
-                    );
-
-                    let translation_scalar = lerp(
-                        prev_history_step.translation_scalar.into_inner(),
-                        history_step.translation_scalar.into_inner(),
-                        back_lerp_val,
-                    );
-
-                    let offset_scalar = lerp(
-                        prev_history_step.offset_scalar.into_inner(),
-                        history_step.offset_scalar.into_inner(),
-                        back_lerp_val,
-                    );
-
-                    let from_scale_scalar = lerp(
-                        prev_history_step.from_scale_scalar.into_inner(),
-                        history_step.from_scale_scalar.into_inner(),
-                        back_lerp_val,
-                    );
-
-                    let to_scale_scalar = lerp(
-                        prev_history_step.to_scale_scalar.into_inner(),
-                        history_step.to_scale_scalar.into_inner(),
-                        back_lerp_val,
-                    );
-
-                    let translation_x = lerp(
-                        prev_history_step.translation.into_inner().x,
-                        history_step.translation.into_inner().x,
-                        back_lerp_val,
-                    ) * 0.5
-                        * CONSTS.initial_window_width;
-
-                    let translation_y = lerp(
-                        prev_history_step.translation.into_inner().y,
-                        history_step.translation.into_inner().y,
-                        back_lerp_val,
-                    ) * 0.5
-                        * CONSTS.initial_window_height;
-
-                    let offset_translation_x = lerp(
-                        prev_history_step.offset.into_inner().x,
-                        history_step.offset.into_inner().x,
-                        back_lerp_val,
-                    ) * 0.5;
-
-                    let offset_translation_y = lerp(
-                        prev_history_step.offset.into_inner().y,
-                        history_step.offset.into_inner().y,
-                        back_lerp_val,
-                    ) * 0.5;
-
-                    alpha *= lerp(1.0, history_step.alpha.into_inner(), root_scalar);
-                    dest_x += translation_x * scale_x * translation_scalar * root_scalar;
-                    dest_y += translation_y * scale_y * translation_scalar * root_scalar;
-                    offset_x += offset_translation_x * scale_x * offset_scalar * root_scalar;
-                    offset_y += offset_translation_y * scale_y * offset_scalar * root_scalar;
-
-                    // NOTE PI is only subtracted because angles are 0..2PI currently
-                    rotation += (1.0 - alpha)
-                        * (history_step.rotation.into_inner() - PI)
-                        * rotation_scalar
-                        * root_scalar;
-
-                    scale_x *= lerp(
-                        1.0,
-                        lerp(
-                            lerp(
-                                1.0,
-                                history_step.from_scale.into_inner().x,
-                                from_scale_scalar,
-                            ),
-                            lerp(1.0, history_step.to_scale.into_inner().x, to_scale_scalar),
-                            alpha,
-                        ) * 2.0,
-                        root_scalar,
-                    );
-
-                    scale_y *= lerp(
-                        1.0,
-                        lerp(
-                            lerp(
-                                1.0,
-                                history_step.from_scale.into_inner().y,
-                                from_scale_scalar,
-                            ),
-                            lerp(1.0, history_step.to_scale.into_inner().y, to_scale_scalar),
-                            alpha,
-                        ) * 2.0,
-                        root_scalar,
-                    );
-                }
-
-                ggez::graphics::draw(
-                    ctx,
-                    &history_step.computed_texture,
-                    DrawParam::new()
-                        .color(GgColor::new(1.0, 1.0, 1.0, alpha))
-                        .dest([dest_x, dest_y])
-                        .offset([offset_x, offset_y])
-                        .scale([scale_x, scale_y])
-                        .rotation(rotation),
-                )?;
-            }
-
+            // TODO Use renderer
             self.last_render_t = timer::ticks(ctx);
+            graphics::present(ctx)?;
         }
-        graphics::present(ctx)?;
 
         Ok(())
     }

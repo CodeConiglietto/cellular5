@@ -6,6 +6,7 @@ pub mod constraint_resolver_nodes;
 pub mod continuous_nodes;
 pub mod coord_map_nodes;
 pub mod discrete_nodes;
+pub mod frame_renderer_nodes;
 pub mod iterative_function_nodes;
 pub mod matrix_nodes;
 pub mod point_nodes;
@@ -77,7 +78,7 @@ pub mod mutagen_functions {
     mod tests {
         use super::*;
 
-        #[derive(Copy)]
+        #[derive(Copy, Clone)]
         struct TestArg {
             depth: usize,
         }

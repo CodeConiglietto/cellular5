@@ -1,11 +1,7 @@
-use crate::{
-    coordinate_set::*,
-    datatype::{colors::*, continuous::*, discrete::*, points::*},
-    util::*,
-};
+use ggez::{graphics::Image as GgImage, Context};
 use ndarray::{s, Array3, ArrayView1};
 
-use ggez::{graphics::Image as GgImage, Context};
+use crate::prelude::*;
 
 #[derive(Debug)]
 pub struct HistoryStep {
@@ -13,20 +9,26 @@ pub struct HistoryStep {
     pub computed_texture: GgImage,
 
     pub update_coordinate: CoordinateSet,
-
-    pub rotation: Angle,
-    pub translation: SNPoint,
-    pub offset: SNPoint,
-    pub from_scale: SNPoint,
-    pub to_scale: SNPoint,
-
+    pub frame_renderer: FrameRenderers,
     pub root_scalar: UNFloat,
-    pub alpha: UNFloat,
-    pub rotation_scalar: UNFloat,
-    pub translation_scalar: UNFloat,
-    pub offset_scalar: UNFloat,
-    pub from_scale_scalar: UNFloat,
-    pub to_scale_scalar: UNFloat,
+}
+
+impl HistoryStep {
+    pub fn new(ctx: &mut Context, array_width: usize, array_height: usize) -> Self {
+        let cell_array = init_cell_array(array_width, array_height);
+
+        Self {
+            computed_texture: compute_texture(ctx, cell_array.view()),
+            cell_array,
+            update_coordinate: CoordinateSet {
+                x: SNFloat::ZERO,
+                y: SNFloat::ZERO,
+                t: 0.0,
+            },
+            frame_renderer: FrameRenderers::default(),
+            root_scalar: UNFloat::ZERO,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -38,32 +40,7 @@ impl History {
     pub fn new(ctx: &mut Context, array_width: usize, array_height: usize, size: usize) -> Self {
         Self {
             history_steps: (0..size)
-                .map(|_| {
-                    let cell_array = init_cell_array(array_width, array_height);
-
-                    HistoryStep {
-                        computed_texture: compute_texture(ctx, cell_array.view()),
-                        cell_array,
-                        update_coordinate: CoordinateSet {
-                            x: SNFloat::ZERO,
-                            y: SNFloat::ZERO,
-                            t: 0.0,
-                        },
-                        rotation: Angle::ZERO,
-                        translation: SNPoint::zero(),
-                        offset: SNPoint::zero(),
-                        from_scale: SNPoint::zero(),
-                        to_scale: SNPoint::zero(),
-
-                        root_scalar: UNFloat::default(),
-                        alpha: UNFloat::default(),
-                        rotation_scalar: UNFloat::default(),
-                        translation_scalar: UNFloat::default(),
-                        offset_scalar: UNFloat::default(),
-                        from_scale_scalar: UNFloat::default(),
-                        to_scale_scalar: UNFloat::default(),
-                    }
-                })
+                .map(|_| HistoryStep::new(ctx, array_width, array_height))
                 .collect(),
         }
     }

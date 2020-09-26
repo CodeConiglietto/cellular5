@@ -36,6 +36,8 @@ pub struct NodeSet {
     //constraint_resolvers
     sfloat_normaliser_nodes: Metarena<SFloatNormaliserNodes>,
     ufloat_normaliser_nodes: Metarena<UFloatNormaliserNodes>,
+    //frame_renderers
+    frame_renderer_nodes: Metarena<FrameRendererNodes>,
 }
 
 impl NodeSet {
@@ -247,5 +249,15 @@ impl Storage<SIntNodes> for NodeSet {
 
     fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<SIntNodes>> {
         &mut self.sint_nodes.value
+    }
+}
+
+impl Storage<FrameRendererNodes> for NodeSet {
+    fn arena(&self) -> &Arena<ArenaSlot<FrameRendererNodes>> {
+        &self.frame_renderer_nodes.value
+    }
+
+    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<FrameRendererNodes>> {
+        &mut self.frame_renderer_nodes.value
     }
 }

@@ -558,6 +558,11 @@ impl EventHandler for MyGame {
                 mutation_likelihood.powf(2.0) as f32 // )
             ));
 
+            self.next_history_step.frame_renderer = self
+                .node_tree
+                .root_frame_renderer
+                .compute(step_com_arg.reborrow());
+
             self.next_history_step.computed_texture =
                 compute_texture(ctx, self.next_history_step.cell_array.view());
 
@@ -598,18 +603,21 @@ impl EventHandler for MyGame {
         assert!(CONSTS.cell_array_history_length > CONSTS.cell_array_lerp_length);
 
         if self.last_render_t != timer::ticks(ctx) {
-            let renderer = self.node_tree.root_frame_renderer.compute(ComArg {
-                coordinate_set: self.next_history_step.update_coordinate,
-                history: &self.history,
-                nodes: &self.nodes,
-                data: &self.data,
-                depth: 0,
-                current_t: self.current_t,
-            });
+            let lerp_sub =
+                (timer::ticks(ctx) % CONSTS.tics_per_update) as f32 / CONSTS.tics_per_update as f32;
 
-            renderer.draw(ctx, &self.history, self.current_t)?;
+            for lerp_i in 0..CONSTS.cell_array_lerp_length {
+                let args = RenderArgs {
+                    ctx,
+                    history: &self.history,
+                    current_t: self.current_t,
+                    lerp_sub,
+                    lerp_i,
+                };
 
-            // TODO Use renderer
+                args.history_step().frame_renderer.draw(args)?;
+            }
+
             self.last_render_t = timer::ticks(ctx);
             graphics::present(ctx)?;
         }

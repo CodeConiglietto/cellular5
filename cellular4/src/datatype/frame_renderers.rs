@@ -53,6 +53,8 @@ impl<'a> RenderArgs<'a> {
 
 #[derive(Debug)]
 pub enum FrameRenderers {
+    InfiniZoom {invert_direction: Boolean},
+    InfiniZoomRotate {invert_direction: Boolean, angle: Angle},
     Generalized {
         rotation: Angle,
         translation: SNPoint,
@@ -69,7 +71,6 @@ pub enum FrameRenderers {
         from_scale_scalar: UNFloat,
         to_scale_scalar: UNFloat,
     },
-
     /// Used as a default value for history steps before they first time they're computed to
     None,
 }
@@ -77,6 +78,51 @@ pub enum FrameRenderers {
 impl FrameRenderers {
     pub fn draw(&self, args: RenderArgs) -> GameResult<()> {
         match self {
+            FrameRenderers::InfiniZoom { invert_direction } => {
+                let alpha = 1.0 - args.back_lerp_val();
+                let mut alpha =
+                    (1.0 - ((alpha * 2.0) - 1.0).abs()) / CONSTS.cell_array_lerp_length as f32;
+
+                let mut scalar = (1.0 / (args.lerp_i as f32 + (1.0 - args.lerp_sub)).max(1.0));
+                if invert_direction.into_inner() {scalar = 1.0 - scalar}
+                let dest_x = CONSTS.initial_window_width * 0.5;
+                let dest_y = CONSTS.initial_window_height * 0.5;
+
+                let scale_x = CONSTS.initial_window_width / CONSTS.cell_array_width as f32;
+                let scale_y = CONSTS.initial_window_height / CONSTS.cell_array_height as f32;
+                ggez::graphics::draw(
+                    args.ctx,
+                    &args.history_step().computed_texture,
+                    DrawParam::new()
+                        .color(GgColor::new(1.0, 1.0, 1.0, (1.0 / args.history_len() as f32) * alpha))
+                        .offset([0.5, 0.5])
+                        .dest([dest_x, dest_y])
+                        .scale([scalar * scale_x, scalar * scale_y]),
+                )?;
+            },
+            FrameRenderers::InfiniZoomRotate { invert_direction, angle } => {
+                let alpha = 1.0 - args.back_lerp_val();
+                let mut alpha =
+                    (1.0 - ((alpha * 2.0) - 1.0).abs()) / CONSTS.cell_array_lerp_length as f32;
+
+                let mut scalar = (1.0 / (args.lerp_i as f32 + (1.0 - args.lerp_sub)).max(1.0));
+                if invert_direction.into_inner() {scalar = 1.0 - scalar}
+                let dest_x = CONSTS.initial_window_width * 0.5;
+                let dest_y = CONSTS.initial_window_height * 0.5;
+
+                let scale_x = CONSTS.initial_window_width / CONSTS.cell_array_width as f32;
+                let scale_y = CONSTS.initial_window_height / CONSTS.cell_array_height as f32;
+                ggez::graphics::draw(
+                    args.ctx,
+                    &args.history_step().computed_texture,
+                    DrawParam::new()
+                        .color(GgColor::new(1.0, 1.0, 1.0, (1.0 / args.history_len() as f32) * alpha))
+                        .offset([0.5, 0.5])
+                        .dest([dest_x, dest_y])
+                        .scale([scalar * scale_x, scalar * scale_y])
+                        .rotation(angle.into_inner() * scalar),
+                )?;
+            },
             FrameRenderers::Generalized {
                 rotation,
                 translation,

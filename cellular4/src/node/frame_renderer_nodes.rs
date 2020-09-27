@@ -7,7 +7,11 @@ use crate::prelude::*;
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum FrameRendererNodes {
     // TODO Remove gen_preferred when we have a proper leaf node
-    #[mutagen(gen_preferred, gen_weight = branch_node_weight)]
+    #[mutagen(gen_weight = leaf_node_weight)]
+    InfiniZoom {invert_direction: Boolean},
+    #[mutagen(gen_weight = pipe_node_weight)]
+    InfiniZoomRotate {invert_direction: Boolean, child_angle: NodeBox<AngleNodes>},
+    #[mutagen(gen_weight = branch_node_weight)]
     Generalized {
         rotation_node: NodeBox<AngleNodes>,
         translation_node: NodeBox<SNPointNodes>,
@@ -35,6 +39,8 @@ impl Node for FrameRendererNodes {
 
     fn compute(&self, mut compute_arg: ComArg) -> Self::Output {
         match self {
+            FrameRendererNodes::InfiniZoom {invert_direction} => FrameRenderers::InfiniZoom{invert_direction: *invert_direction},
+            FrameRendererNodes::InfiniZoomRotate {invert_direction, child_angle} => FrameRenderers::InfiniZoomRotate{invert_direction: *invert_direction, angle: child_angle.compute(compute_arg)},
             FrameRendererNodes::Generalized {
                 rotation_node,
                 translation_node,

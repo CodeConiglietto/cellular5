@@ -1,4 +1,4 @@
-use ggez::{graphics::Image as GgImage, Context};
+use ggez::{graphics::Image as GgImage, graphics::Drawable, Context};
 
 use std::{
     path::{Path, PathBuf},
@@ -165,7 +165,7 @@ pub fn init_cell_array(width: usize, height: usize) -> Array3<u8> {
 
 pub fn compute_texture(ctx: &mut Context, cell_array: ArrayView3<u8>) -> GgImage {
     let (height, width, _) = cell_array.dim();
-    let image = GgImage::from_rgba8(
+    let mut image = GgImage::from_rgba8(
         ctx,
         width as u16,
         height as u16,
@@ -173,6 +173,7 @@ pub fn compute_texture(ctx: &mut Context, cell_array: ArrayView3<u8>) -> GgImage
     )
     .unwrap();
 
+    // image.set_blend_mode(Some(ggez::graphics::BlendMode::Multiply));
     // image.set_filter(ggez::graphics::FilterMode::Nearest);
     image
 }

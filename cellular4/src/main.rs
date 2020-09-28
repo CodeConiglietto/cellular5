@@ -514,10 +514,24 @@ impl EventHandler for MyGame {
                 current_t,
             };
 
-            self.next_history_step.update_coordinate = self
+            dbg!(last_update_arg.coordinate_set);
+
+            self.next_history_step.update_coordinate = 
+            self
                 .node_tree
                 .compute_offset_node
                 .compute(last_update_arg.into());
+
+                
+                // CoordinateSet {
+                //     x: SNFloat::ZERO,
+                //     y: SNFloat::ZERO,
+                //     t: current_t as f32,
+                // };
+            dbg!(self.next_history_step.update_coordinate);
+
+            //Workaround, please fix
+            self.next_history_step.update_coordinate.t = current_t as f32;
 
             let mut step_upd_arg = UpdArg {
                 coordinate_set: self.next_history_step.update_coordinate,

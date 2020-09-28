@@ -83,7 +83,8 @@ impl FrameRenderers {
                 let mut alpha =
                     (1.0 - ((alpha * 2.0) - 1.0).abs()) / CONSTS.cell_array_lerp_length as f32;
 
-                let mut scalar = (1.0 / (args.lerp_i as f32 + (1.0 - args.lerp_sub)).max(1.0));
+                let mut scalar = 1.0 / (args.lerp_i as f32 + (1.0 - args.lerp_sub)).max(1.0);
+                // let mut scalar = lerp( 1.0, 1.0 / (args.lerp_i as f32 + (1.0 - args.lerp_sub)).max(1.0), args.history_step().root_scalar.into_inner());
                 if invert_direction.into_inner() {scalar = 1.0 - scalar}
                 let dest_x = CONSTS.initial_window_width * 0.5;
                 let dest_y = CONSTS.initial_window_height * 0.5;
@@ -104,8 +105,9 @@ impl FrameRenderers {
                 let alpha = 1.0 - args.back_lerp_val();
                 let mut alpha =
                     (1.0 - ((alpha * 2.0) - 1.0).abs()) / CONSTS.cell_array_lerp_length as f32;
-
-                let mut scalar = (1.0 / (args.lerp_i as f32 + (1.0 - args.lerp_sub)).max(1.0));
+                //TODO fix
+                let mut scalar = 1.0 / (args.lerp_i as f32 + (1.0 - args.lerp_sub)).max(1.0);
+                // let mut scalar = lerp(1.0, 1.0 / (args.lerp_i as f32 + (1.0 - args.lerp_sub)).max(1.0), args.history_step().root_scalar.into_inner());
                 if invert_direction.into_inner() {scalar = 1.0 - scalar}
                 let dest_x = CONSTS.initial_window_width * 0.5;
                 let dest_y = CONSTS.initial_window_height * 0.5;

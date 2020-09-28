@@ -119,8 +119,8 @@ impl FrameRenderers {
                         .color(GgColor::new(1.0, 1.0, 1.0, (1.0 / args.history_len() as f32) * alpha))
                         .offset([0.5, 0.5])
                         .dest([dest_x, dest_y])
-                        .scale([scalar * scale_x, scalar * scale_y])
-                        .rotation(angle.into_inner() * scalar),
+                        .scale([scalar * scale_x * 1.5, scalar * scale_y * 1.5])
+                        .rotation(angle.into_inner() * scalar * args.history_step().root_scalar.into_inner()),
                 )?;
             },
             FrameRenderers::Generalized {

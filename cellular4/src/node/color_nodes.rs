@@ -119,6 +119,12 @@ pub enum FloatColorNodes {
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
+    RemoveAlpha {
+        child_a: NodeBox<FloatColorNodes>,
+        child_b: NodeBox<BooleanNodes>,
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
     SetAlpha {
         child_a: NodeBox<FloatColorNodes>,
         child_b: NodeBox<UNFloatNodes>,
@@ -447,6 +453,13 @@ impl Node for FloatColorNodes {
                 } else {
                     child_b.compute(compute_arg.reborrow())
                 }
+            }
+            RemoveAlpha { child_a, child_b } => {
+                let mut color = child_a.compute(compute_arg.reborrow());
+
+                if child_b.compute(compute_arg.reborrow()).into_inner() {color.a = UNFloat::ZERO;}
+
+                color
             }
             SetAlpha { child_a, child_b } => {
                 let mut color = child_a.compute(compute_arg.reborrow());
@@ -899,6 +912,18 @@ pub enum ByteColorNodes {
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
+    RemoveAlpha {
+        child_a: NodeBox<ByteColorNodes>,
+        child_b: NodeBox<BooleanNodes>,
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    SetAlpha {
+        child_a: NodeBox<ByteColorNodes>,
+        child_b: NodeBox<ByteNodes>,
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
     ModifyState {
         child: NodeBox<ByteColorNodes>,
         child_state: NodeBox<CoordMapNodes>,
@@ -940,6 +965,20 @@ impl Node for ByteColorNodes {
                 b: b.compute(compute_arg.reborrow()),
                 a: a.compute(compute_arg.reborrow()),
             },
+            RemoveAlpha { child_a, child_b } => {
+                let mut color = child_a.compute(compute_arg.reborrow());
+
+                if child_b.compute(compute_arg.reborrow()).into_inner() {color.a = Byte::new(0);}
+
+                color
+            }
+            SetAlpha { child_a, child_b } => {
+                let mut color = child_a.compute(compute_arg.reborrow());
+
+                color.a = child_b.compute(compute_arg.reborrow());
+
+                color
+            }
             FromFloatColor { child } => child.compute(compute_arg.reborrow()).into(),
             FromBitColor { child } => child.compute(compute_arg.reborrow()).into(),
             ModifyState { child, child_state } => child.compute(ComArg {

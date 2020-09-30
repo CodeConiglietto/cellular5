@@ -66,7 +66,7 @@ pub enum FloatColorNodes {
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
-    #[mutagen(gen_preferred)]
+    // #[mutagen(gen_preferred)]
     ComplexLAB {
         l: NodeBox<UNFloatNodes>,
         child_complex: NodeBox<SNComplexNodes>,
@@ -143,6 +143,7 @@ pub enum FloatColorNodes {
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
+    // #[mutagen(gen_preferred)]
     PointSetLineBuffer {
         buffer: Buffer<FloatColor>,
         child_point_set: NodeBox<PointSetNodes>,
@@ -186,7 +187,6 @@ pub enum FloatColorNodes {
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
-    // #[mutagen(gen_preferred)]
     DucksFractal {
         child_offset: NodeBox<SNPointNodes>,
         child_scale: NodeBox<SNPointNodes>,
@@ -582,7 +582,6 @@ impl<'a> Updatable<'a> for FloatColorNodes {
 
     fn update(&mut self, mut arg: UpdArg<'a>) {
         use FloatColorNodes::*;
-
         match self {
             PointDrawingBuffer {
                 buffer,

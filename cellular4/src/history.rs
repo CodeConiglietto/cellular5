@@ -2,6 +2,7 @@ use ggez::{graphics::Image as GgImage, Context};
 use ndarray::{s, Array3, ArrayView1};
 
 use crate::prelude::*;
+use rand::thread_rng;
 
 #[derive(Debug)]
 pub struct HistoryStep {
@@ -11,6 +12,8 @@ pub struct HistoryStep {
     pub update_coordinate: CoordinateSet,
     pub frame_renderer: FrameRenderers,
     pub root_scalar: UNFloat,
+    pub fade_color: FloatColor,
+    pub alpha_multiplier: UNFloat,
 }
 
 impl HistoryStep {
@@ -27,6 +30,8 @@ impl HistoryStep {
             },
             frame_renderer: FrameRenderers::default(),
             root_scalar: UNFloat::ZERO,
+            fade_color: FloatColor::ALL_ZERO,
+            alpha_multiplier: UNFloat::ZERO,
         }
     }
 }
@@ -48,6 +53,18 @@ impl History {
     pub fn get_raw(&self, x: usize, y: usize, t: usize) -> ArrayView1<u8> {
         let array = &self.history_steps[t % self.history_steps.len()].cell_array;
         array.slice(s![y % array.dim().0, x % array.dim().1, ..])
+    }
+
+    pub fn get_normalised(&self, pos: SNPoint, t: usize) -> FloatColor {
+        self.get(
+            ((pos.x().into_inner() + 1.0)
+                        * 0.5
+                        * CONSTS.cell_array_width as f32) as usize,
+                    ((pos.y().into_inner() + 1.0)
+                        * 0.5
+                        * CONSTS.cell_array_height as f32) as usize,
+                    t as usize,
+        ).into()
     }
 
     pub fn get(&self, x: usize, y: usize, t: usize) -> ByteColor {

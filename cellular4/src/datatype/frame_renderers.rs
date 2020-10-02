@@ -1,7 +1,7 @@
 use std::f32::consts::PI;
 
 use ggez::{
-    graphics::{Color as GgColor, DrawParam},
+    graphics::{Color as GgColor, DrawParam, Image as GgImage},
     timer, Context, GameResult,
 };
 
@@ -11,6 +11,7 @@ use crate::prelude::*;
 pub struct RenderArgs<'a> {
     pub ctx: &'a mut Context,
     pub history: &'a History,
+    pub blank_texture: &'a GgImage,
     pub current_t: usize,
     pub lerp_sub: f32,
     pub lerp_i: usize,
@@ -53,6 +54,7 @@ impl<'a> RenderArgs<'a> {
 
 #[derive(Debug)]
 pub enum FrameRenderers {
+    FadeAndChild {child: Box<FrameRenderers>, fade_color: FloatColor, fade_alpha_multiplier: UNFloat},
     InfiniZoom {invert_direction: Boolean},
     InfiniZoomRotate {invert_direction: Boolean, angle: Angle},
     Generalized {
@@ -78,14 +80,46 @@ pub enum FrameRenderers {
 impl FrameRenderers {
     pub fn draw(&self, args: RenderArgs) -> GameResult<()> {
         match self {
+            FrameRenderers::FadeAndChild {child, fade_color, fade_alpha_multiplier} => {
+                if args.lerp_i == 0
+                {
+                    let mut modified_color = fade_color.clone();
+                    modified_color.a = 
+                    UNFloat::new(modified_color.a.into_inner() * fade_alpha_multiplier.into_inner() * 0.5);
+                    
+                    ggez::graphics::draw(
+                        args.ctx,
+                        args.blank_texture,
+                        DrawParam::new()
+                            .color(modified_color.into())
+                            .scale([CONSTS.initial_window_width as f32, CONSTS.initial_window_height as f32]),
+                    )?;
+                }
+                child.draw(args);
+            },
             FrameRenderers::InfiniZoom { invert_direction } => {
                 let alpha = 1.0 - args.back_lerp_val();
                 let mut alpha =
                     (1.0 - ((alpha * 2.0) - 1.0).abs()) / CONSTS.cell_array_lerp_length as f32;
 
-                let mut scalar = 1.0 / (args.lerp_i as f32 + (1.0 - args.lerp_sub)).max(1.0);
-                // let mut scalar = lerp( 1.0, 1.0 / (args.lerp_i as f32 + (1.0 - args.lerp_sub)).max(1.0), args.history_step().root_scalar.into_inner());
-                if invert_direction.into_inner() {scalar = 1.0 - scalar}
+                let mut scalar = 1.0;
+                // let mut scalar = 
+                //     lerp(1.0, 
+                //         1.0 / (args.lerp_i as f32 + (1.0 - args.lerp_sub)).max(1.0), 
+                //         args.history_step().root_scalar.into_inner());
+                if invert_direction.into_inner() 
+                {
+                    // scalar = 1.0 - scalar
+                    scalar = 
+                    lerp(1.0 / (args.lerp_i as f32 + (1.0 - args.lerp_sub)).max(1.0),
+                        1.0,
+                        args.history_step().root_scalar.into_inner());
+                } else {
+                    scalar = 
+                        lerp(1.0, 
+                            1.0 / (args.lerp_i as f32 + (1.0 - args.lerp_sub)).max(1.0), 
+                            args.history_step().root_scalar.into_inner());
+                }
                 let dest_x = CONSTS.initial_window_width * 0.5;
                 let dest_y = CONSTS.initial_window_height * 0.5;
 
@@ -106,9 +140,23 @@ impl FrameRenderers {
                 let mut alpha =
                     (1.0 - ((alpha * 2.0) - 1.0).abs()) / CONSTS.cell_array_lerp_length as f32;
                 //TODO fix
-                let mut scalar = 1.0 / (args.lerp_i as f32 + (1.0 - args.lerp_sub)).max(1.0);
+                let mut scalar = 1.0;
+                // let mut scalar = 1.0 / (args.lerp_i as f32 + (1.0 - args.lerp_sub)).max(1.0);
                 // let mut scalar = lerp(1.0, 1.0 / (args.lerp_i as f32 + (1.0 - args.lerp_sub)).max(1.0), args.history_step().root_scalar.into_inner());
-                if invert_direction.into_inner() {scalar = 1.0 - scalar}
+                // if invert_direction.into_inner() {scalar = 1.0 - scalar}
+                if invert_direction.into_inner() 
+                {
+                    // scalar = 1.0 - scalar
+                    scalar = 
+                    lerp(1.0 / (args.lerp_i as f32 + (1.0 - args.lerp_sub)).max(1.0),
+                        1.0,
+                        args.history_step().root_scalar.into_inner());
+                } else {
+                    scalar = 
+                        lerp(1.0, 
+                            1.0 / (args.lerp_i as f32 + (1.0 - args.lerp_sub)).max(1.0), 
+                            args.history_step().root_scalar.into_inner());
+                }
                 let dest_x = CONSTS.initial_window_width * 0.5;
                 let dest_y = CONSTS.initial_window_height * 0.5;
 

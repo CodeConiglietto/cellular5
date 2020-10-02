@@ -28,6 +28,12 @@ pub enum FrameRendererNodes {
         from_scale_scalar_node: NodeBox<UNFloatNodes>,
         to_scale_scalar_node: NodeBox<UNFloatNodes>,
     },
+    #[mutagen(gen_weight = branch_node_weight)]
+    FadeAndChild {
+        child_renderer: NodeBox<FrameRendererNodes>, 
+        child_color: NodeBox<FloatColorNodes>, 
+        child_alpha_multiplier: NodeBox<UNFloatNodes>
+    },
 
     // TODO Remove when we have a proper leaf nodes
     #[mutagen(gen_weight = leaf_node_weight)]
@@ -71,6 +77,11 @@ impl Node for FrameRendererNodes {
                 offset_scalar: offset_scalar_node.compute(compute_arg.reborrow()),
                 from_scale_scalar: from_scale_scalar_node.compute(compute_arg.reborrow()),
                 to_scale_scalar: to_scale_scalar_node.compute(compute_arg.reborrow()),
+            },
+            FrameRendererNodes::FadeAndChild{child_renderer, child_color, child_alpha_multiplier} => FrameRenderers::FadeAndChild{
+                child: Box::new(child_renderer.compute(compute_arg.reborrow())),
+                fade_color: child_color.compute(compute_arg.reborrow()),
+                fade_alpha_multiplier: child_alpha_multiplier.compute(compute_arg.reborrow()),
             },
 
             FrameRendererNodes::None => FrameRenderers::None,

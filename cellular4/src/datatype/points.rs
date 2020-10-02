@@ -72,6 +72,10 @@ impl SNPoint {
         SNFloat::new_unchecked(self.value.y)
     }
 
+    pub fn abs(self) -> Self {
+        Self::from_snfloats(self.x().abs(), self.y().abs())
+    }
+
     pub fn to_angle(self) -> Angle {
         Angle::new(f32::atan2(self.value.x, self.value.y))
     }

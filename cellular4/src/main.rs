@@ -5,6 +5,7 @@ use ggez::{
     conf::{FullscreenType, WindowMode, WindowSetup},
     event::{self, EventHandler, KeyCode, KeyMods},
     graphics,
+    graphics::{Image as GgImage, Color as GgColor, DrawParam},
     input::keyboard,
     timer, Context, ContextBuilder, GameResult,
 };
@@ -101,6 +102,8 @@ struct NodeTree {
     root_node: NodeBox<FloatColorNodes>,
     root_frame_renderer: NodeBox<FrameRendererNodes>,
     compute_offset_node: NodeBox<CoordMapNodes>,
+    fade_color_node: NodeBox<FloatColorNodes>,
+    fade_color_alpha_multiplier: NodeBox<UNFloatNodes>,
 }
 
 // impl NodeTree {
@@ -180,6 +183,8 @@ struct MyGame {
     history: History,
     next_history_step: HistoryStep,
 
+    blank_texture: GgImage,
+
     //The rolling total used to calculate the average per update instead of per slice
     rolling_update_stat_total: UpdateStat,
     //The average update stat over time, calculated by averaging rolling total and itself once an update
@@ -222,6 +227,7 @@ impl MyGame {
         let mut data = DataSet::new();
 
         MyGame {
+            blank_texture: compute_blank_texture(ctx),
             next_history_step: HistoryStep::new(
                 ctx,
                 CONSTS.cell_array_width,
@@ -540,6 +546,9 @@ impl EventHandler for MyGame {
 
             let mut step_com_arg: ComArg = step_upd_arg.reborrow().into();
 
+            self.next_history_step.fade_color = self.node_tree.fade_color_node.compute(step_com_arg.reborrow());
+            self.next_history_step.alpha_multiplier = self.node_tree.fade_color_alpha_multiplier.compute(step_com_arg.reborrow());
+
             // self.next_history_step.root_scalar = self
             //     .node_tree
             //     .render_nodes
@@ -612,7 +621,7 @@ impl EventHandler for MyGame {
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         assert!(CONSTS.cell_array_history_length > CONSTS.cell_array_lerp_length);
 
-        if self.last_render_t != timer::ticks(ctx) {
+        if self.last_render_t != timer::ticks(ctx) {            
             let lerp_sub =
                 (timer::ticks(ctx) % CONSTS.tics_per_update) as f32 / CONSTS.tics_per_update as f32;
 
@@ -623,6 +632,7 @@ impl EventHandler for MyGame {
                     current_t: self.current_t,
                     lerp_sub,
                     lerp_i,
+                    blank_texture: &self.blank_texture,
                 };
 
                 args.history_step().frame_renderer.draw(args)?;

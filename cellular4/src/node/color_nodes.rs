@@ -22,6 +22,10 @@ pub enum FloatColorNodes {
     #[mutagen(gen_weight = pipe_node_weight)]
     Grayscale { child: NodeBox<UNFloatNodes> },
 
+    //Brute force attempt to get more visually satisfying behaviour
+    #[mutagen(gen_weight = pipe_node_weight)]
+    AbsChildCoords { child: NodeBox<FloatColorNodes> },
+
     #[mutagen(gen_weight = branch_node_weight)]
     RGB {
         r: NodeBox<UNFloatNodes>,
@@ -112,6 +116,14 @@ pub enum FloatColorNodes {
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
+    // #[mutagen(gen_preferred)]
+    TriangleBlendAutomata{
+        child_rho: NodeBox<UNFloatNodes>,
+        child_theta: NodeBox<AngleNodes>,
+        child_normaliser: NodeBox<SFloatNormaliserNodes>,
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
     IfElse {
         predicate: NodeBox<BooleanNodes>,
         child_a: NodeBox<FloatColorNodes>,
@@ -187,6 +199,7 @@ pub enum FloatColorNodes {
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
+    // #[mutagen(gen_preferred)]
     DucksFractal {
         child_offset: NodeBox<SNPointNodes>,
         child_scale: NodeBox<SNPointNodes>,
@@ -230,6 +243,65 @@ impl Node for FloatColorNodes {
                     b: value,
                     a: value,
                 }
+            }
+            TriangleBlendAutomata {
+                child_rho,
+                child_theta,
+                child_normaliser,
+            } => {
+                let rho = UNFloat::new(0.1);//child_rho.compute(compute_arg.reborrow());
+                let theta = Angle::new(0.0);//child_theta.compute(compute_arg.reborrow());
+                let normaliser = child_normaliser.compute(compute_arg.reborrow());
+
+                let theta_a = theta;
+                let theta_b = theta + Angle::new(2.0 / 3.0 * PI);
+                let theta_c = theta - Angle::new(2.0 / 3.0 * PI);
+
+                // TODO rewrite this once we have a polar type node
+                let middle = compute_arg.coordinate_set.get_coord_point();
+
+                let t = compute_arg.reborrow().current_t;
+
+                let color_a = compute_arg.reborrow().history.get_normalised(middle.normalised_add(
+                                SNPoint::from_snfloats(
+                                    SNFloat::new(rho.into_inner() * f32::sin(theta_a.into_inner())),
+                                    SNFloat::new(rho.into_inner() * f32::cos(theta_a.into_inner())),
+                                ),
+                                normaliser,
+                            ), t);
+
+                let color_b = compute_arg.reborrow().history.get_normalised(middle.normalised_add(
+                    SNPoint::from_snfloats(
+                                    SNFloat::new(rho.into_inner() * f32::sin(theta_b.into_inner())),
+                                    SNFloat::new(rho.into_inner() * f32::cos(theta_b.into_inner())),
+                                ),
+                                normaliser,
+                            ), t);
+
+                let color_c = compute_arg.reborrow().history.get_normalised(middle.normalised_add(
+                    SNPoint::from_snfloats(
+                                    SNFloat::new(rho.into_inner() * f32::sin(theta_c.into_inner())),
+                                    SNFloat::new(rho.into_inner() * f32::cos(theta_c.into_inner())),
+                                ),
+                                normaliser,
+                            ), t);
+                
+                let r = UNFloat::new((color_a.r.into_inner() + color_b.r.into_inner() + color_c.r.into_inner()) / 3.0);
+                let g = UNFloat::new((color_a.g.into_inner() + color_b.g.into_inner() + color_c.g.into_inner()) / 3.0);
+                let b = UNFloat::new((color_a.b.into_inner() + color_b.b.into_inner() + color_c.b.into_inner()) / 3.0);
+                let a = UNFloat::new((color_a.a.into_inner() + color_b.a.into_inner() + color_c.a.into_inner()) / 3.0);
+
+                let average = FloatColor { r, g, b, a };
+
+                if average.get_average() > 0.5 {
+                    FloatColor::WHITE
+                } else {
+                    FloatColor::BLACK
+                }
+            }
+            AbsChildCoords { child } => {
+                let new_point = compute_arg.coordinate_set.get_coord_point().abs();
+                child.compute(compute_arg.reborrow().replace_coords(&new_point))
             }
             RGB { r, g, b, a } => FloatColor {
                 r: r.compute(compute_arg.reborrow()),

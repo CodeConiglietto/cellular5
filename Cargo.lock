@@ -285,6 +285,8 @@ dependencies = [
  "fern",
  "float-ord",
  "generational-arena",
+ "gfx",
+ "gfx_device_gl",
  "ggez",
  "image 0.22.5",
  "itertools",

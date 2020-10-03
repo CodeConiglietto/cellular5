@@ -1,11 +1,15 @@
 use std::fs;
 
+// We need to do this rather than importing the macros individually
+#[macro_use]
+extern crate gfx;
+
 use cpu_monitor::CpuInstant;
 use ggez::{
     conf::{FullscreenType, WindowMode, WindowSetup},
     event::{self, EventHandler, KeyCode, KeyMods},
     graphics,
-    graphics::{Image as GgImage, Color as GgColor, DrawParam},
+    graphics::{Color as GgColor, DrawParam, Image as GgImage},
     input::keyboard,
     timer, Context, ContextBuilder, GameResult,
 };
@@ -17,8 +21,8 @@ use rayon::prelude::*;
 use structopt::StructOpt;
 
 use crate::{
-    arena_wrappers::*, data_set::*, history::*, node_set::*, opts::Opts, prelude::*,
-    update_stat::UpdateStat,
+    arena_wrappers::*, data_set::*, gfx_renderer::GfxRenderer, history::*, node_set::*, opts::Opts,
+    prelude::*, update_stat::UpdateStat,
 };
 
 pub mod arena_wrappers;
@@ -26,6 +30,7 @@ pub mod constants;
 pub mod coordinate_set;
 pub mod data_set;
 pub mod datatype;
+pub mod gfx_renderer;
 pub mod history;
 pub mod mutagen_args;
 pub mod node;
@@ -201,6 +206,8 @@ struct MyGame {
     last_render_t: usize,
     cpu_t: CpuInstant,
     rng: DeterministicRng,
+
+    gfx_renderer: GfxRenderer,
 }
 
 impl MyGame {
@@ -225,6 +232,14 @@ impl MyGame {
             .map(|_| NodeSet::new())
             .collect();
         let mut data = DataSet::new();
+
+        let gfx_renderer = GfxRenderer::new_shadertoy(
+            ctx,
+            include_str!(concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/shaders/shadertoy/basic.glsl"
+            )),
+        );
 
         MyGame {
             blank_texture: compute_blank_texture(ctx),
@@ -270,6 +285,8 @@ impl MyGame {
             cpu_t: CpuInstant::now().unwrap(),
             rng,
             history,
+
+            gfx_renderer,
         }
     }
 }
@@ -522,8 +539,7 @@ impl EventHandler for MyGame {
 
             // dbg!(last_update_arg.coordinate_set);
 
-            self.next_history_step.update_coordinate = 
-            self
+            self.next_history_step.update_coordinate = self
                 .node_tree
                 .compute_offset_node
                 .compute(last_update_arg.into());
@@ -546,8 +562,14 @@ impl EventHandler for MyGame {
 
             let mut step_com_arg: ComArg = step_upd_arg.reborrow().into();
 
-            self.next_history_step.fade_color = self.node_tree.fade_color_node.compute(step_com_arg.reborrow());
-            self.next_history_step.alpha_multiplier = self.node_tree.fade_color_alpha_multiplier.compute(step_com_arg.reborrow());
+            self.next_history_step.fade_color = self
+                .node_tree
+                .fade_color_node
+                .compute(step_com_arg.reborrow());
+            self.next_history_step.alpha_multiplier = self
+                .node_tree
+                .fade_color_alpha_multiplier
+                .compute(step_com_arg.reborrow());
 
             // self.next_history_step.root_scalar = self
             //     .node_tree
@@ -621,7 +643,8 @@ impl EventHandler for MyGame {
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         assert!(CONSTS.cell_array_history_length > CONSTS.cell_array_lerp_length);
 
-        if self.last_render_t != timer::ticks(ctx) {            
+        if self.last_render_t != timer::ticks(ctx) {
+            /*
             let lerp_sub =
                 (timer::ticks(ctx) % CONSTS.tics_per_update) as f32 / CONSTS.tics_per_update as f32;
 
@@ -637,6 +660,9 @@ impl EventHandler for MyGame {
 
                 args.history_step().frame_renderer.draw(args)?;
             }
+             */
+
+            self.gfx_renderer.draw(ctx);
 
             self.last_render_t = timer::ticks(ctx);
             graphics::present(ctx)?;

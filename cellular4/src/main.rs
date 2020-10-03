@@ -1,4 +1,4 @@
-use std::fs;
+use std::{env, fs};
 
 // We need to do this rather than importing the macros individually
 #[macro_use]
@@ -235,10 +235,15 @@ impl MyGame {
 
         let gfx_renderer = GfxRenderer::new_shadertoy(
             ctx,
-            include_str!(concat!(
-                env!("CARGO_MANIFEST_DIR"),
-                "/shaders/shadertoy/basic.glsl"
-            )),
+            &fs::read_to_string(
+                env::current_dir()
+                    .unwrap()
+                    .join("cellular4")
+                    .join("shaders")
+                    .join("shadertoy")
+                    .join("basic.glsl"),
+            )
+            .unwrap(),
         );
 
         MyGame {

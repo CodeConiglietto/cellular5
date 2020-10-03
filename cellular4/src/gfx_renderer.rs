@@ -29,7 +29,7 @@ gfx_defines! {
         time: gfx::Global<f32> = "iTime",
         tex: gfx::TextureSampler<[f32; 4]> = "iTexture",
 
-        out_color: gfx::RenderTarget<ColorFormat> = "outColor",
+        out_color: gfx::BlendTarget<ColorFormat> = ("outColor", gfx::state::ColorMask::all(), gfx::preset::blend::ALPHA),
         out_depth: gfx::DepthTarget<DepthFormat> =
             gfx::preset::depth::LESS_EQUAL_WRITE,
     }
@@ -153,7 +153,7 @@ impl GfxRenderer {
         self.data.resolution[0] = w;
         self.data.resolution[1] = h;
 
-        encoder.clear(&self.data.out_color, [0.0, 0.0, 0.0, 1.0]);
+        // encoder.clear(&self.data.out_color, [0.0, 0.0, 0.0, 1.0]);
 
         encoder.clear_depth(&self.data.out_depth, 1.0);
 

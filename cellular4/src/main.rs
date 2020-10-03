@@ -629,6 +629,8 @@ impl EventHandler for MyGame {
                 current.update_recursively(step_upd_arg.reborrow());
             }
 
+            self.gfx_renderer.set_image_from_cell_array(ctx, self.next_history_step.cell_array.view());
+
             // Rotate the buffers by swapping
             let h_len = self.history.history_steps.len();
             std::mem::swap(
@@ -649,9 +651,11 @@ impl EventHandler for MyGame {
         assert!(CONSTS.cell_array_history_length > CONSTS.cell_array_lerp_length);
 
         if self.last_render_t != timer::ticks(ctx) {
-            /*
+            
             let lerp_sub =
                 (timer::ticks(ctx) % CONSTS.tics_per_update) as f32 / CONSTS.tics_per_update as f32;
+
+                self.gfx_renderer.draw(ctx);
 
             for lerp_i in 0..CONSTS.cell_array_lerp_length {
                 let args = RenderArgs {
@@ -665,9 +669,6 @@ impl EventHandler for MyGame {
 
                 args.history_step().frame_renderer.draw(args)?;
             }
-             */
-
-            self.gfx_renderer.draw(ctx);
 
             self.last_render_t = timer::ticks(ctx);
             graphics::present(ctx)?;

@@ -83,9 +83,31 @@ impl FrameRenderers {
             FrameRenderers::FadeAndChild {child, fade_color, fade_alpha_multiplier} => {
                 if args.lerp_i == 0
                 {
+                    let (
+                        prev_fade_color,
+                        prev_fade_alpha_multiplier,
+                    ) = if let &FrameRenderers::FadeAndChild {
+                        fade_color,
+                        fade_alpha_multiplier,
+                        ..
+                    } = &args.prev_history_step().frame_renderer
+                    {
+                        (
+                            fade_color,
+                            fade_alpha_multiplier,
+                        )
+                    } else {
+                        Default::default()
+                    };
+
                     let mut modified_color = fade_color.clone();
                     modified_color.a = 
-                    UNFloat::new(modified_color.a.into_inner() * fade_alpha_multiplier.into_inner() * 0.5);
+                    UNFloat::new(
+                        lerp(
+                        modified_color.a.into_inner() * fade_alpha_multiplier.into_inner() * 0.25,
+                        prev_fade_color.a.into_inner() * prev_fade_alpha_multiplier.into_inner() * 0.25,
+                        args.lerp_val())
+                    );
                     
                     ggez::graphics::draw(
                         args.ctx,

@@ -5,7 +5,7 @@ use ggez::{
     conf::{FullscreenType, WindowMode, WindowSetup},
     event::{self, EventHandler, KeyCode, KeyMods},
     graphics,
-    graphics::{Image as GgImage, Color as GgColor, DrawParam},
+    graphics::{Color as GgColor, DrawParam, Image as GgImage},
     input::keyboard,
     timer, Context, ContextBuilder, GameResult,
 };
@@ -61,9 +61,6 @@ fn main() {
         .expect("Could not create ggez context!");
 
     let mut my_game = MyGame::new(&mut ctx, opts);
-
-    // Eagerly initialize the image preloader rather than waiting for the first time it's used
-    IMAGE_PRELOADER.with(|_| ());
 
     match event::run(&mut ctx, &mut event_loop, &mut my_game) {
         Ok(_) => info!("Exited cleanly."),
@@ -201,6 +198,8 @@ struct MyGame {
     last_render_t: usize,
     cpu_t: CpuInstant,
     rng: DeterministicRng,
+
+    image_preloader: Preloader<Image>,
 }
 
 impl MyGame {
@@ -220,6 +219,8 @@ impl MyGame {
             CONSTS.cell_array_height,
             CONSTS.cell_array_history_length,
         );
+
+        let mut image_preloader = Preloader::new(32, RandomImageLoader::new());
 
         let mut nodes: Vec<_> = (0..=node::max_node_depth())
             .map(|_| NodeSet::new())
@@ -257,6 +258,7 @@ impl MyGame {
                     current_t: 0,
                     history: &history,
                     coordinate_set: history.history_steps[0].update_coordinate,
+                    image_preloader: &mut image_preloader,
                 },
             ),
 
@@ -270,6 +272,7 @@ impl MyGame {
             cpu_t: CpuInstant::now().unwrap(),
             rng,
             history,
+            image_preloader,
         }
     }
 }
@@ -486,6 +489,7 @@ impl EventHandler for MyGame {
                         current_t,
                         coordinate_set: history_step.update_coordinate,
                         history: &self.history,
+                        image_preloader: &mut self.image_preloader,
                     },
                 );
                 self.node_tree.root_frame_renderer.mutate_rng(
@@ -497,6 +501,7 @@ impl EventHandler for MyGame {
                         current_t,
                         coordinate_set: history_step.update_coordinate,
                         history: &self.history,
+                        image_preloader: &mut self.image_preloader,
                     },
                 );
                 // // info!("{:#?}", &self.root_node);
@@ -517,13 +522,13 @@ impl EventHandler for MyGame {
                 nodes: &mut self.nodes,
                 data: &mut self.data,
                 depth: 0,
+                image_preloader: &mut self.image_preloader,
                 current_t,
             };
 
             // dbg!(last_update_arg.coordinate_set);
 
-            self.next_history_step.update_coordinate = 
-            self
+            self.next_history_step.update_coordinate = self
                 .node_tree
                 .compute_offset_node
                 .compute(last_update_arg.into());
@@ -541,13 +546,20 @@ impl EventHandler for MyGame {
                 nodes: &mut self.nodes,
                 data: &mut self.data,
                 depth: 0,
+                image_preloader: &mut self.image_preloader,
                 current_t,
             };
 
             let mut step_com_arg: ComArg = step_upd_arg.reborrow().into();
 
-            self.next_history_step.fade_color = self.node_tree.fade_color_node.compute(step_com_arg.reborrow());
-            self.next_history_step.alpha_multiplier = self.node_tree.fade_color_alpha_multiplier.compute(step_com_arg.reborrow());
+            self.next_history_step.fade_color = self
+                .node_tree
+                .fade_color_node
+                .compute(step_com_arg.reborrow());
+            self.next_history_step.alpha_multiplier = self
+                .node_tree
+                .fade_color_alpha_multiplier
+                .compute(step_com_arg.reborrow());
 
             // self.next_history_step.root_scalar = self
             //     .node_tree
@@ -595,6 +607,7 @@ impl EventHandler for MyGame {
                     history: &self.history,
                     nodes: children,
                     data: &mut self.data,
+                    image_preloader: &mut self.image_preloader,
                     depth,
                     current_t,
                 };
@@ -621,7 +634,7 @@ impl EventHandler for MyGame {
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         assert!(CONSTS.cell_array_history_length > CONSTS.cell_array_lerp_length);
 
-        if self.last_render_t != timer::ticks(ctx) {            
+        if self.last_render_t != timer::ticks(ctx) {
             let lerp_sub =
                 (timer::ticks(ctx) % CONSTS.tics_per_update) as f32 / CONSTS.tics_per_update as f32;
 

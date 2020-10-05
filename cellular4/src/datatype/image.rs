@@ -38,20 +38,16 @@ lazy_static! {
     });
 }
 
-thread_local! {
-    pub static IMAGE_PRELOADER: Preloader<Image> = Preloader::new(32, RandomImageLoader::new());
-}
-
 const FALLBACK_IMAGE_DATA: &[u8] =
     include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/eyeball2.png"));
 
-struct RandomImageLoader {
+pub struct RandomImageLoader {
     rng: DeterministicRng,
     http: HttpClient,
 }
 
 impl RandomImageLoader {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             rng: DeterministicRng::new(),
             http: HttpClient::new(),
@@ -260,9 +256,9 @@ impl<'de> Deserialize<'de> for Image {
 impl<'a> Generatable<'a> for Image {
     type GenArg = GenArg<'a>;
 
-    fn generate_rng<R: Rng + ?Sized>(_rng: &mut R, _arg: GenArg<'a>) -> Self {
-        IMAGE_PRELOADER
-            .with(|p| p.try_get_next())
+    fn generate_rng<R: Rng + ?Sized>(_rng: &mut R, arg: GenArg<'a>) -> Self {
+        arg.image_preloader
+            .try_get_next()
             .unwrap_or_else(|| FALLBACK_IMAGE.clone())
     }
 }
@@ -270,9 +266,10 @@ impl<'a> Generatable<'a> for Image {
 impl<'a> Mutatable<'a> for Image {
     type MutArg = MutArg<'a>;
 
-    fn mutate_rng<R: Rng + ?Sized>(&mut self, _rng: &mut R, _arg: Self::MutArg) {
-        *self = IMAGE_PRELOADER
-            .with(|p| p.try_get_next())
+    fn mutate_rng<R: Rng + ?Sized>(&mut self, _rng: &mut R, arg: Self::MutArg) {
+        *self = arg
+            .image_preloader
+            .try_get_next()
             .unwrap_or_else(|| FALLBACK_IMAGE.clone());
     }
 }

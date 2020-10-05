@@ -145,6 +145,7 @@ where
             history,
             current_t,
             coordinate_set,
+            image_preloader,
         } = arg;
 
         let nodes_len = nodes.len();
@@ -184,6 +185,7 @@ where
                 current_t,
                 history,
                 coordinate_set,
+                image_preloader,
             };
 
             dbg!(crate::node::mutagen_functions::leaf_node_weight(
@@ -207,6 +209,7 @@ where
                     current_t,
                     history,
                     coordinate_set,
+                    image_preloader,
                 },
             ),
             last_accessed: current_t,
@@ -247,6 +250,7 @@ where
                     current_t: arg.current_t,
                     history: arg.history,
                     coordinate_set: arg.coordinate_set,
+                    image_preloader: arg.image_preloader,
                 },
             );
         }
@@ -275,6 +279,7 @@ where
                 coordinate_set: arg.coordinate_set,
                 history: arg.history,
                 current_t: arg.current_t,
+                image_preloader: arg.image_preloader,
             });
         }
     }
@@ -300,6 +305,7 @@ where
                 coordinate_set: arg.coordinate_set,
                 history: arg.history,
                 current_t: arg.current_t,
+                image_preloader: arg.image_preloader,
             });
         }
     }

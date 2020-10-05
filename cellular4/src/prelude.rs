@@ -3,6 +3,7 @@ pub use crate::{
     arena_wrappers::*,
     constants::*,
     coordinate_set::*,
+    data_set::*,
     datatype::{
         buffers::*, colors::*, complex::*, constraint_resolvers::*, continuous::*, discrete::*,
         distance_functions::*, frame_renderers::*, image::*, iterative_results::*, matrices::*,
@@ -16,5 +17,7 @@ pub use crate::{
         frame_renderer_nodes::*, iterative_function_nodes::*, matrix_nodes::*,
         mutagen_functions::*, point_nodes::*, point_set_nodes::*, Node,
     },
+    node_set::*,
+    preloader::*,
     util::*,
 };

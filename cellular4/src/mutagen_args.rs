@@ -1,6 +1,6 @@
 use mutagen::Reborrow;
 
-use crate::{coordinate_set::*, data_set::*, datatype::points::*, history::*, node_set::*};
+use crate::prelude::*;
 
 pub trait MutagenArg {
     fn depth(&self) -> usize;
@@ -14,6 +14,7 @@ pub struct GenArg<'a> {
     pub current_t: usize,
     pub coordinate_set: CoordinateSet,
     pub history: &'a History,
+    pub image_preloader: &'a mut Preloader<Image>,
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, GenArg<'a>> for GenArg<'b> {
@@ -25,6 +26,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, GenArg<'a>> for GenArg<'b> {
             current_t: self.current_t,
             coordinate_set: self.coordinate_set,
             history: &self.history,
+            image_preloader: &mut self.image_preloader,
         }
     }
 }
@@ -45,6 +47,7 @@ pub struct MutArg<'a> {
     pub current_t: usize,
     pub coordinate_set: CoordinateSet,
     pub history: &'a History,
+    pub image_preloader: &'a mut Preloader<Image>,
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, MutArg<'a>> for MutArg<'b> {
@@ -56,6 +59,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, MutArg<'a>> for MutArg<'b> {
             current_t: self.current_t,
             coordinate_set: self.coordinate_set,
             history: &self.history,
+            image_preloader: &mut self.image_preloader,
         }
     }
 }
@@ -69,6 +73,7 @@ impl<'a> From<MutArg<'a>> for GenArg<'a> {
             current_t: arg.current_t,
             coordinate_set: arg.coordinate_set,
             history: arg.history,
+            image_preloader: arg.image_preloader,
         }
     }
 }
@@ -131,6 +136,7 @@ pub struct UpdArg<'a> {
     pub history: &'a History,
     pub depth: usize,
     pub current_t: usize,
+    pub image_preloader: &'a mut Preloader<Image>,
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, UpdArg<'a>> for UpdArg<'b> {
@@ -142,6 +148,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, UpdArg<'a>> for UpdArg<'b> {
             history: &self.history,
             depth: self.depth,
             current_t: self.current_t,
+            image_preloader: &mut self.image_preloader,
         }
     }
 }
@@ -168,6 +175,7 @@ impl<'a> From<GenArg<'a>> for UpdArg<'a> {
             current_t: arg.current_t,
             coordinate_set: arg.coordinate_set,
             history: arg.history,
+            image_preloader: arg.image_preloader,
         }
     }
 }

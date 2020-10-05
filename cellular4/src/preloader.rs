@@ -10,6 +10,7 @@ use std::{
 
 use log::{debug, info, trace};
 
+#[derive(Debug)]
 pub struct Preloader<T>
 where
     T: Debug + Send + 'static,

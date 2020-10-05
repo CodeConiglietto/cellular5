@@ -4,6 +4,7 @@ members = [
   "mutagen",
   "mutagen-derive",
   "dot-serde",
+  "shadertoy",
 ]
 
 [profile.release]

@@ -102,6 +102,10 @@ impl UNFloat {
         UNFloat::new(self.into_inner() * other.into_inner())
     }
 
+    pub fn lerp(self, other: UNFloat, scalar: UNFloat) -> Self {
+        UNFloat::new(lerp(self.into_inner(), other.into_inner(), scalar.into_inner()))
+    }
+
     pub const ZERO: Self = Self { value: 0.0 };
     pub const ONE: Self = Self { value: 1.0 };
 

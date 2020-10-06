@@ -387,6 +387,10 @@ impl FloatColor {
         }
     }
 
+    pub fn lerp(self, other: Self, scalar: UNFloat) -> Self {
+        Self {r: self.r.lerp(other.r, scalar), g: self.g.lerp(other.g, scalar), b: self.b.lerp(other.b, scalar), a: self.a.lerp(other.a, scalar)}
+    }
+
     pub const ALL_ZERO: Self = Self { r: UNFloat::ZERO, g: UNFloat::ZERO, b: UNFloat::ZERO, a: UNFloat::ZERO };
     pub const WHITE: Self = Self { r: UNFloat::ONE, g: UNFloat::ONE, b: UNFloat::ONE, a: UNFloat::ONE };
     pub const BLACK: Self = Self { r: UNFloat::ZERO, g: UNFloat::ZERO, b: UNFloat::ZERO, a: UNFloat::ONE };

@@ -100,7 +100,7 @@ impl FrameRenderers {
                         Default::default()
                     };
 
-                    let mut modified_color = fade_color.clone();
+                    let mut modified_color = fade_color.clone().lerp(prev_fade_color.clone(), UNFloat::new(args.lerp_sub));
                     modified_color.a = 
                     UNFloat::new(
                         lerp(

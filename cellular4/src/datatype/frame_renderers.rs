@@ -104,9 +104,9 @@ impl FrameRenderers {
                     modified_color.a = 
                     UNFloat::new(
                         lerp(
-                        modified_color.a.into_inner() * fade_alpha_multiplier.into_inner() * 0.25,
-                        prev_fade_color.a.into_inner() * prev_fade_alpha_multiplier.into_inner() * 0.25,
-                        args.lerp_val())
+                        modified_color.a.into_inner() * fade_alpha_multiplier.into_inner(),
+                        prev_fade_color.a.into_inner() * prev_fade_alpha_multiplier.into_inner(),
+                        args.lerp_sub) / args.lerp_len() as f32
                     );
                     
                     ggez::graphics::draw(

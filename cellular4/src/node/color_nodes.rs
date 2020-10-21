@@ -198,7 +198,7 @@ pub enum FloatColorNodes {
         child_color: NodeBox<FloatColorNodes>,
     },
 
-    #[mutagen(gen_weight = branch_node_weight)]
+    #[mutagen(gen_weight = 0.0)]//branch_node_weight)]
     // #[mutagen(gen_preferred)]
     DucksFractal {
         child_offset: NodeBox<SNPointNodes>,

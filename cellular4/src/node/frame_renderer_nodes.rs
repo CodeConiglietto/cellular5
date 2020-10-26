@@ -28,7 +28,9 @@ pub enum FrameRendererNodes {
         from_scale_scalar_node: NodeBox<UNFloatNodes>,
         to_scale_scalar_node: NodeBox<UNFloatNodes>,
     },
-    #[mutagen(gen_weight = branch_node_weight)]
+    // #[mutagen(gen_weight = branch_node_weight)]
+    //TODO: redo this so it doesn't kill people with epilepsy
+    #[mutagen(gen_weight = 0.0)]
     FadeAndChild {
         child_renderer: NodeBox<FrameRendererNodes>, 
         child_color: NodeBox<FloatColorNodes>, 

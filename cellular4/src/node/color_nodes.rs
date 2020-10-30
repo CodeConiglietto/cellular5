@@ -25,6 +25,8 @@ pub enum FloatColorNodes {
     //Brute force attempt to get more visually satisfying behaviour
     #[mutagen(gen_weight = pipe_node_weight)]
     AbsChildCoords { child: NodeBox<FloatColorNodes> },
+    #[mutagen(gen_weight = pipe_node_weight)]
+    InvertXBlendChild { child: NodeBox<FloatColorNodes> },
 
     #[mutagen(gen_weight = branch_node_weight)]
     RGB {
@@ -302,6 +304,13 @@ impl Node for FloatColorNodes {
             AbsChildCoords { child } => {
                 let new_point = compute_arg.coordinate_set.get_coord_point().abs();
                 child.compute(compute_arg.reborrow().replace_coords(&new_point))
+            }
+            InvertXBlendChild { child } => {
+                let new_point = compute_arg.coordinate_set.get_coord_point().invert_x();
+                let color_a = child.compute(compute_arg.reborrow());
+                let color_b = child.compute(compute_arg.reborrow().replace_coords(&new_point));
+
+                color_a.lerp(color_b, UNFloat::new(0.5))
             }
             RGB { r, g, b, a } => FloatColor {
                 r: r.compute(compute_arg.reborrow()),

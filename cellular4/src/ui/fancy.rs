@@ -8,7 +8,7 @@ use std::{
 
 use termion::{clear, color, cursor};
 
-use crate::{constants::CONSTS, update_stat::UpdateStat};
+use crate::{constants::CONSTS, ui::UiBase, update_stat::UpdateStat};
 
 struct LogLine {
     level: log::Level,
@@ -35,14 +35,14 @@ impl Display for LogLine {
     }
 }
 
-pub struct Padded<'a> {
+struct Padded<'a> {
     body: &'a str,
     padding: &'a str,
     width: usize,
 }
 
 impl<'a> Padded<'a> {
-    pub fn new(body: &'a str, padding: &'a str, width: usize) -> Self {
+    fn new(body: &'a str, padding: &'a str, width: usize) -> Self {
         assert!(width >= body.len());
         assert!(padding.len() > 0);
 
@@ -99,7 +99,7 @@ impl<'a> Display for Padded<'a> {
     }
 }
 
-pub struct ValueTable<'a> {
+struct ValueTable<'a> {
     rows: &'a [(&'a str, f64)],
 }
 
@@ -173,14 +173,16 @@ impl Logs {
     }
 }
 
-pub struct UI {
+pub struct Ui {
     logs: Arc<Mutex<Logs>>,
     swap_logs: Logs,
     prev_update_stat: Option<UpdateStat>,
 }
 
-impl UI {
-    pub fn new() -> Self {
+impl UiBase for Ui {
+    fn new() -> Self {
+        println!("{}{}", clear::All, cursor::Goto(1, 1));
+
         Self {
             logs: Arc::new(Mutex::new(Logs::new())),
             swap_logs: Logs::new(),
@@ -188,16 +190,12 @@ impl UI {
         }
     }
 
-    pub fn log_output(&self) -> fern::Output {
+    fn log_output(&self) -> fern::Output {
         let logs = Arc::clone(&self.logs);
         fern::Output::call(move |record| log_record(&*logs, record))
     }
 
-    pub fn log(&self, record: &log::Record) {
-        log_record(&self.logs, record)
-    }
-
-    pub fn draw(&mut self, update_stat: &UpdateStat) {
+    fn draw(&mut self, update_stat: &UpdateStat) {
         self.swap_logs.clear();
 
         {
@@ -218,12 +216,22 @@ impl UI {
 
         let prev_update_stat = self.prev_update_stat.replace(update_stat.clone());
 
+        let table_rows = [
+            ("Activity", update_stat.activity_value),
+            ("Alpha", update_stat.alpha_value),
+            ("Local Similarity", update_stat.local_similarity_value),
+            ("Global Similarity", update_stat.global_similarity_value),
+        ];
+
+        let height = 1 + table_rows.len();
+
         if prev_update_stat.is_some() {
             print!("{}", cursor::Left(CONSTS.console_width as u16));
-            for _ in 0..5 {
+            for _ in 0..height {
                 print!("{}", cursor::Up(1));
                 print!("{}", clear::CurrentLine);
             }
+            std::io::stdout().lock().flush().unwrap();
         }
 
         for log in logs.lines.iter() {
@@ -231,24 +239,9 @@ impl UI {
         }
 
         println!("{}", Padded::new(" Heuristics ", "=", CONSTS.console_width));
-
-        print!(
-            "{}",
-            ValueTable::new(&[
-                ("Activity", update_stat.activity_value),
-                ("Alpha", update_stat.alpha_value),
-                ("Local Similarity", update_stat.local_similarity_value),
-                ("Global Similarity", update_stat.global_similarity_value)
-            ])
-        );
+        print!("{}", ValueTable::new(&table_rows));
 
         io::stdout().lock().flush().unwrap();
-    }
-}
-
-impl Default for UI {
-    fn default() -> Self {
-        Self::new()
     }
 }
 

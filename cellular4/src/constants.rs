@@ -23,8 +23,8 @@ pub struct Constants {
     pub initial_window_height: f32,
     pub vsync: bool,
     pub fullscreen: bool,
-    pub log_verbose: bool,
     pub console_width: usize,
+    pub fancy_terminal: bool,
 
     pub cell_array_width: usize,
     pub cell_array_height: usize,

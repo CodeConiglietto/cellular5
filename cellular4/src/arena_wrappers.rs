@@ -84,8 +84,8 @@ where
                 "NODE SHOULD BE CULLED BUT IS GETTING COMPUTED {:?}",
                 std::any::type_name::<T>()
             );
-            dbg!(slot.last_accessed);
-            dbg!(arg.current_t);
+            ldbg!(slot.last_accessed);
+            ldbg!(arg.current_t);
         }
 
         slot.value.compute(ComArg {
@@ -110,7 +110,7 @@ where
 
     fn generate_rng<R: Rng + ?Sized>(rng: &mut R, arg: Self::GenArg) -> Self {
         if arg.nodes.is_empty() {
-            dbg!(arg.depth);
+            ldbg!(arg.depth);
             panic!("No nodesets left to allocate to! Is a node weight mislabeled?");
         }
 
@@ -162,21 +162,21 @@ where
             || depth + depth_skipped > crate::node::max_node_depth()
             || depth + depth_skipped + 1 + children.len() != crate::node::max_node_depth() + 1
         {
-            dbg!(depth);
-            dbg!(depth_skipped);
-            dbg!(nodes_len);
-            dbg!(children.len());
-            dbg!(crate::node::max_node_depth());
+            ldbg!(depth);
+            ldbg!(depth_skipped);
+            ldbg!(nodes_len);
+            ldbg!(children.len());
+            ldbg!(crate::node::max_node_depth());
 
             panic!("SOMETHING'S HAPPENED");
         }
 
         if children.is_empty() && cfg!(debug_assertions) {
-            dbg!("THIS BETTER GEN A LEAF NODE OR WE HITTIN PANIC TOWN");
-            dbg!(depth);
-            dbg!(depth_skipped);
-            dbg!(crate::node::max_node_depth());
-            dbg!(std::any::type_name::<T>());
+            ldbg!("THIS BETTER GEN A LEAF NODE OR WE HITTIN PANIC TOWN");
+            ldbg!(depth);
+            ldbg!(depth_skipped);
+            ldbg!(crate::node::max_node_depth());
+            ldbg!(std::any::type_name::<T>());
 
             let mut test_arg = GenArg {
                 nodes: children,
@@ -188,13 +188,13 @@ where
                 image_preloader,
             };
 
-            dbg!(crate::node::mutagen_functions::leaf_node_weight(
+            ldbg!(crate::node::mutagen_functions::leaf_node_weight(
                 test_arg.reborrow()
             ));
-            dbg!(crate::node::mutagen_functions::pipe_node_weight(
+            ldbg!(crate::node::mutagen_functions::pipe_node_weight(
                 test_arg.reborrow()
             ));
-            dbg!(crate::node::mutagen_functions::branch_node_weight(
+            ldbg!(crate::node::mutagen_functions::branch_node_weight(
                 test_arg.reborrow()
             ));
         }

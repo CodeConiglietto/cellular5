@@ -17,9 +17,35 @@ use rayon::prelude::*;
 use structopt::StructOpt;
 
 use crate::{
-    arena_wrappers::*, data_set::*, history::*, node_set::*, opts::Opts, prelude::*,
+    arena_wrappers::*, data_set::*, history::*, node_set::*, opts::Opts, prelude::*, ui::*,
     update_stat::UpdateStat,
 };
+
+// Shamelessly copied from the std implementation of dbg!
+// Macro declaration order matters! Keep this BEFORE any code and any module declarations
+macro_rules! ldbg {
+    () => {
+        ::log::trace!("[{}:{}]", ::std::file!(), ::std::line!())
+    };
+
+    ($val:expr) => {
+        match $val {
+            tmp => {
+                ::log::trace!("[{}:{}] {} = {:#?}",
+                              ::std::file!(), ::std::line!(), ::std::stringify!($val), &tmp);
+                tmp
+            }
+        }
+    };
+
+    ($val:expr,) => {
+        $crate::ldbg!($val)
+    };
+
+    ($($val:expr),+ $(,)?) => {
+        ($($crate::ldbg!($val)),+,)
+    };
+}
 
 pub mod arena_wrappers;
 pub mod constants;
@@ -33,16 +59,12 @@ pub mod node_set;
 pub mod opts;
 pub mod preloader;
 pub mod prelude;
+pub mod ui;
 pub mod update_stat;
 pub mod util;
 
-#[cfg(unix)]
-pub mod term;
-
 fn main() {
     std::env::set_var("RUST_BACKTRACE", "full");
-
-    setup_logging();
 
     let opts = Opts::from_args();
     let (mut ctx, mut event_loop) = ContextBuilder::new("cellular4", "CodeBunny")
@@ -71,7 +93,7 @@ fn main() {
     }
 }
 
-fn setup_logging() {
+fn setup_logging(ui: &Ui) {
     let image_error_dispatch = fern::Dispatch::new()
         .level(log::LevelFilter::Off)
         .level_for(datatype::image::MODULE_PATH, log::LevelFilter::Error)
@@ -90,7 +112,7 @@ fn setup_logging() {
         .level(log::LevelFilter::Info)
         .level_for(module_path!(), log::LevelFilter::Trace)
         .chain(image_error_dispatch)
-        .chain(std::io::stdout())
+        .chain(ui.log_output())
         .apply()
         .unwrap();
 }
@@ -201,6 +223,7 @@ struct MyGame {
     last_render_t: usize,
     cpu_t: CpuInstant,
     rng: DeterministicRng,
+    ui: Ui,
 
     image_preloader: Preloader<Image>,
 }
@@ -229,6 +252,9 @@ impl MyGame {
             .map(|_| NodeSet::new())
             .collect();
         let mut data = DataSet::new();
+
+        let ui = Ui::new();
+        setup_logging(&ui);
 
         MyGame {
             blank_texture: compute_blank_texture(ctx),
@@ -273,6 +299,7 @@ impl MyGame {
             current_t: 0,
             last_render_t: 0,
             cpu_t: CpuInstant::now().unwrap(),
+            ui,
             rng,
             history,
             image_preloader,
@@ -446,7 +473,7 @@ impl EventHandler for MyGame {
             self.average_update_stat =
                 ((self.average_update_stat + self.rolling_update_stat_total) / 2.0).clamp_values();
 
-            dbg!(timer::fps(ctx));
+            //dbg!(timer::fps(ctx));
 
             self.rolling_update_stat_total = UpdateStat {
                 activity_value: 0.0,
@@ -467,8 +494,8 @@ impl EventHandler for MyGame {
 
             let mutation_likelihood = &self.average_update_stat.mutation_likelihood();
 
-            dbg!(&self.average_update_stat);
-            dbg!(mutation_likelihood);
+            //dbg!(&self.average_update_stat);
+            //dbg!(mutation_likelihood);
 
             let history_len = self.history.history_steps.len();
             let history_index = self.current_t.saturating_sub(1) % history_len;
@@ -477,7 +504,7 @@ impl EventHandler for MyGame {
             if self.tree_dirty
                 || (CONSTS.auto_mutate
                     && (
-                        dbg!(cpu_usage >= CONSTS.auto_mutate_above_cpu_usage)
+                        cpu_usage >= CONSTS.auto_mutate_above_cpu_usage
                             || self.average_update_stat.should_mutate()
                         // || dbg!(thread_rng().gen::<usize>() % CONSTS.graph_mutation_divisor) == 0
                     ))
@@ -624,6 +651,8 @@ impl EventHandler for MyGame {
                 &mut self.history.history_steps[current_t % h_len],
                 &mut self.next_history_step,
             );
+
+            self.ui.draw(&self.average_update_stat);
 
             self.current_t += 1;
             self.cpu_t = next_cpu_t;

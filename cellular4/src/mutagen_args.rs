@@ -1,6 +1,10 @@
 use mutagen::Reborrow;
 
-use crate::{coordinate_set::*, data_set::*, datatype::points::*, history::*, node_set::*};
+use crate::prelude::*;
+
+pub trait MutagenArg {
+    fn depth(&self) -> usize;
+}
 
 #[derive(Debug)]
 pub struct GenArg<'a> {
@@ -8,6 +12,9 @@ pub struct GenArg<'a> {
     pub data: &'a mut DataSet,
     pub depth: usize,
     pub current_t: usize,
+    pub coordinate_set: CoordinateSet,
+    pub history: &'a History,
+    pub image_preloader: &'a mut Preloader<Image>,
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, GenArg<'a>> for GenArg<'b> {
@@ -17,7 +24,18 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, GenArg<'a>> for GenArg<'b> {
             data: &mut self.data,
             depth: self.depth,
             current_t: self.current_t,
+            coordinate_set: self.coordinate_set,
+            history: &self.history,
+            image_preloader: &mut self.image_preloader,
         }
+    }
+}
+
+impl<'a> mutagen::State for GenArg<'a> {}
+
+impl<'a> MutagenArg for GenArg<'a> {
+    fn depth(&self) -> usize {
+        self.depth.saturating_sub(1) // Subtract 1 since NodeBox adds 1 earlier than the mutagen code will see it
     }
 }
 
@@ -27,6 +45,9 @@ pub struct MutArg<'a> {
     pub data: &'a mut DataSet,
     pub depth: usize,
     pub current_t: usize,
+    pub coordinate_set: CoordinateSet,
+    pub history: &'a History,
+    pub image_preloader: &'a mut Preloader<Image>,
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, MutArg<'a>> for MutArg<'b> {
@@ -36,6 +57,9 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, MutArg<'a>> for MutArg<'b> {
             data: &mut self.data,
             depth: self.depth,
             current_t: self.current_t,
+            coordinate_set: self.coordinate_set,
+            history: &self.history,
+            image_preloader: &mut self.image_preloader,
         }
     }
 }
@@ -47,7 +71,18 @@ impl<'a> From<MutArg<'a>> for GenArg<'a> {
             data: arg.data,
             depth: arg.depth,
             current_t: arg.current_t,
+            coordinate_set: arg.coordinate_set,
+            history: arg.history,
+            image_preloader: arg.image_preloader,
         }
+    }
+}
+
+impl<'a> mutagen::State for MutArg<'a> {}
+
+impl<'a> MutagenArg for MutArg<'a> {
+    fn depth(&self) -> usize {
+        self.depth.saturating_sub(1) // Subtract 1 since NodeBox adds 1 earlier than the mutagen code will see it
     }
 }
 
@@ -58,6 +93,7 @@ pub struct ComArg<'a> {
     pub coordinate_set: CoordinateSet,
     pub history: &'a History,
     pub depth: usize,
+    pub current_t: usize,
 }
 
 impl<'a> ComArg<'a> {
@@ -79,7 +115,16 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, ComArg<'a>> for ComArg<'b> {
             coordinate_set: self.coordinate_set,
             history: &self.history,
             depth: self.depth,
+            current_t: self.current_t,
         }
+    }
+}
+
+impl<'a> mutagen::State for ComArg<'a> {}
+
+impl<'a> MutagenArg for ComArg<'a> {
+    fn depth(&self) -> usize {
+        self.depth.saturating_sub(1) // Subtract 1 since NodeBox adds 1 earlier than the mutagen code will see it
     }
 }
 
@@ -91,6 +136,7 @@ pub struct UpdArg<'a> {
     pub history: &'a History,
     pub depth: usize,
     pub current_t: usize,
+    pub image_preloader: &'a mut Preloader<Image>,
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, UpdArg<'a>> for UpdArg<'b> {
@@ -102,6 +148,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, UpdArg<'a>> for UpdArg<'b> {
             history: &self.history,
             depth: self.depth,
             current_t: self.current_t,
+            image_preloader: &mut self.image_preloader,
         }
     }
 }
@@ -114,7 +161,30 @@ impl<'a> From<UpdArg<'a>> for ComArg<'a> {
             coordinate_set: arg.coordinate_set,
             history: arg.history,
             depth: arg.depth,
+            current_t: arg.current_t,
         }
+    }
+}
+
+impl<'a> From<GenArg<'a>> for UpdArg<'a> {
+    fn from(arg: GenArg<'a>) -> Self {
+        Self {
+            nodes: arg.nodes,
+            data: arg.data,
+            depth: arg.depth,
+            current_t: arg.current_t,
+            coordinate_set: arg.coordinate_set,
+            history: arg.history,
+            image_preloader: arg.image_preloader,
+        }
+    }
+}
+
+impl<'a> mutagen::State for UpdArg<'a> {}
+
+impl<'a> MutagenArg for UpdArg<'a> {
+    fn depth(&self) -> usize {
+        self.depth.saturating_sub(1) // Subtract 1 since NodeBox adds 1 earlier than the mutagen code will see it
     }
 }
 

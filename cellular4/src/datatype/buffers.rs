@@ -122,11 +122,7 @@ where
 impl<'a, T: Default + Generatable<'a>> Generatable<'a> for Buffer<T> {
     type GenArg = T::GenArg;
 
-    fn generate_rng<R: Rng + ?Sized>(
-        _rng: &mut R,
-        _state: mutagen::State,
-        _arg: Self::GenArg,
-    ) -> Self {
+    fn generate_rng<R: Rng + ?Sized>(_rng: &mut R, _arg: Self::GenArg) -> Self {
         Self::new(Array2::from_shape_fn(
             (CONSTS.cell_array_height, CONSTS.cell_array_width),
             |(_y, _x)| T::default(), //generate_rng(rng, state, arg.clone()),
@@ -137,12 +133,7 @@ impl<'a, T: Default + Generatable<'a>> Generatable<'a> for Buffer<T> {
 impl<'a, T: Mutatable<'a>> Mutatable<'a> for Buffer<T> {
     type MutArg = T::MutArg;
 
-    fn mutate_rng<R: Rng + ?Sized>(
-        &mut self,
-        _rng: &mut R,
-        _state: mutagen::State,
-        _arg: Self::MutArg,
-    ) {
+    fn mutate_rng<R: Rng + ?Sized>(&mut self, _rng: &mut R, _arg: Self::MutArg) {
         //TODO: find a way to mutate this that doesn't look like a rainbow static explosion
         // for inner in self.array.iter_mut() {
         //     inner.mutate_rng(rng, state, arg.clone());
@@ -153,11 +144,11 @@ impl<'a, T: Mutatable<'a>> Mutatable<'a> for Buffer<T> {
 impl<'a, T: Updatable<'a>> Updatable<'a> for Buffer<T> {
     type UpdateArg = T::UpdateArg;
 
-    fn update(&mut self, _state: mutagen::State, _arg: Self::UpdateArg) {}
+    fn update(&mut self, _arg: Self::UpdateArg) {}
 }
 
 impl<'a, T: UpdatableRecursively<'a>> UpdatableRecursively<'a> for Buffer<T> {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: Self::UpdateArg) {}
+    fn update_recursively(&mut self, _arg: Self::UpdateArg) {}
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]

@@ -8,54 +8,54 @@ use crate::prelude::*;
 pub enum BooleanNodes {
     #[mutagen(gen_weight = branch_node_weight)]
     UNFloatLess {
-        child_a: Box<UNFloatNodes>,
-        child_b: Box<UNFloatNodes>,
+        child_a: NodeBox<UNFloatNodes>,
+        child_b: NodeBox<UNFloatNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     UNFloatMore {
-        child_a: Box<UNFloatNodes>,
-        child_b: Box<UNFloatNodes>,
+        child_a: NodeBox<UNFloatNodes>,
+        child_b: NodeBox<UNFloatNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     UNFloatBetween {
-        child_value: Box<UNFloatNodes>,
-        child_range_a: Box<UNFloatNodes>,
-        child_range_b: Box<UNFloatNodes>,
+        child_value: NodeBox<UNFloatNodes>,
+        child_range_a: NodeBox<UNFloatNodes>,
+        child_range_b: NodeBox<UNFloatNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     SNFloatLess {
-        child_a: Box<SNFloatNodes>,
-        child_b: Box<SNFloatNodes>,
+        child_a: NodeBox<SNFloatNodes>,
+        child_b: NodeBox<SNFloatNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     SNFloatMore {
-        child_a: Box<SNFloatNodes>,
-        child_b: Box<SNFloatNodes>,
+        child_a: NodeBox<SNFloatNodes>,
+        child_b: NodeBox<SNFloatNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     SNFloatBetween {
-        child_value: Box<SNFloatNodes>,
-        child_range_a: Box<SNFloatNodes>,
-        child_range_b: Box<SNFloatNodes>,
+        child_value: NodeBox<SNFloatNodes>,
+        child_range_a: NodeBox<SNFloatNodes>,
+        child_range_b: NodeBox<SNFloatNodes>,
     },
     #[mutagen(gen_weight = pipe_node_weight)]
-    SNFloatSign { child: Box<SNFloatNodes> },
+    SNFloatSign { child: NodeBox<SNFloatNodes> },
     #[mutagen(gen_weight = branch_node_weight)]
     And {
-        child_a: Box<BooleanNodes>,
-        child_b: Box<BooleanNodes>,
+        child_a: NodeBox<BooleanNodes>,
+        child_b: NodeBox<BooleanNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     Or {
-        child_a: Box<BooleanNodes>,
-        child_b: Box<BooleanNodes>,
+        child_a: NodeBox<BooleanNodes>,
+        child_b: NodeBox<BooleanNodes>,
     },
     #[mutagen(gen_weight = pipe_node_weight)]
-    Not { child: Box<BooleanNodes> },
+    Not { child: NodeBox<BooleanNodes> },
     #[mutagen(gen_weight = branch_node_weight)]
     BitColorHas {
-        child_a: Box<BitColorNodes>,
-        child_b: Box<BitColorNodes>,
+        child_a: NodeBox<BitColorNodes>,
+        child_b: NodeBox<BitColorNodes>,
     },
     // #[mutagen(mut_reroll = 0.9)]
     // #[mutagen(gen_weight = leaf_node_weight)]
@@ -64,23 +64,23 @@ pub enum BooleanNodes {
     Constant { value: Boolean },
     #[mutagen(gen_weight = branch_node_weight)]
     ModifyState {
-        child: Box<BooleanNodes>,
-        child_state: Box<CoordMapNodes>,
+        child: NodeBox<BooleanNodes>,
+        child_state: NodeBox<CoordMapNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     IfElse {
-        predicate: Box<BooleanNodes>,
-        child_a: Box<BooleanNodes>,
-        child_b: Box<BooleanNodes>,
+        predicate: NodeBox<BooleanNodes>,
+        child_a: NodeBox<BooleanNodes>,
+        child_b: NodeBox<BooleanNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     ByteEquals {
-        child_a: Box<ByteNodes>,
-        child_b: Box<ByteNodes>,
+        child_a: NodeBox<ByteNodes>,
+        child_b: NodeBox<ByteNodes>,
     },
     // #[mutagen(gen_weight = branch_node_weight)]
     // Majority {
-    //     child: Box<BooleanNodes>,
+    //     child:NodeBox<BooleanNodes>,
     //     point_set: PointSet,
     // },
 }
@@ -216,60 +216,56 @@ impl Node for BooleanNodes {
 impl<'a> Updatable<'a> for BooleanNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update(&mut self, _arg: UpdArg<'a>) {}
 }
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum NibbleNodes {
     #[mutagen(gen_weight = leaf_node_weight)]
-    Constant {
-        value: Nibble,
-    },
+    Constant { value: Nibble },
     // #[mutagen(gen_weight = leaf_node_weight)]
     // Random,
     #[mutagen(gen_weight = branch_node_weight)]
     Add {
-        child_a: Box<NibbleNodes>,
-        child_b: Box<NibbleNodes>,
+        child_a: NodeBox<NibbleNodes>,
+        child_b: NodeBox<NibbleNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     Multiply {
-        child_a: Box<NibbleNodes>,
-        child_b: Box<NibbleNodes>,
+        child_a: NodeBox<NibbleNodes>,
+        child_b: NodeBox<NibbleNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     Divide {
-        child_value: Box<NibbleNodes>,
-        child_divisor: Box<NibbleNodes>,
+        child_value: NodeBox<NibbleNodes>,
+        child_divisor: NodeBox<NibbleNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     Modulus {
-        child_value: Box<NibbleNodes>,
-        child_divisor: Box<NibbleNodes>,
+        child_value: NodeBox<NibbleNodes>,
+        child_divisor: NodeBox<NibbleNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     FromBooleans {
-        a: Box<BooleanNodes>,
-        b: Box<BooleanNodes>,
-        c: Box<BooleanNodes>,
-        d: Box<BooleanNodes>,
+        a: NodeBox<BooleanNodes>,
+        b: NodeBox<BooleanNodes>,
+        c: NodeBox<BooleanNodes>,
+        d: NodeBox<BooleanNodes>,
     },
-    FromByteModulo {
-        child: Box<ByteNodes>,
-    },
-    FromByteDivide {
-        child: Box<ByteNodes>,
-    },
+    #[mutagen(gen_weight = pipe_node_weight)]
+    FromByteModulo { child: NodeBox<ByteNodes> },
+    #[mutagen(gen_weight = pipe_node_weight)]
+    FromByteDivide { child: NodeBox<ByteNodes> },
     #[mutagen(gen_weight = leaf_node_weight)]
     FromGametic,
     #[mutagen(gen_weight = branch_node_weight)]
     IfElse {
-        predicate: Box<BooleanNodes>,
-        child_a: Box<NibbleNodes>,
-        child_b: Box<NibbleNodes>,
+        predicate: NodeBox<BooleanNodes>,
+        child_a: NodeBox<NibbleNodes>,
+        child_b: NodeBox<NibbleNodes>,
     },
-    // InvertNormalised { child: Box<NibbleNodes> },
+    // InvertNormalised { child:NodeBox<NibbleNodes> },
 }
 
 impl Node for NibbleNodes {
@@ -344,7 +340,7 @@ impl Node for NibbleNodes {
 impl<'a> Updatable<'a> for NibbleNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update(&mut self, _arg: UpdArg<'a>) {}
 }
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]
@@ -356,38 +352,40 @@ pub enum ByteNodes {
     // Random,
     #[mutagen(gen_weight = branch_node_weight)]
     Add {
-        child_a: Box<ByteNodes>,
-        child_b: Box<ByteNodes>,
+        child_a: NodeBox<ByteNodes>,
+        child_b: NodeBox<ByteNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     Multiply {
-        child_a: Box<ByteNodes>,
-        child_b: Box<ByteNodes>,
+        child_a: NodeBox<ByteNodes>,
+        child_b: NodeBox<ByteNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     MultiplyNibbles {
-        child_a: Box<NibbleNodes>,
-        child_b: Box<NibbleNodes>,
+        child_a: NodeBox<NibbleNodes>,
+        child_b: NodeBox<NibbleNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     Divide {
-        child_value: Box<ByteNodes>,
-        child_divisor: Box<ByteNodes>,
+        child_value: NodeBox<ByteNodes>,
+        child_divisor: NodeBox<ByteNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     Modulus {
-        child_value: Box<ByteNodes>,
-        child_divisor: Box<ByteNodes>,
+        child_value: NodeBox<ByteNodes>,
+        child_divisor: NodeBox<ByteNodes>,
     },
     #[mutagen(gen_weight = pipe_node_weight)]
-    FromIterativeResult { child: Box<IterativeFunctionNodes> },
+    FromIterativeResult {
+        child: NodeBox<IterativeFunctionNodes>,
+    },
     #[mutagen(gen_weight = leaf_node_weight)]
     FromGametic,
     #[mutagen(gen_weight = branch_node_weight)]
     IfElse {
-        predicate: Box<BooleanNodes>,
-        child_a: Box<ByteNodes>,
-        child_b: Box<ByteNodes>,
+        predicate: NodeBox<BooleanNodes>,
+        child_a: NodeBox<ByteNodes>,
+        child_b: NodeBox<ByteNodes>,
     },
 }
 
@@ -442,7 +440,7 @@ impl Node for ByteNodes {
 impl<'a> Updatable<'a> for ByteNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update(&mut self, _arg: UpdArg<'a>) {}
 }
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]
@@ -454,31 +452,31 @@ pub enum UIntNodes {
     // Random,
     #[mutagen(gen_weight = branch_node_weight)]
     Add {
-        child_a: Box<UIntNodes>,
-        child_b: Box<UIntNodes>,
+        child_a: NodeBox<UIntNodes>,
+        child_b: NodeBox<UIntNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     Multiply {
-        child_a: Box<UIntNodes>,
-        child_b: Box<UIntNodes>,
+        child_a: NodeBox<UIntNodes>,
+        child_b: NodeBox<UIntNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     Divide {
-        child_value: Box<UIntNodes>,
-        child_divisor: Box<UIntNodes>,
+        child_value: NodeBox<UIntNodes>,
+        child_divisor: NodeBox<UIntNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     Modulus {
-        child_value: Box<UIntNodes>,
-        child_divisor: Box<UIntNodes>,
+        child_value: NodeBox<UIntNodes>,
+        child_divisor: NodeBox<UIntNodes>,
     },
     #[mutagen(gen_weight = leaf_node_weight)]
     FromGametic,
     #[mutagen(gen_weight = branch_node_weight)]
     IfElse {
-        predicate: Box<BooleanNodes>,
-        child_a: Box<UIntNodes>,
-        child_b: Box<UIntNodes>,
+        predicate: NodeBox<BooleanNodes>,
+        child_a: NodeBox<UIntNodes>,
+        child_b: NodeBox<UIntNodes>,
     },
 }
 
@@ -528,7 +526,7 @@ impl Node for UIntNodes {
 impl<'a> Updatable<'a> for UIntNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update(&mut self, _arg: UpdArg<'a>) {}
 }
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]
@@ -540,29 +538,29 @@ pub enum SIntNodes {
     // Random,
     #[mutagen(gen_weight = branch_node_weight)]
     Add {
-        child_a: Box<SIntNodes>,
-        child_b: Box<SIntNodes>,
+        child_a: NodeBox<SIntNodes>,
+        child_b: NodeBox<SIntNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     Multiply {
-        child_a: Box<SIntNodes>,
-        child_b: Box<SIntNodes>,
+        child_a: NodeBox<SIntNodes>,
+        child_b: NodeBox<SIntNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     Divide {
-        child_value: Box<SIntNodes>,
-        child_divisor: Box<SIntNodes>,
+        child_value: NodeBox<SIntNodes>,
+        child_divisor: NodeBox<SIntNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     Modulus {
-        child_value: Box<SIntNodes>,
-        child_divisor: Box<SIntNodes>,
+        child_value: NodeBox<SIntNodes>,
+        child_divisor: NodeBox<SIntNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     IfElse {
-        predicate: Box<BooleanNodes>,
-        child_a: Box<SIntNodes>,
-        child_b: Box<SIntNodes>,
+        predicate: NodeBox<BooleanNodes>,
+        child_a: NodeBox<SIntNodes>,
+        child_b: NodeBox<SIntNodes>,
     },
 }
 
@@ -611,5 +609,5 @@ impl Node for SIntNodes {
 impl<'a> Updatable<'a> for SIntNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update(&mut self, _arg: UpdArg<'a>) {}
 }

@@ -52,6 +52,6 @@ impl CoordinateSet {
 
     //todo refactor divisor into constant
     pub fn get_unfloat_t(&self) -> UNFloat {
-        UNFloat::new_triangle(self.t / 500.0)
+        UNFloat::new_triangle(self.t / 50.0 / CONSTS.time_scale_divisor)
     }
 }

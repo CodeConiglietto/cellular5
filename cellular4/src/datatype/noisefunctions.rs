@@ -1,4 +1,4 @@
-use mutagen::{Generatable, Mutatable};
+use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
 use noise::{
     BasicMulti, Billow, Checkerboard, Fbm, HybridMulti, NoiseFn, OpenSimplex, RangeFunction,
     RidgedMulti, Seedable, SuperSimplex, Value, Worley,
@@ -6,13 +6,7 @@ use noise::{
 use rand::prelude::*;
 use serde::{de::Deserializer, ser::Serializer, Deserialize, Serialize};
 
-use crate::{
-    datatype::{
-        continuous::UNFloat,
-        discrete::{Boolean, Nibble},
-    },
-    mutagen_args::*,
-};
+use crate::prelude::*;
 
 #[derive(Serialize, Deserialize, Generatable, Mutatable, Debug)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
@@ -44,6 +38,16 @@ impl NoiseFunctions {
             NoiseFunctions::Worley(noise) => noise.noise.get([x, y, t]),
         }
     }
+}
+
+impl<'a> Updatable<'a> for NoiseFunctions {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _arg: UpdArg<'a>) {}
+}
+
+impl<'a> UpdatableRecursively<'a> for NoiseFunctions {
+    fn update_recursively(&mut self, _arg: UpdArg<'a>) {}
 }
 
 #[derive(Debug, Clone)]
@@ -89,12 +93,8 @@ where
 {
     type GenArg = <T::Params as Generatable<'a>>::GenArg;
 
-    fn generate_rng<R: Rng + ?Sized>(
-        rng: &mut R,
-        state: mutagen::State,
-        arg: Self::GenArg,
-    ) -> Self {
-        let params = T::Params::generate_rng(rng, state, arg);
+    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, arg: Self::GenArg) -> Self {
+        let params = T::Params::generate_rng(rng, arg);
 
         Self {
             noise: T::new(&params),
@@ -110,13 +110,8 @@ where
 {
     type MutArg = <T::Params as Mutatable<'a>>::MutArg;
 
-    fn mutate_rng<R: Rng + ?Sized>(
-        &mut self,
-        rng: &mut R,
-        state: mutagen::State,
-        arg: Self::MutArg,
-    ) {
-        self.params.mutate_rng(rng, state, arg);
+    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, arg: Self::MutArg) {
+        self.params.mutate_rng(rng, arg);
         self.noise = T::new(&self.params);
     }
 }
@@ -140,23 +135,14 @@ impl SeedParams {
 impl<'a> Generatable<'a> for SeedParams {
     type GenArg = GenArg<'a>;
 
-    fn generate_rng<R: Rng + ?Sized>(
-        rng: &mut R,
-        _state: mutagen::State,
-        _arg: GenArg<'a>,
-    ) -> Self {
+    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, _arg: GenArg<'a>) -> Self {
         Self::random(rng)
     }
 }
 
 impl<'a> Mutatable<'a> for SeedParams {
     type MutArg = MutArg<'a>;
-    fn mutate_rng<R: Rng + ?Sized>(
-        &mut self,
-        rng: &mut R,
-        _state: mutagen::State,
-        _arg: MutArg<'a>,
-    ) {
+    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, _arg: MutArg<'a>) {
         *self = Self::random(rng);
     }
 }

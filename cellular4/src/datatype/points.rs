@@ -15,7 +15,7 @@ use serde::{
 };
 
 use crate::{
-    datatype::{constraint_resolvers::*, continuous::*},
+    datatype::{complex::*, constraint_resolvers::*, continuous::*},
     mutagen_args::*,
 };
 
@@ -72,12 +72,20 @@ impl SNPoint {
         SNFloat::new_unchecked(self.value.y)
     }
 
+    pub fn abs(self) -> Self {
+        Self::from_snfloats(self.x().abs(), self.y().abs())
+    }
+
     pub fn to_angle(self) -> Angle {
         Angle::new(f32::atan2(self.value.x, self.value.y))
     }
 
     pub fn average(self, other: Self) -> Self {
         Self::new(Point2::from(self.into_inner().coords + other.into_inner().coords) * 0.5)
+    }
+
+    pub fn invert_x(self) -> Self{
+        Self::from_snfloats(self.x().invert(), self.y())
     }
 
     pub fn normalised_add(self, other: SNPoint, normaliser: SFloatNormaliser) -> SNPoint {
@@ -130,6 +138,11 @@ impl SNPoint {
             SNFloat::new(rho * f32::sin(theta)),
             SNFloat::new(rho * f32::cos(theta)),
         )
+    }
+
+    // TODO Refactor this when polar point datatype is added
+    pub fn from_complex(value: SNComplex) -> Self {
+        Self::from_snfloats(value.re(), value.im())
     }
 
     pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
@@ -203,23 +216,14 @@ impl Default for SNPoint {
 impl<'a> Generatable<'a> for SNPoint {
     type GenArg = GenArg<'a>;
 
-    fn generate_rng<R: Rng + ?Sized>(
-        rng: &mut R,
-        _state: mutagen::State,
-        _arg: GenArg<'a>,
-    ) -> Self {
+    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, _arg: GenArg<'a>) -> Self {
         Self::random(rng)
     }
 }
 
 impl<'a> Mutatable<'a> for SNPoint {
     type MutArg = MutArg<'a>;
-    fn mutate_rng<R: Rng + ?Sized>(
-        &mut self,
-        rng: &mut R,
-        _state: mutagen::State,
-        _arg: MutArg<'a>,
-    ) {
+    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, _arg: MutArg<'a>) {
         *self = Self::random(rng);
     }
 }
@@ -227,11 +231,11 @@ impl<'a> Mutatable<'a> for SNPoint {
 impl<'a> Updatable<'a> for SNPoint {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update(&mut self, _arg: UpdArg<'a>) {}
 }
 
 impl<'a> UpdatableRecursively<'a> for SNPoint {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update_recursively(&mut self, _arg: UpdArg<'a>) {}
 }
 
 #[cfg(test)]

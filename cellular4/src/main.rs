@@ -1,10 +1,11 @@
-use std::{f32::consts::PI, fs};
+use std::fs;
 
 use cpu_monitor::CpuInstant;
 use ggez::{
     conf::{FullscreenType, WindowMode, WindowSetup},
     event::{self, EventHandler, KeyCode, KeyMods},
-    graphics::{self, Color as GgColor, DrawParam, Image as GgImage, WHITE},
+    graphics,
+    graphics::{Color as GgColor, DrawParam, Image as GgImage},
     input::keyboard,
     timer, Context, ContextBuilder, GameResult,
 };
@@ -16,35 +17,9 @@ use rayon::prelude::*;
 use structopt::StructOpt;
 
 use crate::{
-    arena_wrappers::*, data_set::*, history::*, node_set::*, opts::Opts, prelude::*, term::UI,
+    arena_wrappers::*, data_set::*, history::*, node_set::*, opts::Opts, prelude::*,
     update_stat::UpdateStat,
 };
-
-// Shamelessly copied from the std implementation of dbg!
-// Macro declaration order matters! Keep this BEFORE any code and any module declarations
-macro_rules! ldbg {
-    () => {
-        ::log::trace!("[{}:{}]", ::std::file!(), ::std::line!())
-    };
-
-    ($val:expr) => {
-        match $val {
-            tmp => {
-                ::log::trace!("[{}:{}] {} = {:#?}",
-                              ::std::file!(), ::std::line!(), ::std::stringify!($val), &tmp);
-                tmp
-            }
-        }
-    };
-
-    ($val:expr,) => {
-        $crate::ldbg!($val)
-    };
-
-    ($($val:expr),+ $(,)?) => {
-        ($($crate::ldbg!($val)),+,)
-    };
-}
 
 pub mod arena_wrappers;
 pub mod constants;
@@ -58,15 +33,16 @@ pub mod node_set;
 pub mod opts;
 pub mod preloader;
 pub mod prelude;
-pub mod term;
 pub mod update_stat;
 pub mod util;
+
+#[cfg(unix)]
+pub mod term;
 
 fn main() {
     std::env::set_var("RUST_BACKTRACE", "full");
 
-    let ui = UI::new();
-    setup_logging(&ui);
+    setup_logging();
 
     let opts = Opts::from_args();
     let (mut ctx, mut event_loop) = ContextBuilder::new("cellular4", "CodeBunny")
@@ -87,10 +63,7 @@ fn main() {
         .build()
         .expect("Could not create ggez context!");
 
-    let mut my_game = MyGame::new(&mut ctx, ui, opts);
-
-    // Eagerly initialize the image preloader rather than waiting for the first time it's used
-    IMAGE_PRELOADER.with(|_| ());
+    let mut my_game = MyGame::new(&mut ctx, opts);
 
     match event::run(&mut ctx, &mut event_loop, &mut my_game) {
         Ok(_) => info!("Exited cleanly."),
@@ -98,16 +71,14 @@ fn main() {
     }
 }
 
-fn setup_logging(ui: &UI) {
+fn setup_logging() {
     let image_error_dispatch = fern::Dispatch::new()
         .level(log::LevelFilter::Off)
         .level_for(datatype::image::MODULE_PATH, log::LevelFilter::Error)
         .chain(fern::log_file("image_errors.log").unwrap());
 
-    let mut dispatch = fern::Dispatch::new();
-
-    dispatch = if CONSTS.log_verbose {
-        dispatch.format(|out, message, record| {
+    fern::Dispatch::new()
+        .format(|out, message, record| {
             out.finish(format_args!(
                 "{}[{}][{}] {}",
                 chrono::Local::now().format("[%Y-%m-%d][%H:%M:%S%.3f]"),
@@ -116,55 +87,23 @@ fn setup_logging(ui: &UI) {
                 message
             ))
         })
-    } else {
-        dispatch.format(|out, message, record| {
-            out.finish(format_args!("[{}] {}", record.level(), message))
-        })
-    };
-
-    dispatch
         .level(log::LevelFilter::Info)
         .level_for(module_path!(), log::LevelFilter::Trace)
         .chain(image_error_dispatch)
-        .chain(ui.log_output())
+        .chain(std::io::stdout())
         .apply()
         .unwrap();
 }
 
 #[derive(Debug, Generatable, Mutatable, UpdatableRecursively)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
-struct RenderNodes {
-    compute_offset_node: NodeBox<CoordMapNodes>,
-
-    root_rotation_node: NodeBox<AngleNodes>,
-    root_translation_node: NodeBox<SNPointNodes>,
-    root_offset_node: NodeBox<SNPointNodes>,
-    root_from_scale_node: NodeBox<SNPointNodes>,
-    root_to_scale_node: NodeBox<SNPointNodes>,
-
-    root_scalar_node: NodeBox<UNFloatNodes>,
-    root_alpha_node: NodeBox<UNFloatNodes>,
-
-    rotation_scalar_node: NodeBox<UNFloatNodes>,
-    translation_scalar_node: NodeBox<UNFloatNodes>,
-    offset_scalar_node: NodeBox<UNFloatNodes>,
-    from_scale_scalar_node: NodeBox<UNFloatNodes>,
-    to_scale_scalar_node: NodeBox<UNFloatNodes>,
-}
-
-impl<'a> Updatable<'a> for RenderNodes {
-    type UpdateArg = UpdArg<'a>;
-
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
-}
-
-#[derive(Debug, Generatable, Mutatable, UpdatableRecursively)]
-#[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 struct NodeTree {
-    //The root node for the tree that computes the next screen state
+    /// The root node for the tree that computes the next screen state
     root_node: NodeBox<FloatColorNodes>,
-    //Nodes for computing parameters for the next draw param
-    render_nodes: RenderNodes,
+    root_frame_renderer: NodeBox<FrameRendererNodes>,
+    compute_offset_node: NodeBox<CoordMapNodes>,
+    fade_color_node: NodeBox<FloatColorNodes>,
+    fade_color_alpha_multiplier: NodeBox<UNFloatNodes>,
 }
 
 // impl NodeTree {
@@ -237,12 +176,14 @@ struct NodeTree {
 impl<'a> Updatable<'a> for NodeTree {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update(&mut self, _arg: UpdArg<'a>) {}
 }
 
 struct MyGame {
     history: History,
     next_history_step: HistoryStep,
+
+    blank_texture: GgImage,
 
     //The rolling total used to calculate the average per update instead of per slice
     rolling_update_stat_total: UpdateStat,
@@ -260,11 +201,12 @@ struct MyGame {
     last_render_t: usize,
     cpu_t: CpuInstant,
     rng: DeterministicRng,
-    ui: UI,
+
+    image_preloader: Preloader<Image>,
 }
 
 impl MyGame {
-    pub fn new(ctx: &mut Context, ui: UI, opts: Opts) -> MyGame {
+    pub fn new(ctx: &mut Context, opts: Opts) -> MyGame {
         if let Some(seed) = opts.seed {
             info!("Manually setting RNG seed");
             *RNG_SEED.lock().unwrap() = seed;
@@ -281,58 +223,45 @@ impl MyGame {
             CONSTS.cell_array_history_length,
         );
 
-        let mut nodes: Vec<_> = (0..CONSTS
-            .max_branch_depth
-            .max(CONSTS.max_pipe_depth.max(CONSTS.max_leaf_depth))
-            + 1)
+        let mut image_preloader = Preloader::new(32, RandomImageLoader::new());
+
+        let mut nodes: Vec<_> = (0..=node::max_node_depth())
             .map(|_| NodeSet::new())
             .collect();
         let mut data = DataSet::new();
 
         MyGame {
-            next_history_step: HistoryStep {
-                cell_array: init_cell_array(CONSTS.cell_array_width, CONSTS.cell_array_height),
-                computed_texture: GgImage::solid(ctx, 1, WHITE).unwrap(),
-                update_coordinate: CoordinateSet {
-                    x: SNFloat::ZERO,
-                    y: SNFloat::ZERO,
-                    t: 0.0,
-                },
-                rotation: Angle::ZERO,
-                translation: SNPoint::zero(),
-                offset: SNPoint::zero(),
-                from_scale: SNPoint::zero(),
-                to_scale: SNPoint::zero(),
-
-                root_scalar: UNFloat::default(),
-                alpha: UNFloat::default(),
-                rotation_scalar: UNFloat::default(),
-                translation_scalar: UNFloat::default(),
-                offset_scalar: UNFloat::default(),
-                from_scale_scalar: UNFloat::default(),
-                to_scale_scalar: UNFloat::default(),
-            },
+            blank_texture: compute_blank_texture(ctx),
+            next_history_step: HistoryStep::new(
+                ctx,
+                CONSTS.cell_array_width,
+                CONSTS.cell_array_height,
+            ),
             rolling_update_stat_total: UpdateStat {
                 activity_value: 0.0,
                 alpha_value: 0.0,
                 local_similarity_value: 0.0,
                 global_similarity_value: 0.0,
+                cpu_usage: 0.0,
             },
             average_update_stat: UpdateStat {
                 activity_value: 0.0,
                 alpha_value: 0.0,
                 local_similarity_value: 0.0,
                 global_similarity_value: 0.0,
+                cpu_usage: 0.0,
             },
 
             node_tree: Generatable::generate_rng(
                 &mut rng,
-                mutagen::State::default(),
                 GenArg {
                     nodes: &mut nodes,
                     data: &mut data,
                     depth: 0,
                     current_t: 0,
+                    history: &history,
+                    coordinate_set: history.history_steps[0].update_coordinate,
+                    image_preloader: &mut image_preloader,
                 },
             ),
 
@@ -346,7 +275,7 @@ impl MyGame {
             cpu_t: CpuInstant::now().unwrap(),
             rng,
             history,
-            ui,
+            image_preloader,
         }
     }
 }
@@ -441,13 +370,14 @@ impl EventHandler for MyGame {
                 root_node.compute(ComArg {
                     nodes,
                     data,
+                    current_t,
                     coordinate_set: CoordinateSet {
                         x: UNFloat::new(x as f32 / CONSTS.cell_array_width as f32).to_signed(),
                         y: UNFloat::new(
                             (y + slice_y as usize) as f32 / CONSTS.cell_array_height as f32,
                         )
                         .to_signed(),
-                        t: current_t as f32 / CONSTS.time_scale_divisor,
+                        t: current_t as f32,
                     },
                     history,
                     depth: 0,
@@ -491,6 +421,7 @@ impl EventHandler for MyGame {
                 global_similarity_value: f64::from(
                     1.0 - (global_color.get_average() - current_color.get_average()).abs(),
                 ), // / total_cells as f64
+                cpu_usage: 0.0, //we don't accumulate this here because we set it below
             }
         };
 
@@ -513,15 +444,16 @@ impl EventHandler for MyGame {
             let cpu_usage = (next_cpu_t - self.cpu_t).non_idle();
 
             self.average_update_stat =
-                (self.average_update_stat + self.rolling_update_stat_total) / 2.0;
+                ((self.average_update_stat + self.rolling_update_stat_total) / 2.0).clamp_values();
 
-            ldbg!(timer::fps(ctx));
+            dbg!(timer::fps(ctx));
 
             self.rolling_update_stat_total = UpdateStat {
                 activity_value: 0.0,
                 alpha_value: 0.0,
                 local_similarity_value: 0.0,
                 global_similarity_value: 0.0,
+                cpu_usage: cpu_usage,
             };
 
             let _update_state = UpdateState {
@@ -533,34 +465,46 @@ impl EventHandler for MyGame {
                 history,
             };
 
-            ldbg!(cpu_usage);
-            ldbg!(&self.average_update_stat);
+            let mutation_likelihood = &self.average_update_stat.mutation_likelihood();
+
+            dbg!(&self.average_update_stat);
+            dbg!(mutation_likelihood);
+
+            let history_len = self.history.history_steps.len();
+            let history_index = self.current_t.saturating_sub(1) % history_len;
+            let history_step = &self.history.history_steps[history_index];
 
             if self.tree_dirty
                 || (CONSTS.auto_mutate
-                    && (ldbg!(cpu_usage >= CONSTS.auto_mutate_above_cpu_usage)
-                        || ldbg!(self.average_update_stat.should_mutate())
-                        || ldbg!(thread_rng().gen::<usize>() % CONSTS.graph_mutation_divisor) == 0))
+                    && (
+                        dbg!(cpu_usage >= CONSTS.auto_mutate_above_cpu_usage)
+                            || self.average_update_stat.should_mutate()
+                        // || dbg!(thread_rng().gen::<usize>() % CONSTS.graph_mutation_divisor) == 0
+                    ))
             {
                 info!("====TIC: {} MUTATING TREE====", self.current_t);
                 self.node_tree.root_node.mutate_rng(
                     &mut self.rng,
-                    mutagen::State::default(),
                     MutArg {
                         nodes: &mut self.nodes,
                         data: &mut self.data,
                         depth: 0,
                         current_t,
+                        coordinate_set: history_step.update_coordinate,
+                        history: &self.history,
+                        image_preloader: &mut self.image_preloader,
                     },
                 );
-                self.node_tree.render_nodes.mutate_rng(
+                self.node_tree.root_frame_renderer.mutate_rng(
                     &mut self.rng,
-                    mutagen::State::default(),
                     MutArg {
                         nodes: &mut self.nodes,
                         data: &mut self.data,
                         depth: 0,
                         current_t,
+                        coordinate_set: history_step.update_coordinate,
+                        history: &self.history,
+                        image_preloader: &mut self.image_preloader,
                     },
                 );
                 // // info!("{:#?}", &self.root_node);
@@ -569,10 +513,6 @@ impl EventHandler for MyGame {
                 // }
                 self.tree_dirty = false;
             }
-
-            let history_len = self.history.history_steps.len();
-            let history_index = self.current_t.saturating_sub(1) % history_len;
-            let history_step = &self.history.history_steps[history_index];
 
             // let last_update_state = UpdateState {
             //     coordinate_set: history_step.update_coordinate,
@@ -585,14 +525,23 @@ impl EventHandler for MyGame {
                 nodes: &mut self.nodes,
                 data: &mut self.data,
                 depth: 0,
+                image_preloader: &mut self.image_preloader,
                 current_t,
             };
 
+            // dbg!(last_update_arg.coordinate_set);
+
             self.next_history_step.update_coordinate = self
                 .node_tree
-                .render_nodes
                 .compute_offset_node
                 .compute(last_update_arg.into());
+
+            // dbg!(self.next_history_step.update_coordinate);
+
+            //Workaround, TODO:please fix
+            //double TODO: fix this please it could be breaking other stuff
+            //triple TODO: please it's important
+            self.next_history_step.update_coordinate.t = current_t as f32;
 
             let mut step_upd_arg = UpdArg {
                 coordinate_set: self.next_history_step.update_coordinate,
@@ -600,120 +549,73 @@ impl EventHandler for MyGame {
                 nodes: &mut self.nodes,
                 data: &mut self.data,
                 depth: 0,
+                image_preloader: &mut self.image_preloader,
                 current_t,
             };
 
             let mut step_com_arg: ComArg = step_upd_arg.reborrow().into();
 
-            self.next_history_step.rotation = self
+            self.next_history_step.fade_color = self
                 .node_tree
-                .render_nodes
-                .root_rotation_node
-                .compute(step_com_arg.reborrow()); //.average(history_step.rotation);
-            self.next_history_step.translation = self
+                .fade_color_node
+                .compute(step_com_arg.reborrow());
+            self.next_history_step.alpha_multiplier = self
                 .node_tree
-                .render_nodes
-                .root_translation_node
-                .compute(step_com_arg.reborrow()); //.average(history_step.translation);
-            self.next_history_step.offset = self
-                .node_tree
-                .render_nodes
-                .root_offset_node
-                .compute(step_com_arg.reborrow()); //.average(history_step.offset);
-            self.next_history_step.from_scale = self
-                .node_tree
-                .render_nodes
-                .root_from_scale_node
-                .compute(step_com_arg.reborrow()); //.average(history_step.from_scale);
-            self.next_history_step.to_scale = self
-                .node_tree
-                .render_nodes
-                .root_to_scale_node
-                .compute(step_com_arg.reborrow()); //.average(history_step.to_scale);
+                .fade_color_alpha_multiplier
+                .compute(step_com_arg.reborrow());
 
-            self.next_history_step.root_scalar = self
-                .node_tree
-                .render_nodes
-                .root_scalar_node
-                .compute(step_com_arg.reborrow()); //.average(history_step.root_scalar);
+            // self.next_history_step.root_scalar = self
+            //     .node_tree
+            //     .render_nodes
+            //     .root_scalar_node
+            //     .compute(step_com_arg.reborrow())
+            // .multiply(UNFloat::new_clamped(
+            //     1.0 - self.average_update_stat.activity_value as f32,
+            // ))
+            // .multiply(UNFloat::new_clamped(
+            //     1.0 - self.average_update_stat.alpha_value as f32,
+            // ))
+            // .multiply(UNFloat::new_clamped(
+            //     self.average_update_stat.global_similarity_value as f32,
+            // ))
+            // .multiply(UNFloat::new_clamped(
+            //     1.0 - self.average_update_stat.local_similarity_value as f32,
+            // ))
+            // .average(history_step.root_scalar);
 
-            self.next_history_step.alpha = self
-                .node_tree
-                .render_nodes
-                .root_alpha_node
-                .compute(step_com_arg.reborrow()); //.average(history_step.alpha);
+            self.next_history_step.root_scalar = UNFloat::new(
+                // (self
+                // .node_tree
+                // .render_nodes
+                // .root_scalar_node
+                // .compute(step_com_arg.reborrow()).average(history_step.root_scalar).into_inner() *
+                mutation_likelihood.powf(2.0) as f32, // )
+            );
 
-            self.next_history_step.rotation_scalar = self
+            self.next_history_step.frame_renderer = self
                 .node_tree
-                .render_nodes
-                .rotation_scalar_node
-                .compute(step_com_arg.reborrow()); //.average(history_step.rotation_scalar);
-
-            self.next_history_step.translation_scalar = self
-                .node_tree
-                .render_nodes
-                .translation_scalar_node
-                .compute(step_com_arg.reborrow()); //.average(history_step.translation_scalar);
-
-            self.next_history_step.offset_scalar = self
-                .node_tree
-                .render_nodes
-                .offset_scalar_node
-                .compute(step_com_arg.reborrow()); //.average(history_step.offset_scalar);
-
-            self.next_history_step.to_scale_scalar = self
-                .node_tree
-                .render_nodes
-                .to_scale_scalar_node
-                .compute(step_com_arg.reborrow()); //.average(history_step.to_scale_scalar);
-
-            self.next_history_step.from_scale_scalar = self
-                .node_tree
-                .render_nodes
-                .from_scale_scalar_node
-                .compute(step_com_arg.reborrow()); //.average(history_step.from_scale_scalar);
-
-            self.next_history_step.root_scalar = self
-                .node_tree
-                .render_nodes
-                .root_scalar_node
-                .compute(step_com_arg.reborrow())
-                .multiply(UNFloat::new_clamped(
-                    1.0 - self.average_update_stat.activity_value as f32,
-                ))
-                .multiply(UNFloat::new_clamped(
-                    1.0 - self.average_update_stat.alpha_value as f32,
-                ))
-                .multiply(UNFloat::new_clamped(
-                    self.average_update_stat.global_similarity_value as f32,
-                ))
-                .multiply(UNFloat::new_clamped(
-                    1.0 - self.average_update_stat.local_similarity_value as f32,
-                ))
-                .average(history_step.root_scalar);
+                .root_frame_renderer
+                .compute(step_com_arg.reborrow());
 
             self.next_history_step.computed_texture =
                 compute_texture(ctx, self.next_history_step.cell_array.view());
 
-            self.node_tree
-                .update_recursively(mutagen::State::default(), step_upd_arg.reborrow());
+            self.node_tree.update_recursively(step_upd_arg.reborrow());
 
-            let max_node_depth = self.nodes.len();
-
-            for i in 0..max_node_depth {
-                let (nodes_a, children) = self.nodes.split_at_mut(i + 1);
-                let current = &mut nodes_a[i];
+            for depth in 0..self.nodes.len() {
+                let (current, children) = self.nodes[depth..].split_first_mut().unwrap();
 
                 let mut step_upd_arg = UpdArg {
                     coordinate_set: self.next_history_step.update_coordinate,
                     history: &self.history,
                     nodes: children,
                     data: &mut self.data,
-                    depth: 0,
+                    image_preloader: &mut self.image_preloader,
+                    depth,
                     current_t,
                 };
 
-                current.update_recursively(mutagen::State::default(), step_upd_arg.reborrow());
+                current.update_recursively(step_upd_arg.reborrow());
             }
 
             // Rotate the buffers by swapping
@@ -733,162 +635,28 @@ impl EventHandler for MyGame {
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
+        assert!(CONSTS.cell_array_history_length > CONSTS.cell_array_lerp_length);
+
         if self.last_render_t != timer::ticks(ctx) {
             let lerp_sub =
                 (timer::ticks(ctx) % CONSTS.tics_per_update) as f32 / CONSTS.tics_per_update as f32;
 
-            let lerp_len = CONSTS.cell_array_lerp_length;
-
-            for i in 0..lerp_len {
-                //let transparency = if i == 0 {1.0} else {if i == 1 {0.5} else {0.0}};
-                let back_lerp_val = (i as f32 + (1.0 - lerp_sub)) / lerp_len as f32;
-                let alpha = 1.0 - back_lerp_val;
-
-                let lerp_val = (i as f32 + lerp_sub) / lerp_len as f32;
-
-                let history_len = self.history.history_steps.len();
-
-                let prev_history_index =
-                    (self.current_t + i + history_len - lerp_len - 1) % history_len;
-                let history_index = (prev_history_index + 1) % history_len;
-
-                let prev_history_step = &self.history.history_steps[prev_history_index];
-                let history_step = &self.history.history_steps[history_index];
-
-                let mut alpha =
-                    (1.0 - ((alpha * 2.0) - 1.0).abs()) / CONSTS.cell_array_lerp_length as f32;
-
-                let mut dest_x = CONSTS.initial_window_width * 0.5;
-                let mut dest_y = CONSTS.initial_window_height * 0.5;
-
-                let mut offset_x = 0.5;
-                let mut offset_y = 0.5;
-
-                let mut scale_x = CONSTS.initial_window_width / CONSTS.cell_array_width as f32;
-                let mut scale_y = CONSTS.initial_window_height / CONSTS.cell_array_height as f32;
-
-                let mut rotation = 0.0;
-
-                if CONSTS.apply_frame_transformations {
-                    let root_scalar = lerp(
-                        prev_history_step.root_scalar.into_inner(),
-                        history_step.root_scalar.into_inner(),
-                        lerp_val,
-                    );
-
-                    let rotation_scalar = lerp(
-                        prev_history_step.rotation_scalar.into_inner(),
-                        history_step.rotation_scalar.into_inner(),
-                        lerp_val,
-                    );
-
-                    let translation_scalar = lerp(
-                        prev_history_step.translation_scalar.into_inner(),
-                        history_step.translation_scalar.into_inner(),
-                        lerp_val,
-                    );
-
-                    let offset_scalar = lerp(
-                        prev_history_step.offset_scalar.into_inner(),
-                        history_step.offset_scalar.into_inner(),
-                        lerp_val,
-                    );
-
-                    let from_scale_scalar = lerp(
-                        prev_history_step.from_scale_scalar.into_inner(),
-                        history_step.from_scale_scalar.into_inner(),
-                        lerp_val,
-                    );
-
-                    let to_scale_scalar = lerp(
-                        prev_history_step.to_scale_scalar.into_inner(),
-                        history_step.to_scale_scalar.into_inner(),
-                        lerp_val,
-                    );
-
-                    let translation_x = lerp(
-                        prev_history_step.translation.into_inner().x,
-                        history_step.translation.into_inner().x,
-                        lerp_val,
-                    ) * 0.5
-                        * CONSTS.initial_window_width;
-
-                    let translation_y = lerp(
-                        prev_history_step.translation.into_inner().y,
-                        history_step.translation.into_inner().y,
-                        lerp_val,
-                    ) * 0.5
-                        * CONSTS.initial_window_height;
-
-                    let offset_translation_x = lerp(
-                        prev_history_step.offset.into_inner().x,
-                        history_step.offset.into_inner().x,
-                        lerp_val,
-                    ) * 0.5;
-
-                    let offset_translation_y = lerp(
-                        prev_history_step.offset.into_inner().y,
-                        history_step.offset.into_inner().y,
-                        lerp_val,
-                    ) * 0.5;
-
-                    alpha *= lerp(1.0, history_step.alpha.into_inner(), root_scalar);
-                    dest_x += translation_x * scale_x * translation_scalar * root_scalar;
-                    dest_y += translation_y * scale_y * translation_scalar * root_scalar;
-                    offset_x += offset_translation_x * scale_x * offset_scalar * root_scalar;
-                    offset_y += offset_translation_y * scale_y * offset_scalar * root_scalar;
-
-                    // NOTE PI is only subtracted because angles are 0..2PI currently
-                    rotation += (1.0 - alpha) * history_step.rotation.into_inner()
-                        - PI * rotation_scalar * root_scalar;
-
-                    scale_x *= lerp(
-                        1.0,
-                        lerp(
-                            lerp(
-                                1.0,
-                                history_step.from_scale.into_inner().x,
-                                from_scale_scalar,
-                            ),
-                            lerp(1.0, history_step.to_scale.into_inner().x, to_scale_scalar),
-                            alpha,
-                        ) * 2.0,
-                        root_scalar,
-                    );
-
-                    scale_y *= lerp(
-                        1.0,
-                        lerp(
-                            lerp(
-                                1.0,
-                                history_step.from_scale.into_inner().y,
-                                from_scale_scalar,
-                            ),
-                            lerp(1.0, history_step.to_scale.into_inner().y, to_scale_scalar),
-                            alpha,
-                        ) * 2.0,
-                        root_scalar,
-                    );
-                }
-
-                ggez::graphics::draw(
+            for lerp_i in 0..CONSTS.cell_array_lerp_length {
+                let args = RenderArgs {
                     ctx,
-                    &history_step.computed_texture,
-                    DrawParam::new()
-                        .color(GgColor::new(1.0, 1.0, 1.0, alpha))
-                        .dest([dest_x, dest_y])
-                        .offset([offset_x, offset_y])
-                        .scale([scale_x, scale_y])
-                        .rotation(rotation),
-                )?;
+                    history: &self.history,
+                    current_t: self.current_t,
+                    lerp_sub,
+                    lerp_i,
+                    blank_texture: &self.blank_texture,
+                };
+
+                args.history_step().frame_renderer.draw(args)?;
             }
 
             self.last_render_t = timer::ticks(ctx);
+            graphics::present(ctx)?;
         }
-
-        graphics::present(ctx)?;
-
-        self.ui.draw(&self.average_update_stat);
 
         Ok(())
     }

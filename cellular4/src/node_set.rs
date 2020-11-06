@@ -1,17 +1,9 @@
-use crate::{
-    arena_wrappers::*,
-    mutagen_args::*,
-    node::{
-        color_blend_nodes::*, color_nodes::*, continuous_nodes::*, coord_map_nodes::*,
-        discrete_nodes::*, distance_function_nodes::*, matrix_nodes::*, noise_nodes::*,
-        point_nodes::*, point_set_nodes::*,
-    },
-};
 use generational_arena::*;
+use mutagen::{Updatable, UpdatableRecursively};
 
-use mutagen::{State, Updatable, UpdatableRecursively};
+use crate::{arena_wrappers::*, prelude::*, ArenaSlot};
 
-#[derive(Debug, UpdatableRecursively)]
+#[derive(Default, Debug, UpdatableRecursively)]
 pub struct NodeSet {
     //color_blend
     color_blend_nodes: Metarena<ColorBlendNodes>,
@@ -29,61 +21,35 @@ pub struct NodeSet {
     boolean_nodes: Metarena<BooleanNodes>,
     nibble_nodes: Metarena<NibbleNodes>,
     byte_nodes: Metarena<ByteNodes>,
-    //distance_function
-    distance_function_nodes: Metarena<DistanceFunctionNodes>,
+    uint_nodes: Metarena<UIntNodes>,
+    sint_nodes: Metarena<SIntNodes>,
     //matrix
     snfloat_matrix3_nodes: Metarena<SNFloatMatrix3Nodes>,
-    //noise
-    noise_nodes: Metarena<NoiseNodes>,
     //point
     snpoint_nodes: Metarena<SNPointNodes>,
     //point_set
     point_set_nodes: Metarena<PointSetNodes>,
+    //iterative_function
+    iterative_function_nodes: Metarena<IterativeFunctionNodes>,
+    //complex
+    sncomplex_nodes: Metarena<SNComplexNodes>,
+    //constraint_resolvers
+    sfloat_normaliser_nodes: Metarena<SFloatNormaliserNodes>,
+    ufloat_normaliser_nodes: Metarena<UFloatNormaliserNodes>,
+    //frame_renderers
+    frame_renderer_nodes: Metarena<FrameRendererNodes>,
 }
 
 impl NodeSet {
     pub fn new() -> NodeSet {
-        NodeSet {
-            //color_blend
-            color_blend_nodes: Metarena::new(),
-            //color
-            bit_color_nodes: Metarena::new(),
-            byte_color_nodes: Metarena::new(),
-            float_color_nodes: Metarena::new(),
-            //continuous
-            angle_nodes: Metarena::new(),
-            unfloat_nodes: Metarena::new(),
-            snfloat_nodes: Metarena::new(),
-            //coord_map
-            coord_map_nodes: Metarena::new(),
-            //discrete
-            boolean_nodes: Metarena::new(),
-            nibble_nodes: Metarena::new(),
-            byte_nodes: Metarena::new(),
-            //distance_function
-            distance_function_nodes: Metarena::new(),
-            //matrix
-            snfloat_matrix3_nodes: Metarena::new(),
-            //noise
-            noise_nodes: Metarena::new(),
-            //point
-            snpoint_nodes: Metarena::new(),
-            //point_set
-            point_set_nodes: Metarena::new(),
-        }
-    }
-}
-
-impl Default for NodeSet {
-    fn default() -> Self {
-        Self::new()
+        Self::default()
     }
 }
 
 impl<'a> Updatable<'a> for NodeSet {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: State, _arg: Self::UpdateArg) {}
+    fn update(&mut self, _arg: Self::UpdateArg) {}
 }
 
 impl Storage<ColorBlendNodes> for NodeSet {
@@ -196,16 +162,6 @@ impl Storage<ByteNodes> for NodeSet {
     }
 }
 
-impl Storage<DistanceFunctionNodes> for NodeSet {
-    fn arena(&self) -> &Arena<ArenaSlot<DistanceFunctionNodes>> {
-        &self.distance_function_nodes.value
-    }
-
-    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<DistanceFunctionNodes>> {
-        &mut self.distance_function_nodes.value
-    }
-}
-
 impl Storage<SNFloatMatrix3Nodes> for NodeSet {
     fn arena(&self) -> &Arena<ArenaSlot<SNFloatMatrix3Nodes>> {
         &self.snfloat_matrix3_nodes.value
@@ -213,16 +169,6 @@ impl Storage<SNFloatMatrix3Nodes> for NodeSet {
 
     fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<SNFloatMatrix3Nodes>> {
         &mut self.snfloat_matrix3_nodes.value
-    }
-}
-
-impl Storage<NoiseNodes> for NodeSet {
-    fn arena(&self) -> &Arena<ArenaSlot<NoiseNodes>> {
-        &self.noise_nodes.value
-    }
-
-    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<NoiseNodes>> {
-        &mut self.noise_nodes.value
     }
 }
 
@@ -243,5 +189,75 @@ impl Storage<PointSetNodes> for NodeSet {
 
     fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<PointSetNodes>> {
         &mut self.point_set_nodes.value
+    }
+}
+
+impl Storage<IterativeFunctionNodes> for NodeSet {
+    fn arena(&self) -> &Arena<ArenaSlot<IterativeFunctionNodes>> {
+        &self.iterative_function_nodes.value
+    }
+
+    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<IterativeFunctionNodes>> {
+        &mut self.iterative_function_nodes.value
+    }
+}
+
+impl Storage<SNComplexNodes> for NodeSet {
+    fn arena(&self) -> &Arena<ArenaSlot<SNComplexNodes>> {
+        &self.sncomplex_nodes.value
+    }
+
+    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<SNComplexNodes>> {
+        &mut self.sncomplex_nodes.value
+    }
+}
+
+impl Storage<SFloatNormaliserNodes> for NodeSet {
+    fn arena(&self) -> &Arena<ArenaSlot<SFloatNormaliserNodes>> {
+        &self.sfloat_normaliser_nodes.value
+    }
+
+    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<SFloatNormaliserNodes>> {
+        &mut self.sfloat_normaliser_nodes.value
+    }
+}
+
+impl Storage<UFloatNormaliserNodes> for NodeSet {
+    fn arena(&self) -> &Arena<ArenaSlot<UFloatNormaliserNodes>> {
+        &self.ufloat_normaliser_nodes.value
+    }
+
+    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<UFloatNormaliserNodes>> {
+        &mut self.ufloat_normaliser_nodes.value
+    }
+}
+
+impl Storage<UIntNodes> for NodeSet {
+    fn arena(&self) -> &Arena<ArenaSlot<UIntNodes>> {
+        &self.uint_nodes.value
+    }
+
+    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<UIntNodes>> {
+        &mut self.uint_nodes.value
+    }
+}
+
+impl Storage<SIntNodes> for NodeSet {
+    fn arena(&self) -> &Arena<ArenaSlot<SIntNodes>> {
+        &self.sint_nodes.value
+    }
+
+    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<SIntNodes>> {
+        &mut self.sint_nodes.value
+    }
+}
+
+impl Storage<FrameRendererNodes> for NodeSet {
+    fn arena(&self) -> &Arena<ArenaSlot<FrameRendererNodes>> {
+        &self.frame_renderer_nodes.value
+    }
+
+    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<FrameRendererNodes>> {
+        &mut self.frame_renderer_nodes.value
     }
 }

@@ -38,20 +38,16 @@ lazy_static! {
     });
 }
 
-thread_local! {
-    pub static IMAGE_PRELOADER: Preloader<Image> = Preloader::new(32, RandomImageLoader::new());
-}
-
 const FALLBACK_IMAGE_DATA: &[u8] =
     include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/eyeball2.png"));
 
-struct RandomImageLoader {
+pub struct RandomImageLoader {
     rng: DeterministicRng,
     http: HttpClient,
 }
 
 impl RandomImageLoader {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             rng: DeterministicRng::new(),
             http: HttpClient::new(),
@@ -63,7 +59,7 @@ impl Generator for RandomImageLoader {
     type Output = Image;
 
     fn generate(&mut self) -> Self::Output {
-        if self.rng.gen_bool(0.25) {
+        if self.rng.gen_bool(CONSTS.image_download_probability) {
             download_random_image(&mut self.http).unwrap_or_else(|e| {
                 warn!("Failed to download image: {}", e);
                 load_random_image_file(&mut self.rng)
@@ -260,13 +256,9 @@ impl<'de> Deserialize<'de> for Image {
 impl<'a> Generatable<'a> for Image {
     type GenArg = GenArg<'a>;
 
-    fn generate_rng<R: Rng + ?Sized>(
-        _rng: &mut R,
-        _state: mutagen::State,
-        _arg: GenArg<'a>,
-    ) -> Self {
-        IMAGE_PRELOADER
-            .with(|p| p.try_get_next())
+    fn generate_rng<R: Rng + ?Sized>(_rng: &mut R, arg: GenArg<'a>) -> Self {
+        arg.image_preloader
+            .try_get_next()
             .unwrap_or_else(|| FALLBACK_IMAGE.clone())
     }
 }
@@ -274,14 +266,10 @@ impl<'a> Generatable<'a> for Image {
 impl<'a> Mutatable<'a> for Image {
     type MutArg = MutArg<'a>;
 
-    fn mutate_rng<R: Rng + ?Sized>(
-        &mut self,
-        _rng: &mut R,
-        _state: mutagen::State,
-        _arg: Self::MutArg,
-    ) {
-        *self = IMAGE_PRELOADER
-            .with(|p| p.try_get_next())
+    fn mutate_rng<R: Rng + ?Sized>(&mut self, _rng: &mut R, arg: Self::MutArg) {
+        *self = arg
+            .image_preloader
+            .try_get_next()
             .unwrap_or_else(|| FALLBACK_IMAGE.clone());
     }
 }
@@ -289,11 +277,11 @@ impl<'a> Mutatable<'a> for Image {
 impl<'a> Updatable<'a> for Image {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: Self::UpdateArg) {}
+    fn update(&mut self, _arg: Self::UpdateArg) {}
 }
 
 impl<'a> UpdatableRecursively<'a> for Image {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: Self::UpdateArg) {}
+    fn update_recursively(&mut self, _arg: Self::UpdateArg) {}
 }
 
 #[derive(Debug, Serialize, Deserialize)]

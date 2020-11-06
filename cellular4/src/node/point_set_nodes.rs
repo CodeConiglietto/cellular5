@@ -16,50 +16,60 @@ pub enum PointSetNodes {
     #[mutagen(gen_weight = pipe_node_weight)]
     Translating {
         value: PointSet,
-        child: Box<SNPointNodes>,
-        child_normaliser: Box<SFloatNormaliserNodes>,
+        child: NodeBox<SNPointNodes>,
+        child_normaliser: NodeBox<SFloatNormaliserNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     Spreading {
         value: PointSet,
-        child: Box<UNFloatNodes>,
-        child_normaliser: Box<SFloatNormaliserNodes>,
+        child: NodeBox<UNFloatNodes>,
+        child_normaliser: NodeBox<SFloatNormaliserNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     Polygonal {
         value: PointSet,
-        child_radius: Box<SNFloatNodes>,
-        child_edges: Box<NibbleNodes>,
+        child_radius: NodeBox<SNFloatNodes>,
+        child_edges: NodeBox<NibbleNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     ShearGrid {
         value: PointSet,
-        child_x_scalar: Box<SNFloatNodes>,
-        child_y_scalar: Box<SNFloatNodes>,
-        child_normaliser: Box<SFloatNormaliserNodes>,
+        child_x_scalar: NodeBox<SNFloatNodes>,
+        child_y_scalar: NodeBox<SNFloatNodes>,
+        child_normaliser: NodeBox<SFloatNormaliserNodes>,
+    },
+    #[mutagen(gen_weight = branch_node_weight)]
+    RecomputedGrid {
+        value: PointSet,
+        child_point: NodeBox<SNPointNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     MatrixGrid {
         value: PointSet,
-        child_matrix: Box<SNFloatMatrix3Nodes>,
-        child_normaliser: Box<SFloatNormaliserNodes>,
+        child_matrix: NodeBox<SNFloatMatrix3Nodes>,
+        child_normaliser: NodeBox<SFloatNormaliserNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     Line {
         value: PointSet,
-        child_points: Box<ByteNodes>,
-        child_a: Box<SNPointNodes>,
-        child_b: Box<SNPointNodes>,
+        child_points: NodeBox<ByteNodes>,
+        child_a: NodeBox<SNPointNodes>,
+        child_b: NodeBox<SNPointNodes>,
+    },
+    #[mutagen(gen_weight = branch_node_weight)]
+    IterativeRecomputation {
+        value: PointSet,
+        child_point: NodeBox<SNPointNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     IterativePolarLine {
         #[mutagen(skip)]
         value: PointSet,
         // TODO Replace child_theta and child_rho with a polar coordinate node when they're implemented
-        child_n: Box<ByteNodes>,
-        child_theta: Box<AngleNodes>,
-        child_rho: Box<UNFloatNodes>,
-        child_normaliser: Box<SFloatNormaliserNodes>,
+        child_n: NodeBox<ByteNodes>,
+        child_theta: NodeBox<AngleNodes>,
+        child_rho: NodeBox<UNFloatNodes>,
+        child_normaliser: NodeBox<SFloatNormaliserNodes>,
     },
 }
 
@@ -75,8 +85,10 @@ impl Node for PointSetNodes {
             Spreading { value, .. } => value.clone(),
             Polygonal { value, .. } => value.clone(),
             ShearGrid { value, .. } => value.clone(),
+            RecomputedGrid { value, .. } => value.clone(),
             MatrixGrid { value, .. } => value.clone(),
             Line { value, .. } => value.clone(),
+            IterativeRecomputation { value, .. } => value.clone(),
             IterativePolarLine { value, .. } => value.clone(),
         }
     }
@@ -85,7 +97,7 @@ impl Node for PointSetNodes {
 impl<'a> Updatable<'a> for PointSetNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, mut arg: UpdArg<'a>) {
+    fn update(&mut self, mut arg: UpdArg<'a>) {
         match self {
             PointSetNodes::Translating {
                 ref mut value,
@@ -208,6 +220,34 @@ impl<'a> Updatable<'a> for PointSetNodes {
 
                 value.replace(Arc::new(edge_vec));
             }
+            PointSetNodes::RecomputedGrid {
+                ref mut value,
+                child_point,
+            } => {
+                let ratio = 0.5 / 8.0;
+
+                let mut edge_vec = Vec::new();
+
+                for x in 0..8 {
+                    for y in 0..8 {
+                        for sx in &[1.0, -1.0] {
+                            for sy in &[1.0, -1.0] {
+                                let grid_point =
+                                    Point2::new(sx * ratio * x as f32, sy * ratio * y as f32);
+
+                                let compute_arg: ComArg<'_> = arg.reborrow().into();
+
+                                let new_point = child_point
+                                    .compute(compute_arg.replace_coords(&SNPoint::new(grid_point)));
+
+                                edge_vec.push(new_point);
+                            }
+                        }
+                    }
+                }
+
+                value.replace(Arc::new(edge_vec));
+            }
             PointSetNodes::MatrixGrid {
                 ref mut value,
                 child_matrix,
@@ -269,6 +309,23 @@ impl<'a> Updatable<'a> for PointSetNodes {
                 }
 
                 value.replace(Arc::new(edge_vec));
+            }
+
+            PointSetNodes::IterativeRecomputation {
+                ref mut value,
+                child_point,
+            } => {
+                value.replace(Arc::new(
+                    value
+                        .points()
+                        .iter()
+                        .map(|point| {
+                            let compute_arg: ComArg<'_> = arg.reborrow().into();
+
+                            child_point.compute(compute_arg.replace_coords(&point))
+                        })
+                        .collect(),
+                ));
             }
 
             PointSetNodes::IterativePolarLine {

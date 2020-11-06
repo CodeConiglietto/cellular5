@@ -5,10 +5,12 @@ use serde::Deserialize;
 
 lazy_static! {
     pub static ref CONSTS: Constants = serde_yaml::from_str(
-        &fs::read_to_string("constants.yml").unwrap_or_else(|_e| panic!(
-            "Couldn't find constants.yml in {}",
-            std::env::current_dir().unwrap().to_string_lossy()
-        ))
+        &fs::read_to_string("constants.yml")
+            .or_else(|_| fs::read_to_string("../constants.yml"))
+            .unwrap_or_else(|_| panic!(
+                "Couldn't find constants.yml in {}",
+                std::env::current_dir().unwrap().to_string_lossy()
+            ))
     )
     .unwrap_or_else(|e| panic!("Failed to parse constants.yml: {}", e));
 }
@@ -57,6 +59,7 @@ pub struct Constants {
     pub global_similarity_lower_bound: f64,
 
     pub image_path: String,
+    pub image_download_probability: f64,
 
     //primitive consts
     pub byte_max_value: u64,

@@ -21,6 +21,7 @@ impl UNFloat {
         Self { value }
     }
 
+    #[track_caller]
     pub fn new(value: f32) -> Self {
         assert!(
             value >= 0.0 && value <= 1.0,
@@ -101,6 +102,10 @@ impl UNFloat {
         UNFloat::new(self.into_inner() * other.into_inner())
     }
 
+    pub fn lerp(self, other: UNFloat, scalar: UNFloat) -> Self {
+        UNFloat::new(lerp(self.into_inner(), other.into_inner(), scalar.into_inner()))
+    }
+
     pub const ZERO: Self = Self { value: 0.0 };
     pub const ONE: Self = Self { value: 1.0 };
 
@@ -112,23 +117,14 @@ impl UNFloat {
 impl<'a> Generatable<'a> for UNFloat {
     type GenArg = GenArg<'a>;
 
-    fn generate_rng<R: Rng + ?Sized>(
-        rng: &mut R,
-        _state: mutagen::State,
-        _arg: GenArg<'a>,
-    ) -> Self {
+    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, _arg: GenArg<'a>) -> Self {
         Self::random(rng)
     }
 }
 
 impl<'a> Mutatable<'a> for UNFloat {
     type MutArg = MutArg<'a>;
-    fn mutate_rng<R: Rng + ?Sized>(
-        &mut self,
-        rng: &mut R,
-        _state: mutagen::State,
-        _arg: MutArg<'a>,
-    ) {
+    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, _arg: MutArg<'a>) {
         *self = Self::random(rng);
     }
 }
@@ -136,11 +132,11 @@ impl<'a> Mutatable<'a> for UNFloat {
 impl<'a> Updatable<'a> for UNFloat {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update(&mut self, _arg: UpdArg<'a>) {}
 }
 
 impl<'a> UpdatableRecursively<'a> for UNFloat {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update_recursively(&mut self, _arg: UpdArg<'a>) {}
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, PartialOrd, Default)]
@@ -153,6 +149,7 @@ impl SNFloat {
         Self { value }
     }
 
+    #[track_caller]
     pub fn new(value: f32) -> Self {
         assert!(
             value >= -1.0 && value <= 1.0,
@@ -277,23 +274,14 @@ impl Display for SNFloat {
 impl<'a> Generatable<'a> for SNFloat {
     type GenArg = GenArg<'a>;
 
-    fn generate_rng<R: Rng + ?Sized>(
-        rng: &mut R,
-        _state: mutagen::State,
-        _arg: GenArg<'a>,
-    ) -> Self {
+    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, _arg: GenArg<'a>) -> Self {
         Self::random(rng)
     }
 }
 
 impl<'a> Mutatable<'a> for SNFloat {
     type MutArg = MutArg<'a>;
-    fn mutate_rng<R: Rng + ?Sized>(
-        &mut self,
-        rng: &mut R,
-        _state: mutagen::State,
-        _arg: MutArg<'a>,
-    ) {
+    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, _arg: MutArg<'a>) {
         *self = Self::random(rng);
     }
 }
@@ -301,13 +289,14 @@ impl<'a> Mutatable<'a> for SNFloat {
 impl<'a> Updatable<'a> for SNFloat {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update(&mut self, _arg: UpdArg<'a>) {}
 }
 
 impl<'a> UpdatableRecursively<'a> for SNFloat {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update_recursively(&mut self, _arg: UpdArg<'a>) {}
 }
 
+//TODO: Normalise between -PI and PI
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default)]
 pub struct Angle {
     value: f32,
@@ -318,6 +307,7 @@ impl Angle {
         Self { value }
     }
 
+    #[track_caller]
     pub fn new(value: f32) -> Self {
         let normalised = match value.partial_cmp(&0.0).unwrap() {
             Ordering::Greater => (value / (2.0 * PI)).fract() * (2.0 * PI),
@@ -393,23 +383,14 @@ impl SubAssign<Angle> for Angle {
 impl<'a> Generatable<'a> for Angle {
     type GenArg = GenArg<'a>;
 
-    fn generate_rng<R: Rng + ?Sized>(
-        rng: &mut R,
-        _state: mutagen::State,
-        _arg: GenArg<'a>,
-    ) -> Self {
+    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, _arg: GenArg<'a>) -> Self {
         Self::random(rng)
     }
 }
 
 impl<'a> Mutatable<'a> for Angle {
     type MutArg = MutArg<'a>;
-    fn mutate_rng<R: Rng + ?Sized>(
-        &mut self,
-        rng: &mut R,
-        _state: mutagen::State,
-        _arg: MutArg<'a>,
-    ) {
+    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, _arg: MutArg<'a>) {
         *self = Self::random(rng);
     }
 }
@@ -417,11 +398,11 @@ impl<'a> Mutatable<'a> for Angle {
 impl<'a> Updatable<'a> for Angle {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update(&mut self, _arg: UpdArg<'a>) {}
 }
 
 impl<'a> UpdatableRecursively<'a> for Angle {
-    fn update_recursively(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update_recursively(&mut self, _arg: UpdArg<'a>) {}
 }
 
 #[cfg(test)]

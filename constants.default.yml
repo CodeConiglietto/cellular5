@@ -92,7 +92,7 @@ auto_mutate_above_cpu_usage: 0.9
 
 vsync: false
 
-cell_array_history_length: 4
+cell_array_history_length: 5
 cell_array_lerp_length: 4
 
 apply_frame_transformations: false
@@ -120,6 +120,7 @@ global_similarity_upper_bound: 0.9999
 global_similarity_lower_bound: 0.01  
 
 image_path: C:\Users\admin\Documents\Project Assets\Cellular\Images\
+image_download_probability: 0.25
 
 byte_max_value: 255
 byte_possible_values: 256

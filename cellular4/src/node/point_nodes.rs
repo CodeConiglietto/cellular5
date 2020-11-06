@@ -15,28 +15,32 @@ pub enum SNPointNodes {
     #[mutagen(gen_weight = leaf_node_weight)]
     Constant { value: SNPoint },
     #[mutagen(gen_weight = pipe_node_weight)]
-    Invert { child: Box<SNPointNodes> },
+    FromComplex {
+        child_complex: NodeBox<SNComplexNodes>,
+    },
+    #[mutagen(gen_weight = pipe_node_weight)]
+    Invert { child: NodeBox<SNPointNodes> },
     #[mutagen(gen_weight = branch_node_weight)]
     FromSNFloats {
-        child_a: Box<SNFloatNodes>,
-        child_b: Box<SNFloatNodes>,
+        child_a: NodeBox<SNFloatNodes>,
+        child_b: NodeBox<SNFloatNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     NormalisedAdd {
-        child_a: Box<SNPointNodes>,
-        child_b: Box<SNPointNodes>,
-        child_normaliser: Box<SFloatNormaliserNodes>,
+        child_a: NodeBox<SNPointNodes>,
+        child_b: NodeBox<SNPointNodes>,
+        child_normaliser: NodeBox<SFloatNormaliserNodes>,
     },
     #[mutagen(gen_weight = pipe_node_weight)]
     IterativeNormalisedAdd {
         value: SNPoint,
-        child_point: Box<SNPointNodes>,
-        child_normaliser: Box<SFloatNormaliserNodes>,
+        child_point: NodeBox<SNPointNodes>,
+        child_normaliser: NodeBox<SFloatNormaliserNodes>,
     },
     #[mutagen(gen_weight = pipe_node_weight)]
-    GetClosestPointInSet { child: Box<PointSetNodes> },
+    GetClosestPointInSet { child: NodeBox<PointSetNodes> },
     #[mutagen(gen_weight = pipe_node_weight)]
-    GetFurthestPointInSet { child: Box<PointSetNodes> },
+    GetFurthestPointInSet { child: NodeBox<PointSetNodes> },
 }
 
 impl Node for SNPointNodes {
@@ -49,6 +53,9 @@ impl Node for SNPointNodes {
             Zero => SNPoint::zero(),
             Coordinate => compute_arg.coordinate_set.get_coord_point(),
             Constant { value } => *value,
+            FromComplex { child_complex } => {
+                SNPoint::from_complex(child_complex.compute(compute_arg))
+            }
             Invert { child } => {
                 let point = child.compute(compute_arg.reborrow()).into_inner();
                 SNPoint::new(Point2::new(point.x * -1.0, point.y * -1.0))
@@ -79,7 +86,7 @@ impl Node for SNPointNodes {
 impl<'a> Updatable<'a> for SNPointNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, mut arg: UpdArg<'a>) {
+    fn update(&mut self, mut arg: UpdArg<'a>) {
         use SNPointNodes::*;
 
         // TODO Remove when more match arms are added

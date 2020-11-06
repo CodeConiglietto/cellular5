@@ -32,5 +32,5 @@ impl IterativeResult {
 impl<'a> Updatable<'a> for IterativeResult {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _state: mutagen::State, _arg: UpdArg<'a>) {}
+    fn update(&mut self, _arg: UpdArg<'a>) {}
 }

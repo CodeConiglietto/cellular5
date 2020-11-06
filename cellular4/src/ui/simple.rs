@@ -1,4 +1,4 @@
-use crate::{constants::CONSTS, ui::UiBase, update_stat::UpdateStat};
+use crate::{ui::UiBase, update_stat::UpdateStat};
 
 pub struct Ui;
 

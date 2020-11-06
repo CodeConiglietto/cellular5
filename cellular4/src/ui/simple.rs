@@ -12,6 +12,6 @@ impl UiBase for Ui {
     }
 
     fn draw(&mut self, update_stat: &UpdateStat) {
-        println!("{:?}", update_stat);
+        println!("{:#?}", update_stat);
     }
 }

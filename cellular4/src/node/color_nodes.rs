@@ -119,7 +119,7 @@ pub enum FloatColorNodes {
 
     #[mutagen(gen_weight = branch_node_weight)]
     // #[mutagen(gen_preferred)]
-    TriangleBlendAutomata{
+    TriangleBlendAutomata {
         child_rho: NodeBox<UNFloatNodes>,
         child_theta: NodeBox<AngleNodes>,
         child_normaliser: NodeBox<SFloatNormaliserNodes>,
@@ -200,7 +200,7 @@ pub enum FloatColorNodes {
         child_color: NodeBox<FloatColorNodes>,
     },
 
-    #[mutagen(gen_weight = 0.0)]//branch_node_weight)]
+    #[mutagen(gen_weight = 0.0)] //branch_node_weight)]
     // #[mutagen(gen_preferred)]
     DucksFractal {
         child_offset: NodeBox<SNPointNodes>,
@@ -247,12 +247,13 @@ impl Node for FloatColorNodes {
                 }
             }
             TriangleBlendAutomata {
-                child_rho,
-                child_theta,
+                // child_rho,
+                // child_theta,
                 child_normaliser,
+                ..
             } => {
-                let rho = UNFloat::new(0.1);//child_rho.compute(compute_arg.reborrow());
-                let theta = Angle::new(0.0);//child_theta.compute(compute_arg.reborrow());
+                let rho = UNFloat::new(0.1); //child_rho.compute(compute_arg.reborrow());
+                let theta = Angle::new(0.0); //child_theta.compute(compute_arg.reborrow());
                 let normaliser = child_normaliser.compute(compute_arg.reborrow());
 
                 let theta_a = theta;
@@ -264,34 +265,55 @@ impl Node for FloatColorNodes {
 
                 let t = compute_arg.reborrow().current_t;
 
-                let color_a = compute_arg.reborrow().history.get_normalised(middle.normalised_add(
-                                SNPoint::from_snfloats(
-                                    SNFloat::new(rho.into_inner() * f32::sin(theta_a.into_inner())),
-                                    SNFloat::new(rho.into_inner() * f32::cos(theta_a.into_inner())),
-                                ),
-                                normaliser,
-                            ), t);
+                let color_a = compute_arg.reborrow().history.get_normalised(
+                    middle.normalised_add(
+                        SNPoint::from_snfloats(
+                            SNFloat::new(rho.into_inner() * f32::sin(theta_a.into_inner())),
+                            SNFloat::new(rho.into_inner() * f32::cos(theta_a.into_inner())),
+                        ),
+                        normaliser,
+                    ),
+                    t,
+                );
 
-                let color_b = compute_arg.reborrow().history.get_normalised(middle.normalised_add(
-                    SNPoint::from_snfloats(
-                                    SNFloat::new(rho.into_inner() * f32::sin(theta_b.into_inner())),
-                                    SNFloat::new(rho.into_inner() * f32::cos(theta_b.into_inner())),
-                                ),
-                                normaliser,
-                            ), t);
+                let color_b = compute_arg.reborrow().history.get_normalised(
+                    middle.normalised_add(
+                        SNPoint::from_snfloats(
+                            SNFloat::new(rho.into_inner() * f32::sin(theta_b.into_inner())),
+                            SNFloat::new(rho.into_inner() * f32::cos(theta_b.into_inner())),
+                        ),
+                        normaliser,
+                    ),
+                    t,
+                );
 
-                let color_c = compute_arg.reborrow().history.get_normalised(middle.normalised_add(
-                    SNPoint::from_snfloats(
-                                    SNFloat::new(rho.into_inner() * f32::sin(theta_c.into_inner())),
-                                    SNFloat::new(rho.into_inner() * f32::cos(theta_c.into_inner())),
-                                ),
-                                normaliser,
-                            ), t);
-                
-                let r = UNFloat::new((color_a.r.into_inner() + color_b.r.into_inner() + color_c.r.into_inner()) / 3.0);
-                let g = UNFloat::new((color_a.g.into_inner() + color_b.g.into_inner() + color_c.g.into_inner()) / 3.0);
-                let b = UNFloat::new((color_a.b.into_inner() + color_b.b.into_inner() + color_c.b.into_inner()) / 3.0);
-                let a = UNFloat::new((color_a.a.into_inner() + color_b.a.into_inner() + color_c.a.into_inner()) / 3.0);
+                let color_c = compute_arg.reborrow().history.get_normalised(
+                    middle.normalised_add(
+                        SNPoint::from_snfloats(
+                            SNFloat::new(rho.into_inner() * f32::sin(theta_c.into_inner())),
+                            SNFloat::new(rho.into_inner() * f32::cos(theta_c.into_inner())),
+                        ),
+                        normaliser,
+                    ),
+                    t,
+                );
+
+                let r = UNFloat::new(
+                    (color_a.r.into_inner() + color_b.r.into_inner() + color_c.r.into_inner())
+                        / 3.0,
+                );
+                let g = UNFloat::new(
+                    (color_a.g.into_inner() + color_b.g.into_inner() + color_c.g.into_inner())
+                        / 3.0,
+                );
+                let b = UNFloat::new(
+                    (color_a.b.into_inner() + color_b.b.into_inner() + color_c.b.into_inner())
+                        / 3.0,
+                );
+                let a = UNFloat::new(
+                    (color_a.a.into_inner() + color_b.a.into_inner() + color_c.a.into_inner())
+                        / 3.0,
+                );
 
                 let average = FloatColor { r, g, b, a };
 
@@ -538,7 +560,9 @@ impl Node for FloatColorNodes {
             RemoveAlpha { child_a, child_b } => {
                 let mut color = child_a.compute(compute_arg.reborrow());
 
-                if child_b.compute(compute_arg.reborrow()).into_inner() {color.a = UNFloat::ZERO;}
+                if child_b.compute(compute_arg.reborrow()).into_inner() {
+                    color.a = UNFloat::ZERO;
+                }
 
                 color
             }
@@ -568,14 +592,14 @@ impl Node for FloatColorNodes {
                 buffer[compute_arg.coordinate_set.get_coord_point()]
             }
 
-            DucksFractal {//TODO make gooderer
+            DucksFractal {
+                //TODO make gooderer
                 child_offset,
                 child_scale,
-                child_iterations,
-                child_magnitude_normaliser,
+                ..
             } => {
-                let offset = child_offset.compute(compute_arg.reborrow()).into_inner();
-                let scale = child_scale.compute(compute_arg.reborrow()).into_inner();
+                let _offset = child_offset.compute(compute_arg.reborrow()).into_inner();
+                let _scale = child_scale.compute(compute_arg.reborrow()).into_inner();
                 let iterations = //50;
                 128 - (128 - compute_arg.coordinate_set.get_byte_t().into_inner() as i32).abs();
                 // 1 + child_iterations
@@ -585,41 +609,43 @@ impl Node for FloatColorNodes {
 
                 // x and y are swapped intentionally
                 let c = Complex::new(
-                    f64::from(//0.001 *
-                        (1.0 - compute_arg.coordinate_set.get_unfloat_t().into_inner()) * 
+                    f64::from(
+                        //0.001 *
+                        (1.0 - compute_arg.coordinate_set.get_unfloat_t().into_inner()) *
                     // scale.y * 
-                    compute_arg.coordinate_set.y.into_inner()// - 0.5
-                ),
-                    f64::from(//0.001 *
-                        (1.0 - compute_arg.coordinate_set.get_unfloat_t().into_inner()) * 
+                    compute_arg.coordinate_set.y.into_inner(), // - 0.5
+                    ),
+                    f64::from(
+                        //0.001 *
+                        (1.0 - compute_arg.coordinate_set.get_unfloat_t().into_inner()) *
                     // scale.x * 
-                    compute_arg.coordinate_set.x.into_inner()// - 0.5
-                ),
+                    compute_arg.coordinate_set.x.into_inner(), // - 0.5
+                    ),
                 );
 
-                let c_offset =
-                        Complex::new(
-                            // compute_arg.coordinate_set.get_unfloat_t().into_inner() as f64
-                            // f64::from(scale.y) *
-                            // f64::from(offset.y)
-                            0.0
-                            ,
-                            // f64::from(scale.x) *
-                            // f64::from(offset.x)
-                            // compute_arg.coordinate_set.get_unfloat_t().into_inner() as f64
-                            0.0
-                            ,
-                        );
+                let _c_offset = Complex::new(
+                    // compute_arg.coordinate_set.get_unfloat_t().into_inner() as f64
+                    // f64::from(scale.y) *
+                    // f64::from(offset.y)
+                    0.0,
+                    // f64::from(scale.x) *
+                    // f64::from(offset.x)
+                    // compute_arg.coordinate_set.get_unfloat_t().into_inner() as f64
+                    0.0,
+                );
 
                 let mut magnitude = 0.0;
 
-                let (z_final, _escape) = escape_time_system(
-                    c// + c_offset
-                    ,
+                let (_z_final, _escape) = escape_time_system(
+                    c, // + c_offset
                     iterations as usize,
-                    |z, _i| (
-                        // if z.im > 0.0 { z } else { z.conj() } 
-                        z.abs() + c).ln(),
+                    |z, _i| {
+                        (
+                            // if z.im > 0.0 { z } else { z.conj() }
+                            z.abs() + c
+                        )
+                            .ln()
+                    },
                     |z, _i| {
                         magnitude += z.norm();
                         false
@@ -635,14 +661,17 @@ impl Node for FloatColorNodes {
                 //     ),
                 //     Byte::new(iterations),
                 // )
-                
+
                 let rgb: Rgb = Hsv::<Srgb, _>::from_components((
                     RgbHue::from_degrees(
                         // magnitude as f32,
-                            // child_magnitude_normaliser.compute(compute_arg.reborrow()).normalise(magnitude as f32).into_inner()
-                    UFloatNormaliser::Sawtooth.normalise(//compute_arg.coordinate_set.get_unfloat_t().into_inner() + 
-                    magnitude as f32).into_inner()
-                            
+                        // child_magnitude_normaliser.compute(compute_arg.reborrow()).normalise(magnitude as f32).into_inner()
+                        UFloatNormaliser::Sawtooth
+                            .normalise(
+                                //compute_arg.coordinate_set.get_unfloat_t().into_inner() +
+                                magnitude as f32,
+                            )
+                            .into_inner()
                             * 360.0,
                     ),
                     1.0 as f32,
@@ -1048,7 +1077,9 @@ impl Node for ByteColorNodes {
             RemoveAlpha { child_a, child_b } => {
                 let mut color = child_a.compute(compute_arg.reborrow());
 
-                if child_b.compute(compute_arg.reborrow()).into_inner() {color.a = Byte::new(0);}
+                if child_b.compute(compute_arg.reborrow()).into_inner() {
+                    color.a = Byte::new(0);
+                }
 
                 color
             }

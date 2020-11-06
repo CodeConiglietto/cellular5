@@ -2,7 +2,7 @@ use std::f32::consts::PI;
 
 use ggez::{
     graphics::{Color as GgColor, DrawParam, Image as GgImage},
-    timer, Context, GameResult,
+    Context, GameResult,
 };
 
 use crate::prelude::*;
@@ -54,9 +54,18 @@ impl<'a> RenderArgs<'a> {
 
 #[derive(Debug)]
 pub enum FrameRenderers {
-    FadeAndChild {child: Box<FrameRenderers>, fade_color: FloatColor, fade_alpha_multiplier: UNFloat},
-    InfiniZoom {invert_direction: Boolean},
-    InfiniZoomRotate {invert_direction: Boolean, angle: Angle},
+    FadeAndChild {
+        child: Box<FrameRenderers>,
+        fade_color: FloatColor,
+        fade_alpha_multiplier: UNFloat,
+    },
+    InfiniZoom {
+        invert_direction: Boolean,
+    },
+    InfiniZoomRotate {
+        invert_direction: Boolean,
+        angle: Angle,
+    },
     Generalized {
         rotation: Angle,
         translation: SNPoint,
@@ -80,68 +89,65 @@ pub enum FrameRenderers {
 impl FrameRenderers {
     pub fn draw(&self, args: RenderArgs) -> GameResult<()> {
         match self {
-            FrameRenderers::FadeAndChild {child, fade_color, fade_alpha_multiplier} => {
-                if args.lerp_i == 0
-                {
-                    let (
-                        prev_fade_color,
-                        prev_fade_alpha_multiplier,
-                    ) = if let &FrameRenderers::FadeAndChild {
-                        fade_color,
-                        fade_alpha_multiplier,
-                        ..
-                    } = &args.prev_history_step().frame_renderer
-                    {
-                        (
+            FrameRenderers::FadeAndChild {
+                child,
+                fade_color,
+                fade_alpha_multiplier,
+            } => {
+                if args.lerp_i == 0 {
+                    let (prev_fade_color, prev_fade_alpha_multiplier) =
+                        if let &FrameRenderers::FadeAndChild {
                             fade_color,
                             fade_alpha_multiplier,
-                        )
-                    } else {
-                        Default::default()
-                    };
+                            ..
+                        } = &args.prev_history_step().frame_renderer
+                        {
+                            (fade_color, fade_alpha_multiplier)
+                        } else {
+                            Default::default()
+                        };
 
-                    let mut modified_color = fade_color.clone().lerp(prev_fade_color.clone(), UNFloat::new(args.lerp_sub));
-                    modified_color.a = 
-                    UNFloat::new(
+                    let mut modified_color = fade_color
+                        .clone()
+                        .lerp(prev_fade_color.clone(), UNFloat::new(args.lerp_sub));
+                    modified_color.a = UNFloat::new(
                         lerp(
-                        modified_color.a.into_inner() * fade_alpha_multiplier.into_inner(),
-                        prev_fade_color.a.into_inner() * prev_fade_alpha_multiplier.into_inner(),
-                        args.lerp_sub) / args.lerp_len() as f32
+                            modified_color.a.into_inner() * fade_alpha_multiplier.into_inner(),
+                            prev_fade_color.a.into_inner()
+                                * prev_fade_alpha_multiplier.into_inner(),
+                            args.lerp_sub,
+                        ) / args.lerp_len() as f32,
                     );
-                    
+
                     ggez::graphics::draw(
                         args.ctx,
                         args.blank_texture,
-                        DrawParam::new()
-                            .color(modified_color.into())
-                            .scale([CONSTS.initial_window_width as f32, CONSTS.initial_window_height as f32]),
+                        DrawParam::new().color(modified_color.into()).scale([
+                            CONSTS.initial_window_width as f32,
+                            CONSTS.initial_window_height as f32,
+                        ]),
                     )?;
                 }
-                child.draw(args);
-            },
+                child.draw(args).unwrap();
+            }
             FrameRenderers::InfiniZoom { invert_direction } => {
-                let alpha = 1.0 - args.back_lerp_val();
-                let mut alpha =
-                    (1.0 - ((alpha * 2.0) - 1.0).abs()) / CONSTS.cell_array_lerp_length as f32;
+                let original_alpha = 1.0 - args.back_lerp_val();
+                let alpha = (1.0 - ((original_alpha * 2.0) - 1.0).abs())
+                    / CONSTS.cell_array_lerp_length as f32;
 
-                let mut scalar = 1.0;
-                // let mut scalar = 
-                //     lerp(1.0, 
-                //         1.0 / (args.lerp_i as f32 + (1.0 - args.lerp_sub)).max(1.0), 
-                //         args.history_step().root_scalar.into_inner());
-                if invert_direction.into_inner() 
-                {
-                    // scalar = 1.0 - scalar
-                    scalar = 
-                    lerp(1.0 / (args.lerp_i as f32 + (1.0 - args.lerp_sub)).max(1.0),
+                let scalar = if invert_direction.into_inner() {
+                    lerp(
+                        1.0 / (args.lerp_i as f32 + (1.0 - args.lerp_sub)).max(1.0),
                         1.0,
-                        args.history_step().root_scalar.into_inner());
+                        args.history_step().root_scalar.into_inner(),
+                    )
                 } else {
-                    scalar = 
-                        lerp(1.0, 
-                            1.0 / (args.lerp_i as f32 + (1.0 - args.lerp_sub)).max(1.0), 
-                            args.history_step().root_scalar.into_inner());
-                }
+                    lerp(
+                        1.0,
+                        1.0 / (args.lerp_i as f32 + (1.0 - args.lerp_sub)).max(1.0),
+                        args.history_step().root_scalar.into_inner(),
+                    )
+                };
                 let dest_x = CONSTS.initial_window_width * 0.5;
                 let dest_y = CONSTS.initial_window_height * 0.5;
 
@@ -151,34 +157,38 @@ impl FrameRenderers {
                     args.ctx,
                     &args.history_step().computed_texture,
                     DrawParam::new()
-                        .color(GgColor::new(1.0, 1.0, 1.0, (1.0 / args.history_len() as f32) * alpha))
+                        .color(GgColor::new(
+                            1.0,
+                            1.0,
+                            1.0,
+                            (1.0 / args.history_len() as f32) * alpha,
+                        ))
                         .offset([0.5, 0.5])
                         .dest([dest_x, dest_y])
                         .scale([scalar * scale_x, scalar * scale_y]),
                 )?;
-            },
-            FrameRenderers::InfiniZoomRotate { invert_direction, angle } => {
-                let alpha = 1.0 - args.back_lerp_val();
-                let mut alpha =
-                    (1.0 - ((alpha * 2.0) - 1.0).abs()) / CONSTS.cell_array_lerp_length as f32;
+            }
+            FrameRenderers::InfiniZoomRotate {
+                invert_direction,
+                angle,
+            } => {
+                let original_alpha = 1.0 - args.back_lerp_val();
+                let alpha = (1.0 - ((original_alpha * 2.0) - 1.0).abs())
+                    / CONSTS.cell_array_lerp_length as f32;
                 //TODO fix
-                let mut scalar = 1.0;
-                // let mut scalar = 1.0 / (args.lerp_i as f32 + (1.0 - args.lerp_sub)).max(1.0);
-                // let mut scalar = lerp(1.0, 1.0 / (args.lerp_i as f32 + (1.0 - args.lerp_sub)).max(1.0), args.history_step().root_scalar.into_inner());
-                // if invert_direction.into_inner() {scalar = 1.0 - scalar}
-                if invert_direction.into_inner() 
-                {
-                    // scalar = 1.0 - scalar
-                    scalar = 
-                    lerp(1.0 / (args.lerp_i as f32 + (1.0 - args.lerp_sub)).max(1.0),
+                let scalar = if invert_direction.into_inner() {
+                    lerp(
+                        1.0 / (args.lerp_i as f32 + (1.0 - args.lerp_sub)).max(1.0),
                         1.0,
-                        args.history_step().root_scalar.into_inner());
+                        args.history_step().root_scalar.into_inner(),
+                    )
                 } else {
-                    scalar = 
-                        lerp(1.0, 
-                            1.0 / (args.lerp_i as f32 + (1.0 - args.lerp_sub)).max(1.0), 
-                            args.history_step().root_scalar.into_inner());
-                }
+                    lerp(
+                        1.0,
+                        1.0 / (args.lerp_i as f32 + (1.0 - args.lerp_sub)).max(1.0),
+                        args.history_step().root_scalar.into_inner(),
+                    )
+                };
                 let dest_x = CONSTS.initial_window_width * 0.5;
                 let dest_y = CONSTS.initial_window_height * 0.5;
 
@@ -188,28 +198,37 @@ impl FrameRenderers {
                     args.ctx,
                     &args.history_step().computed_texture,
                     DrawParam::new()
-                        .color(GgColor::new(1.0, 1.0, 1.0, (1.0 / args.history_len() as f32) * alpha))
+                        .color(GgColor::new(
+                            1.0,
+                            1.0,
+                            1.0,
+                            (1.0 / args.history_len() as f32) * alpha,
+                        ))
                         .offset([0.5, 0.5])
                         .dest([dest_x, dest_y])
                         .scale([scalar * scale_x * 1.5, scalar * scale_y * 1.5])
-                        .rotation(angle.into_inner() * scalar * args.history_step().root_scalar.into_inner()),
+                        .rotation(
+                            angle.into_inner()
+                                * scalar
+                                * args.history_step().root_scalar.into_inner(),
+                        ),
                 )?;
-            },
+            }
             FrameRenderers::Generalized {
-                rotation,
+                // rotation,
                 translation,
-                offset_translation,
+                // offset_translation,
                 offset,
                 from_scale,
                 to_scale,
 
-                alpha,
-
+                // alpha,
                 rotation_scalar,
                 translation_scalar,
                 offset_scalar,
                 from_scale_scalar,
                 to_scale_scalar,
+                ..
             } => {
                 let alpha = 1.0 - args.back_lerp_val();
 
@@ -227,7 +246,7 @@ impl FrameRenderers {
 
                 let mut rotation: f32 = 0.0;
 
-                let prev_root_scalar = args.prev_history_step().root_scalar;
+                let _prev_root_scalar = args.prev_history_step().root_scalar;
                 let root_scalar = args.history_step().root_scalar;
 
                 let (
@@ -237,7 +256,7 @@ impl FrameRenderers {
                     prev_from_scale_scalar,
                     prev_to_scale_scalar,
                     prev_translation,
-                    prev_offset_translation,
+                    _prev_offset_translation,
                     prev_offset,
                 ) = if let &FrameRenderers::Generalized {
                     rotation_scalar,

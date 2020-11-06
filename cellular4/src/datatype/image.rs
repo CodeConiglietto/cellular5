@@ -19,7 +19,7 @@ use crate::{
     constants::*,
     datatype::{colors::ByteColor, continuous::*},
     mutagen_args::*,
-    preloader::{Generator, Preloader},
+    preloader::Generator,
     util::{self, DeterministicRng},
 };
 

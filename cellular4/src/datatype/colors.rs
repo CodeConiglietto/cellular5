@@ -1,7 +1,7 @@
 use approx::abs_diff_eq;
+use ggez::graphics::Color as GgColor;
 use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
 use palette::rgb::Rgb;
-use ggez::graphics::Color as GgColor;
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -388,17 +388,42 @@ impl FloatColor {
     }
 
     pub fn lerp(self, other: Self, scalar: UNFloat) -> Self {
-        Self {r: self.r.lerp(other.r, scalar), g: self.g.lerp(other.g, scalar), b: self.b.lerp(other.b, scalar), a: self.a.lerp(other.a, scalar)}
+        Self {
+            r: self.r.lerp(other.r, scalar),
+            g: self.g.lerp(other.g, scalar),
+            b: self.b.lerp(other.b, scalar),
+            a: self.a.lerp(other.a, scalar),
+        }
     }
 
-    pub const ALL_ZERO: Self = Self { r: UNFloat::ZERO, g: UNFloat::ZERO, b: UNFloat::ZERO, a: UNFloat::ZERO };
-    pub const WHITE: Self = Self { r: UNFloat::ONE, g: UNFloat::ONE, b: UNFloat::ONE, a: UNFloat::ONE };
-    pub const BLACK: Self = Self { r: UNFloat::ZERO, g: UNFloat::ZERO, b: UNFloat::ZERO, a: UNFloat::ONE };
+    pub const ALL_ZERO: Self = Self {
+        r: UNFloat::ZERO,
+        g: UNFloat::ZERO,
+        b: UNFloat::ZERO,
+        a: UNFloat::ZERO,
+    };
+    pub const WHITE: Self = Self {
+        r: UNFloat::ONE,
+        g: UNFloat::ONE,
+        b: UNFloat::ONE,
+        a: UNFloat::ONE,
+    };
+    pub const BLACK: Self = Self {
+        r: UNFloat::ZERO,
+        g: UNFloat::ZERO,
+        b: UNFloat::ZERO,
+        a: UNFloat::ONE,
+    };
 }
 
 impl Into<GgColor> for FloatColor {
     fn into(self) -> GgColor {
-        GgColor{r: self.r.into_inner(), g: self.g.into_inner(), b: self.b.into_inner(), a: self.a.into_inner()}
+        GgColor {
+            r: self.r.into_inner(),
+            g: self.g.into_inner(),
+            b: self.b.into_inner(),
+            a: self.a.into_inner(),
+        }
     }
 }
 

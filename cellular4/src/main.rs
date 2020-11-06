@@ -5,7 +5,7 @@ use ggez::{
     conf::{FullscreenType, WindowMode, WindowSetup},
     event::{self, EventHandler, KeyCode, KeyMods},
     graphics,
-    graphics::{Color as GgColor, DrawParam, Image as GgImage},
+    graphics::Image as GgImage,
     input::keyboard,
     timer, Context, ContextBuilder, GameResult,
 };
@@ -561,33 +561,7 @@ impl EventHandler for MyGame {
                 .fade_color_alpha_multiplier
                 .compute(step_com_arg.reborrow());
 
-            // self.next_history_step.root_scalar = self
-            //     .node_tree
-            //     .render_nodes
-            //     .root_scalar_node
-            //     .compute(step_com_arg.reborrow())
-            // .multiply(UNFloat::new_clamped(
-            //     1.0 - self.average_update_stat.activity_value as f32,
-            // ))
-            // .multiply(UNFloat::new_clamped(
-            //     1.0 - self.average_update_stat.alpha_value as f32,
-            // ))
-            // .multiply(UNFloat::new_clamped(
-            //     self.average_update_stat.global_similarity_value as f32,
-            // ))
-            // .multiply(UNFloat::new_clamped(
-            //     1.0 - self.average_update_stat.local_similarity_value as f32,
-            // ))
-            // .average(history_step.root_scalar);
-
-            self.next_history_step.root_scalar = UNFloat::new(
-                // (self
-                // .node_tree
-                // .render_nodes
-                // .root_scalar_node
-                // .compute(step_com_arg.reborrow()).average(history_step.root_scalar).into_inner() *
-                mutation_likelihood.powf(2.0) as f32 // )
-            );
+            self.next_history_step.root_scalar = UNFloat::new(mutation_likelihood.powf(2.0) as f32);
 
             self.next_history_step.frame_renderer = self
                 .node_tree

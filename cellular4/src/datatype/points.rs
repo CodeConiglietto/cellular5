@@ -84,7 +84,7 @@ impl SNPoint {
         Self::new(Point2::from(self.into_inner().coords + other.into_inner().coords) * 0.5)
     }
 
-    pub fn invert_x(self) -> Self{
+    pub fn invert_x(self) -> Self {
         Self::from_snfloats(self.x().invert(), self.y())
     }
 

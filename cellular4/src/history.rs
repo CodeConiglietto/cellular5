@@ -2,7 +2,6 @@ use ggez::{graphics::Image as GgImage, Context};
 use ndarray::{s, Array3, ArrayView1};
 
 use crate::prelude::*;
-use rand::thread_rng;
 
 #[derive(Debug)]
 pub struct HistoryStep {
@@ -57,14 +56,11 @@ impl History {
 
     pub fn get_normalised(&self, pos: SNPoint, t: usize) -> FloatColor {
         self.get(
-            ((pos.x().into_inner() + 1.0)
-                        * 0.5
-                        * CONSTS.cell_array_width as f32) as usize,
-                    ((pos.y().into_inner() + 1.0)
-                        * 0.5
-                        * CONSTS.cell_array_height as f32) as usize,
-                    t as usize,
-        ).into()
+            ((pos.x().into_inner() + 1.0) * 0.5 * CONSTS.cell_array_width as f32) as usize,
+            ((pos.y().into_inner() + 1.0) * 0.5 * CONSTS.cell_array_height as f32) as usize,
+            t as usize,
+        )
+        .into()
     }
 
     pub fn get(&self, x: usize, y: usize, t: usize) -> ByteColor {

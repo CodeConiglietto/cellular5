@@ -1,3 +1,5 @@
+#![allow(clippy::many_single_char_names)]
+
 use std::{collections::VecDeque, f32::consts::PI};
 
 use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};

@@ -192,9 +192,11 @@ pub fn compute_texture(ctx: &mut Context, cell_array: ArrayView3<u8>) -> GgImage
 }
 
 pub fn compute_blank_texture(ctx: &mut Context) -> GgImage {
-    let image = GgImage::from_rgba8(ctx, 1, 1, &[255, 255, 255, 255]).unwrap();
+    let mut image = GgImage::from_rgba8(ctx, 1, 1, &[255, 255, 255, 255]).unwrap();
 
-    // image.set_filter(ggez::graphics::FilterMode::Nearest);
+    image.set_filter(ggez::graphics::FilterMode::Linear);
+    //image.set_filter(ggez::graphics::FilterMode::Nearest);
+
     image
 }
 

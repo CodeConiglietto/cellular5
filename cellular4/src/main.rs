@@ -1,3 +1,5 @@
+#![allow(clippy::large_enum_variant)]
+
 use std::fs;
 
 use cpu_monitor::CpuInstant;
@@ -480,7 +482,7 @@ impl EventHandler for MyGame {
                 alpha_value: 0.0,
                 local_similarity_value: 0.0,
                 global_similarity_value: 0.0,
-                cpu_usage: cpu_usage,
+                cpu_usage,
             };
 
             let _update_state = UpdateState {

@@ -44,7 +44,7 @@ struct Padded<'a> {
 impl<'a> Padded<'a> {
     fn new(body: &'a str, padding: &'a str, width: usize) -> Self {
         assert!(width >= body.len());
-        assert!(padding.len() > 0);
+        assert!(!padding.is_empty());
 
         Self {
             body,
@@ -147,14 +147,12 @@ const FRAC_BLOCK_CHARS: [char; 9] = [' ', '▏', '▎', '▍', '▌', '▋', '�
 fn frac_block(v: f64) -> char {
     let n = FRAC_BLOCK_CHARS.len();
 
-    char::from(
-        *FRAC_BLOCK_CHARS
-            .iter()
-            .enumerate()
-            .find(|(i, _)| v < *i as f64 / (n - 1) as f64 + 1.0 / ((n - 1) * 2) as f64)
-            .unwrap()
-            .1,
-    )
+    *FRAC_BLOCK_CHARS
+        .iter()
+        .enumerate()
+        .find(|(i, _)| v < *i as f64 / (n - 1) as f64 + 1.0 / ((n - 1) * 2) as f64)
+        .unwrap()
+        .1
 }
 
 struct Logs {
@@ -214,7 +212,7 @@ impl UiBase for Ui {
             return;
         }
 
-        let prev_update_stat = self.prev_update_stat.replace(update_stat.clone());
+        let prev_update_stat = self.prev_update_stat.replace(*update_stat);
 
         let table_rows = [
             ("Activity", update_stat.activity_value),
@@ -258,9 +256,8 @@ fn log_record(logs: &Mutex<Logs>, record: &log::Record) {
                 let n = line
                     .char_indices()
                     .map(|(i, _)| i)
-                    .skip_while(|&i| i < CONSTS.console_width)
-                    .next()
-                    .unwrap_or(line.len());
+                    .find(|&i| i >= CONSTS.console_width)
+                    .unwrap_or_else(|| line.len());
 
                 logs.lines.push_back(LogLine {
                     level: record.level(),

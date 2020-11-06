@@ -96,11 +96,11 @@ impl FrameRenderers {
             } => {
                 if args.lerp_i == 0 {
                     let (prev_fade_color, prev_fade_alpha_multiplier) =
-                        if let &FrameRenderers::FadeAndChild {
+                        if let FrameRenderers::FadeAndChild {
                             fade_color,
                             fade_alpha_multiplier,
                             ..
-                        } = &args.prev_history_step().frame_renderer
+                        } = args.prev_history_step().frame_renderer
                         {
                             (fade_color, fade_alpha_multiplier)
                         } else {
@@ -109,7 +109,7 @@ impl FrameRenderers {
 
                     let mut modified_color = fade_color
                         .clone()
-                        .lerp(prev_fade_color.clone(), UNFloat::new(args.lerp_sub));
+                        .lerp(prev_fade_color, UNFloat::new(args.lerp_sub));
                     modified_color.a = UNFloat::new(
                         lerp(
                             modified_color.a.into_inner() * fade_alpha_multiplier.into_inner(),
@@ -258,7 +258,7 @@ impl FrameRenderers {
                     prev_translation,
                     _prev_offset_translation,
                     prev_offset,
-                ) = if let &FrameRenderers::Generalized {
+                ) = if let FrameRenderers::Generalized {
                     rotation_scalar,
                     translation_scalar,
                     offset_scalar,
@@ -268,7 +268,7 @@ impl FrameRenderers {
                     offset_translation,
                     offset,
                     ..
-                } = &args.prev_history_step().frame_renderer
+                } = args.prev_history_step().frame_renderer
                 {
                     (
                         rotation_scalar,

@@ -55,6 +55,12 @@ impl RandomImageLoader {
     }
 }
 
+impl Default for RandomImageLoader {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Generator for RandomImageLoader {
     type Output = Image;
 

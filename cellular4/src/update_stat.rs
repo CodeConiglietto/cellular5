@@ -7,7 +7,7 @@ use rand::prelude::*;
 
 use crate::constants::*;
 
-#[derive(Default, Debug, Clone, Copy)]
+#[derive(Default, Debug, Clone, Copy, PartialEq)]
 pub struct UpdateStat {
     //Update stats are used to determine an approximation of the entropy of the current state
     //Update stats contain many values:
@@ -31,7 +31,7 @@ pub struct UpdateStat {
 //How symmetrical it is over the x and y axes
 impl UpdateStat {
     pub fn should_mutate(&self) -> bool {
-        dbg!(
+        ldbg!(
             (thread_rng().gen::<f64>() * self.mutation_likelihood()).powf(4.0)
                 * 0.5
                 * CONSTS.cell_array_lerp_length as f64

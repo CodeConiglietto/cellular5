@@ -193,7 +193,7 @@ impl BitColor {
             6 => BitColor::Yellow,
             7 => BitColor::White,
             _ => {
-                dbg!(index);
+                ldbg!(index);
                 panic!()
             }
         }

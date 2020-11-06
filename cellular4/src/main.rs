@@ -475,7 +475,7 @@ impl EventHandler for MyGame {
                 || (CONSTS.auto_mutate
                     && (
                         dbg!(cpu_usage >= CONSTS.auto_mutate_above_cpu_usage)
-                            || dbg!(self.average_update_stat.should_mutate())
+                            || self.average_update_stat.should_mutate()
                         // || dbg!(thread_rng().gen::<usize>() % CONSTS.graph_mutation_divisor) == 0
                     ))
             {
@@ -580,14 +580,14 @@ impl EventHandler for MyGame {
             // ))
             // .average(history_step.root_scalar);
 
-            self.next_history_step.root_scalar = dbg!(UNFloat::new(
+            self.next_history_step.root_scalar = UNFloat::new(
                 // (self
                 // .node_tree
                 // .render_nodes
                 // .root_scalar_node
                 // .compute(step_com_arg.reborrow()).average(history_step.root_scalar).into_inner() *
                 mutation_likelihood.powf(2.0) as f32 // )
-            ));
+            );
 
             self.next_history_step.frame_renderer = self
                 .node_tree

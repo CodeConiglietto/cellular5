@@ -6,7 +6,8 @@ use crate::prelude::*;
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum FrameRendererNodes {
-    // TODO Remove gen_preferred when we have a proper leaf node
+    #[mutagen(gen_weight = leaf_node_weight)]
+    InterleavedRotate,
     #[mutagen(gen_weight = leaf_node_weight)]
     InfiniZoom { invert_direction: Boolean },
     #[mutagen(gen_weight = pipe_node_weight)]
@@ -50,6 +51,7 @@ impl Node for FrameRendererNodes {
 
     fn compute(&self, mut compute_arg: ComArg) -> Self::Output {
         match self {
+            FrameRendererNodes::InterleavedRotate => FrameRenderers::InterleavedRotate,
             FrameRendererNodes::InfiniZoom { invert_direction } => FrameRenderers::InfiniZoom {
                 invert_direction: *invert_direction,
             },

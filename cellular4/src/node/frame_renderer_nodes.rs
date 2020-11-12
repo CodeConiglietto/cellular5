@@ -7,6 +7,8 @@ use crate::prelude::*;
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum FrameRendererNodes {
     #[mutagen(gen_weight = leaf_node_weight)]
+    BasicFade,
+    #[mutagen(gen_weight = leaf_node_weight)]
     InterleavedRotate,
     #[mutagen(gen_weight = leaf_node_weight)]
     Dripping {invert: Boolean},
@@ -55,6 +57,7 @@ impl Node for FrameRendererNodes {
 
     fn compute(&self, mut compute_arg: ComArg) -> Self::Output {
         match self {
+            FrameRendererNodes::BasicFade => FrameRenderers::BasicFade,
             FrameRendererNodes::InterleavedRotate => FrameRenderers::InterleavedRotate,
             FrameRendererNodes::Dripping {invert} => FrameRenderers::Dripping{invert: *invert},
             FrameRendererNodes::SpaceOdyssey { axis } => FrameRenderers::SpaceOdyssey {

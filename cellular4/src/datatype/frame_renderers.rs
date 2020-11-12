@@ -60,6 +60,7 @@ pub enum FrameRenderers {
         fade_color: FloatColor,
         fade_alpha_multiplier: UNFloat,
     },
+    Dripping {invert: Boolean},
     SpaceOdyssey {
         axis: Boolean,
     },
@@ -168,10 +169,34 @@ impl FrameRenderers {
                 }
                 child.draw(args).unwrap();
             }
+            FrameRenderers::Dripping {invert} => {
+                let original_alpha = 1.0 - args.back_lerp_val();
+
+                let dest_x = CONSTS.initial_window_width * 0.5;
+                let dest_y = if invert.into_inner() {CONSTS.initial_window_height} else {0.0};
+
+                let scale_x = CONSTS.initial_window_width / CONSTS.cell_array_width as f32;
+                let scale_y = CONSTS.initial_window_height / CONSTS.cell_array_height as f32;
+
+                let offset_y = if invert.into_inner() {1.0} else {0.0};
+
+                ggez::graphics::draw(
+                    args.ctx,
+                    &args.history_step().computed_texture,
+                    DrawParam::new()
+                        .color(GgColor::new(
+                            1.0,
+                            1.0,
+                            1.0,
+                            1.0 - original_alpha,
+                        ))
+                        .offset([0.5, offset_y])
+                        .dest([dest_x, dest_y])
+                        .scale([scale_x, scale_y * original_alpha]),
+                )?;
+            }
             FrameRenderers::SpaceOdyssey { axis } => {
                 let original_alpha = 1.0 - args.back_lerp_val();
-                let alpha = (1.0 - ((original_alpha * 2.0) - 1.0).abs())
-                    / CONSTS.cell_array_lerp_length as f32;
 
                 let dest_x = CONSTS.initial_window_width * 0.5;
                 let dest_y = CONSTS.initial_window_height * 0.5;

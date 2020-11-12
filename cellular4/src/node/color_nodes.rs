@@ -265,7 +265,7 @@ impl Node for FloatColorNodes {
                 // TODO rewrite this once we have a polar type node
                 let middle = compute_arg.coordinate_set.get_coord_point();
 
-                let t = compute_arg.reborrow().current_t;
+                let hist_t = (compute_arg.reborrow().current_t - 1).max(0);
 
                 let color_a = compute_arg.reborrow().history.get_normalised(
                     middle.normalised_add(
@@ -275,7 +275,7 @@ impl Node for FloatColorNodes {
                         ),
                         normaliser,
                     ),
-                    t,
+                    hist_t,
                 );
 
                 let color_b = compute_arg.reborrow().history.get_normalised(
@@ -286,7 +286,7 @@ impl Node for FloatColorNodes {
                         ),
                         normaliser,
                     ),
-                    t,
+                    hist_t,
                 );
 
                 let color_c = compute_arg.reborrow().history.get_normalised(
@@ -297,7 +297,7 @@ impl Node for FloatColorNodes {
                         ),
                         normaliser,
                     ),
-                    t,
+                    hist_t,
                 );
 
                 let r = UNFloat::new(

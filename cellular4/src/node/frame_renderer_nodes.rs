@@ -9,6 +9,8 @@ pub enum FrameRendererNodes {
     #[mutagen(gen_weight = leaf_node_weight)]
     InterleavedRotate,
     #[mutagen(gen_weight = leaf_node_weight)]
+    SpaceOdyssey { axis: Boolean },
+    #[mutagen(gen_weight = leaf_node_weight)]
     InfiniZoom { invert_direction: Boolean },
     #[mutagen(gen_weight = pipe_node_weight)]
     InfiniZoomRotate {
@@ -52,6 +54,9 @@ impl Node for FrameRendererNodes {
     fn compute(&self, mut compute_arg: ComArg) -> Self::Output {
         match self {
             FrameRendererNodes::InterleavedRotate => FrameRenderers::InterleavedRotate,
+            FrameRendererNodes::SpaceOdyssey { axis } => FrameRenderers::SpaceOdyssey {
+                axis: *axis,
+            },
             FrameRendererNodes::InfiniZoom { invert_direction } => FrameRenderers::InfiniZoom {
                 invert_direction: *invert_direction,
             },

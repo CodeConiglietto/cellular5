@@ -74,21 +74,19 @@ pub enum FloatColorNodes {
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
-    // #[mutagen(gen_preferred)]
     ComplexLAB {
         l: NodeBox<UNFloatNodes>,
         child_complex: NodeBox<SNComplexNodes>,
         alpha: NodeBox<UNFloatNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
-    // #[mutagen(gen_preferred)]
     IterativeResultLAB {
         child_iterative_function: NodeBox<IterativeFunctionNodes>,
         alpha: NodeBox<UNFloatNodes>,
     },
 
-    #[mutagen(gen_weight = pipe_node_weight)]
-    FromBlend { child: NodeBox<ColorBlendNodes> },
+    #[mutagen(gen_weight = branch_node_weight)]
+    ColorBlend { child_a: NodeBox<ColorBlendNodes>, child_b: NodeBox<ColorBlendNodes>, blend_function: ColorBlendFunctions },
 
     #[mutagen(gen_weight = pipe_node_weight)]
     FromBitColor { child: NodeBox<BitColorNodes> },
@@ -111,7 +109,6 @@ pub enum FloatColorNodes {
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
-    // #[mutagen(gen_preferred)]
     TriangleAberration {
         child: NodeBox<FloatColorNodes>,
         child_rho: NodeBox<UNFloatNodes>,
@@ -120,7 +117,6 @@ pub enum FloatColorNodes {
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
-    // #[mutagen(gen_preferred)]
     TriangleBlendAutomata {
         child_rho: NodeBox<UNFloatNodes>,
         child_theta: NodeBox<AngleNodes>,
@@ -159,7 +155,6 @@ pub enum FloatColorNodes {
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
-    // #[mutagen(gen_preferred)]
     PointSetLineBuffer {
         buffer: Buffer<FloatColor>,
         child_point_set: NodeBox<PointSetNodes>,
@@ -202,8 +197,7 @@ pub enum FloatColorNodes {
         child_color: NodeBox<FloatColorNodes>,
     },
 
-    #[mutagen(gen_weight = 0.0)] //branch_node_weight)]
-    // #[mutagen(gen_preferred)]
+    #[mutagen(gen_weight = 0.0)] //branch_node_weight)]//TODO FIX, yes I know it says it down there but this is important. Go learn some fractal stuff buttface
     DucksFractal {
         child_offset: NodeBox<SNPointNodes>,
         child_scale: NodeBox<SNPointNodes>,
@@ -436,7 +430,7 @@ impl Node for FloatColorNodes {
                     alpha.compute(compute_arg.reborrow()).into_inner(),
                 )
             }
-            FromBlend { child } => child.compute(compute_arg.reborrow()),
+            ColorBlend { child_a, child_b, blend_function } => blend_function.blend(child_a.compute(compute_arg.reborrow()), child_b.compute(compute_arg.reborrow())),
             FromBitColor { child } => FloatColor::from(child.compute(compute_arg.reborrow())),
             ModifyState { child, child_state } => child.compute(ComArg {
                 coordinate_set: child_state.compute(compute_arg.reborrow()),

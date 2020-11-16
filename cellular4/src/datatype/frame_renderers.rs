@@ -248,7 +248,7 @@ impl FrameRenderers {
                             1.0,
                             1.0,
                             1.0,
-                            (1.0 / args.history_len() as f32) * (1.0 - original_alpha).powf(2.0),
+                            (1.0 / args.history_len() as f32) * (1.0 - original_alpha),
                         ))
                         .offset([0.5, 0.5])
                         .dest([dest_x, dest_y])

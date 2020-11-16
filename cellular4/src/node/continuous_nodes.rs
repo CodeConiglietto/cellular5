@@ -165,8 +165,8 @@ pub enum SNFloatNodes {
     #[mutagen(gen_weight = branch_node_weight)]
     NoiseFunction {
         noise_function: NoiseFunctions,
-        scale_x_child: NodeBox<ByteNodes>,
-        scale_y_child: NodeBox<ByteNodes>,
+        scale_x_child: NodeBox<NibbleNodes>,
+        scale_y_child: NodeBox<NibbleNodes>,
         scale_t_child: NodeBox<ByteNodes>,
     },
 
@@ -381,6 +381,13 @@ pub enum UNFloatNodes {
         child_b: NodeBox<UNFloatNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
+    NoiseFunction {//Putting one here and converting to brute force more interesting behaviour- This will more readily convert to a colour than the SNFloat version
+        noise_function: NoiseFunctions,
+        scale_x_child: NodeBox<NibbleNodes>,
+        scale_y_child: NodeBox<NibbleNodes>,
+        scale_t_child: NodeBox<ByteNodes>,
+    },
+    #[mutagen(gen_weight = branch_node_weight)]
     CircularAdd {
         child_a: NodeBox<UNFloatNodes>,
         child_b: NodeBox<UNFloatNodes>,
@@ -501,6 +508,19 @@ impl Node for UNFloatNodes {
                     + child_b.compute(compute_arg.reborrow()).into_inner();
                 UNFloat::new(value - (value.floor()))
             }
+            NoiseFunction {
+                noise_function,
+                scale_x_child,
+                scale_y_child,
+                scale_t_child,
+            } => SNFloat::new_clamped(noise_function.compute(
+                compute_arg.coordinate_set.x.into_inner() as f64
+                    * scale_x_child.compute(compute_arg.reborrow()).into_inner() as f64,
+                compute_arg.coordinate_set.y.into_inner() as f64
+                    * scale_y_child.compute(compute_arg.reborrow()).into_inner() as f64,
+                compute_arg.coordinate_set.t as f64
+                    * (scale_t_child.compute(compute_arg.reborrow()).into_inner() / 4) as f64,
+            ) as f32).to_unsigned(),
             InvertNormalised { child } => {
                 UNFloat::new(1.0 - child.compute(compute_arg.reborrow()).into_inner())
             }

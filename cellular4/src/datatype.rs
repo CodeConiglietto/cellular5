@@ -1,5 +1,6 @@
 pub mod buffers;
 pub mod colors;
+pub mod color_blend_functions;
 pub mod complex;
 pub mod constraint_resolvers;
 pub mod continuous;

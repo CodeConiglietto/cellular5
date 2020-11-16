@@ -5,7 +5,7 @@ pub use crate::{
     coordinate_set::*,
     data_set::*,
     datatype::{
-        buffers::*, colors::*, complex::*, constraint_resolvers::*, continuous::*, discrete::*,
+        buffers::*, colors::*, color_blend_functions::*, complex::*, constraint_resolvers::*, continuous::*, discrete::*,
         distance_functions::*, frame_renderers::*, image::*, iterative_results::*, matrices::*,
         noisefunctions::*, point_sets::*, points::*,
     },

@@ -43,7 +43,6 @@ impl<'a> Updatable<'a> for SFloatNormaliser {
 #[mutagen(gen_arg = type (), mut_arg = type ())]
 pub enum UFloatNormaliser {
     //TODO: Add sigmoid function
-    #[mutagen(gen_preferred)]
     Sawtooth,
     Triangle,
     Clamp,

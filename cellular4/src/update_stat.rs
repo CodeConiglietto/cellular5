@@ -52,13 +52,13 @@ impl UpdateStat {
     pub fn flatness(&self) -> f64 {
         ((1.0 - self.activity_value).powf(4.0)
             // + self.local_similarity_value.powf(4.0)
-            + self.global_similarity_value.powf(4.0))
+            + self.global_similarity_value.powf(2.0))
             // / 3.0
             / 2.0
     }
 
     pub fn noise(&self) -> f64 {
-        (self.activity_value.powf(4.0) + (1.0 - self.local_similarity_value).powf(4.0)) / 2.0
+        (self.activity_value.powf(4.0) + (1.0 - self.local_similarity_value).powf(2.0)) / 2.0
     }
 
     pub fn stagnation(&self) -> f64 {

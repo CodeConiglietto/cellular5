@@ -146,7 +146,7 @@ impl FrameRenderers {
                         .dest([dest_x, dest_y])
                         .scale([scale_x * inversion_scalar, scale_y])
                         .rotation(
-                            3.14
+                            PI
                             * original_alpha
                             * args.history_step().root_scalar.into_inner() 
                                 * inversion_scalar,
@@ -369,7 +369,7 @@ impl FrameRenderers {
                 let mut scale_x = CONSTS.initial_window_width / CONSTS.cell_array_width as f32;
                 let mut scale_y = CONSTS.initial_window_height / CONSTS.cell_array_height as f32;
 
-                let mut rotation: f32 = 0.0;
+                let rotation: f32 = 0.0;
 
                 let _prev_root_scalar = args.prev_history_step().root_scalar;
                 let root_scalar = args.history_step().root_scalar;
@@ -416,7 +416,7 @@ impl FrameRenderers {
                         args.back_lerp_val(),
                     );
 
-                    let rotation_scalar = lerp(
+                    let _rotation_scalar = lerp(
                         prev_rotation_scalar.into_inner(),
                         rotation_scalar.into_inner(),
                         args.back_lerp_val(),
@@ -479,7 +479,8 @@ impl FrameRenderers {
                     offset_y += offset_translation_y * scale_y * offset_scalar * root_scalar;
 
                     // NOTE PI is only subtracted because angles are 0..2PI currently
-                    rotation += (1.0 - alpha) * (rotation - PI) * rotation_scalar * root_scalar;
+                    // DOUBLE NOTE This is probably not necessary any more after fixing the angle ranges
+                    // rotation += (1.0 - alpha) * (rotation - PI) * rotation_scalar * root_scalar;
 
                     scale_x *= lerp(
                         1.0,

@@ -1,5 +1,4 @@
 use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
-use rand::Rng;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -19,7 +18,7 @@ impl ColorBlendFunctions {
     pub fn blend(self, a: FloatColor, b: FloatColor) -> FloatColor
     {
         match self {
-            Dissolve => {
+            Self::Dissolve => {
                 if Boolean::random(&mut rand::thread_rng()).into_inner()
                 {
                     a
@@ -27,7 +26,7 @@ impl ColorBlendFunctions {
                     b
                 }
             }
-            Overlay => {
+            Self::Overlay => {
                 let ar = a.r.into_inner();
                 let ag = a.g.into_inner();
                 let ab = a.b.into_inner();
@@ -55,7 +54,7 @@ impl ColorBlendFunctions {
                     a: UNFloat::new((a.a.into_inner() + b.a.into_inner()) * 0.5),
                 }
             }
-            ScreenDodge => {
+            Self::ScreenDodge => {
                 let ar = a.r.into_inner();
                 let ag = a.g.into_inner();
                 let ab = a.b.into_inner();

@@ -46,8 +46,13 @@ impl CoordinateSet {
         SNPoint::from_snfloats(self.x, self.y)
     }
 
+    //Gonna hack this to make it a triangle wave instead of a sawtooth
     pub fn get_byte_t(&self) -> Byte {
-        Byte::new((self.t as u64 % CONSTS.byte_possible_values as u64) as u8)
+        let mut val = self.t as i64 % (CONSTS.byte_possible_values as i64 * 2);
+
+        val = 256 - (256 - val).abs();
+
+        Byte::new(val as u8)
     }
 
     //todo refactor divisor into constant

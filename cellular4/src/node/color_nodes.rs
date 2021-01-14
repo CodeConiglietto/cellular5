@@ -137,6 +137,17 @@ pub enum FloatColorNodes {
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
+    // #[mutagen(gen_preferred)]
+    PolygonBlendAutomata {
+        reseed_stable: Boolean,
+        child_point_count: NodeBox<NibbleNodes>,
+        rho_divisor: Nibble,
+        child_rho: NodeBox<UNFloatNodes>,
+        child_theta: NodeBox<AngleNodes>,
+        child_normaliser: NodeBox<SFloatNormaliserNodes>,
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
     IfElse {
         predicate: NodeBox<BooleanNodes>,
         child_a: NodeBox<FloatColorNodes>,
@@ -522,7 +533,6 @@ impl Node for FloatColorNodes {
                 ..
             } => {
                 let rho = UNFloat::new(child_rho.compute(compute_arg.reborrow()).into_inner() / (rho_divisor.into_inner() + 1) as f32);
-                // let rho = UNFloat::new(0.1); //child_rho.compute(compute_arg.reborrow());
                 let theta = child_theta.compute(compute_arg.reborrow());
                 let normaliser = child_normaliser.compute(compute_arg.reborrow());
 
@@ -594,6 +604,120 @@ impl Node for FloatColorNodes {
                     if a_majority {color_a.a.into_inner().max(color_b.a.into_inner().max(color_c.a.into_inner()))
                     } else {
                         color_a.a.into_inner().min(color_b.a.into_inner().min(color_c.a.into_inner()))}
+                );
+
+
+                let result = FloatColor { r, g, b, a };
+
+                if (reseed_stable.into_inner() || true) && (result.get_average() == 1.0 || result.get_average() == 0.0){
+                    FloatColor::random(&mut thread_rng())
+                } else {
+                    result
+                }
+            }
+            PolygonBlendAutomata {
+                reseed_stable,
+                rho_divisor,
+                child_point_count,
+                child_rho,
+                child_theta,
+                child_normaliser,
+                ..
+            } => {
+                let point_count = (child_point_count.compute(compute_arg.reborrow()).into_inner() + 1) / 2;
+                let rho = UNFloat::new(child_rho.compute(compute_arg.reborrow()).into_inner() / (8 - point_count + 1) as f32 / (rho_divisor.into_inner() + 1) as f32);
+                let theta = child_theta.compute(compute_arg.reborrow());
+                let normaliser = child_normaliser.compute(compute_arg.reborrow());
+
+                // TODO rewrite this once we have a polar type node
+                let middle = compute_arg.coordinate_set.get_coord_point();
+
+                let hist_t = (compute_arg.reborrow().current_t - 1).max(0);
+
+                let mut r_total = 0.0;
+                let mut g_total = 0.0;
+                let mut b_total = 0.0;
+                let mut a_total = 0.0;
+                
+                let mut r_max = 0.0;
+                let mut g_max = 0.0;
+                let mut b_max = 0.0;
+                let mut a_max = 0.0;
+
+                let mut r_min = 1.0;
+                let mut g_min = 1.0;
+                let mut b_min = 1.0;
+                let mut a_min = 1.0;
+                
+                for i in 0..point_count {
+                    let theta_offset = theta + Angle::new((i as f32 / point_count as f32) * 2.0 * PI);
+
+                    let color = compute_arg.reborrow().history.get_normalised(
+                        middle.normalised_add(
+                            SNPoint::from_snfloats(
+                                SNFloat::new(rho.into_inner() * f32::sin(theta_offset.into_inner())),
+                                SNFloat::new(rho.into_inner() * f32::cos(theta_offset.into_inner())),
+                            ),
+                            normaliser,
+                        ),
+                        hist_t,
+                    );
+
+                    let r = color.r.into_inner();
+                    let g = color.g.into_inner();
+                    let b = color.b.into_inner();
+                    let a = color.a.into_inner();
+                    
+                    r_total += r;
+                    g_total += g;
+                    b_total += b;
+                    a_total += a;
+
+                    r_max = r_max.max(r);
+                    g_max = g_max.max(g);
+                    b_max = b_max.max(b);
+                    a_max = a_max.max(a);
+
+                    r_min = r_min.min(r);
+                    g_min = g_min.min(g);
+                    b_min = b_min.min(b);
+                    a_min = a_min.min(a);
+                }
+
+                let r_majority = r_total > point_count as f32 * 0.5;
+                let r = UNFloat::new(
+                    if r_majority {
+                        r_max
+                    } else {
+                        r_min
+                    }
+                );
+
+                let g_majority = g_total > point_count as f32 * 0.5;
+                let g = UNFloat::new(
+                    if g_majority  {
+                        g_max
+                    } else {
+                        g_min
+                    }
+                );
+
+                let b_majority = b_total > point_count as f32 * 0.5;
+                let b = UNFloat::new(
+                    if b_majority  {
+                        b_max
+                    } else {
+                        b_min
+                    }
+                );
+
+                let a_majority = a_total > point_count as f32 * 0.5;
+                let a = UNFloat::new(
+                    if a_majority {
+                        a_max
+                    } else {
+                        a_min
+                    }
                 );
 
 

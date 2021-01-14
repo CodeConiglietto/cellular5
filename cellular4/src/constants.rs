@@ -85,4 +85,6 @@ pub struct Constants {
 
     pub min_branch_depth: usize,
     pub max_branch_depth: usize,
+
+    pub smithsonian_api_key: Option<String>,
 }

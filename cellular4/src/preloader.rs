@@ -33,12 +33,12 @@ where
         let running_child = Arc::clone(&running);
 
         let child_thread = thread::spawn(move || {
-            loop {
-                debug!(
-                    "Preloader child thread {:?} starting up",
-                    thread::current().id()
-                );
+            debug!(
+                "Preloader child thread {:?} starting up",
+                thread::current().id()
+            );
 
+            loop {
                 if sender.send(generator.generate()).is_err() {
                     break;
                 }
@@ -52,6 +52,7 @@ where
                     thread::current().id()
                 );
             }
+
             debug!(
                 "Preloader child thread {:?} shutting down",
                 thread::current().id()
@@ -71,8 +72,8 @@ where
         }
     }
 
-    pub fn _get_next(&self) -> T {
-        self.receiver.recv().unwrap()
+    pub fn get_next(&self) -> T {
+        self.receiver.recv().expect("Child thread disconnected")
     }
 
     pub fn try_get_next(&self) -> Option<T> {

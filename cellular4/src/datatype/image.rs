@@ -1,7 +1,7 @@
 use std::{
     fmt::{self, Debug, Formatter},
-    fs::File,
-    io::{BufRead, BufReader, Cursor, Seek},
+    fs,
+    io::Cursor,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -9,7 +9,7 @@ use std::{
 use failure::{format_err, Fallible};
 use image::{gif, imageops, AnimationDecoder, FilterType, ImageFormat, RgbaImage};
 use lazy_static::lazy_static;
-use log::{debug, error, warn};
+use log::{debug, error, info, warn};
 use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
 use rand::prelude::*;
 use reqwest::blocking::Client as HttpClient;
@@ -23,19 +23,18 @@ use crate::{
     util::{self, DeterministicRng},
 };
 
+mod downloader;
+use downloader::*;
+
 pub const MODULE_PATH: &str = module_path!();
 
 lazy_static! {
     static ref ALL_IMAGES: Vec<PathBuf> = util::collect_filenames(&CONSTS.image_path);
-    static ref FALLBACK_IMAGE: Image = Image::load(
-        ImageSource::Fallback,
-        Cursor::new(FALLBACK_IMAGE_DATA),
-        ImageFormat::PNG,
-    )
-    .unwrap_or_else(|e| {
-        error!("Error loading fallback image: {}", e);
-        panic!()
-    });
+    static ref FALLBACK_IMAGE: Image =
+        Image::load(ImageSource::Fallback, FALLBACK_IMAGE_DATA, None).unwrap_or_else(|e| {
+            error!("Error loading fallback image: {}", e);
+            panic!()
+        });
 }
 
 const FALLBACK_IMAGE_DATA: &[u8] =
@@ -44,14 +43,39 @@ const FALLBACK_IMAGE_DATA: &[u8] =
 pub struct RandomImageLoader {
     rng: DeterministicRng,
     http: HttpClient,
+    downloaders: Vec<Box<dyn ImageDownloader + Send>>,
 }
 
 impl RandomImageLoader {
     pub fn new() -> Self {
+        let mut http = HttpClient::new();
+
+        let mut downloaders: Vec<Box<dyn ImageDownloader + Send>> =
+            vec![Box::new(LoremPicsum::new())];
+
+        if let Some(api_key) = &CONSTS.smithsonian_api_key {
+            match Smithsonian::new(api_key.clone(), &mut http) {
+                Ok(s) => {
+                    info!("Initialized Smithsonian API");
+                    downloaders.push(Box::new(s));
+                }
+                Err(e) => error!("Failed to initialize Smithsonian API: {}", e),
+            }
+        }
+
         Self {
             rng: DeterministicRng::new(),
-            http: HttpClient::new(),
+            http,
+            downloaders,
         }
+    }
+
+    fn download_image(&mut self) -> Fallible<Image> {
+        Ok(self
+            .downloaders
+            .choose_mut(&mut self.rng)
+            .ok_or_else(|| format_err!("No downloaders available"))?
+            .download_image(&mut self.rng, &mut self.http)?)
     }
 }
 
@@ -66,7 +90,7 @@ impl Generator for RandomImageLoader {
 
     fn generate(&mut self) -> Self::Output {
         if self.rng.gen_bool(CONSTS.image_download_probability) {
-            download_random_image(&mut self.http).unwrap_or_else(|e| {
+            self.download_image().unwrap_or_else(|e| {
                 warn!("Failed to download image: {}", e);
                 load_random_image_file(&mut self.rng)
             })
@@ -74,39 +98,6 @@ impl Generator for RandomImageLoader {
             load_random_image_file(&mut self.rng)
         }
     }
-}
-
-fn download_random_image(client: &mut HttpClient) -> Fallible<Image> {
-    let mut buf = Vec::new();
-
-    let mut response = client
-        .get(&format!(
-            "https://picsum.photos/{}/{}",
-            CONSTS.initial_window_width.floor() as usize,
-            CONSTS.initial_window_height.floor() as usize,
-        ))
-        .send()?
-        .error_for_status()?;
-
-    response.copy_to(&mut buf)?;
-
-    let url = response.url();
-    let filename = url
-        .path_segments()
-        .ok_or_else(|| format_err!("Couldn't parse url: {}", url.as_str()))?
-        .last()
-        .ok_or_else(|| format_err!("Empty url: {}", url.as_str()))?;
-
-    let name = format!("{} (Lorem Picsum)", &filename);
-    let format = ImageFormat::from_path(&filename)?;
-
-    debug!("Downloaded image: {}", name);
-
-    Ok(Image::load(
-        ImageSource::Other(name),
-        Cursor::new(&buf),
-        format,
-    )?)
 }
 
 fn load_random_image_file<R: Rng + ?Sized>(rng: &mut R) -> Image {
@@ -142,19 +133,16 @@ impl Image {
     pub fn load_file<P: AsRef<Path>>(path: P) -> image::ImageResult<Self> {
         Ok(Self::new(
             ImageSource::Local(path.as_ref().to_owned()),
-            load_frames(
-                BufReader::new(File::open(&path)?),
-                ImageFormat::from_path(&path)?,
-            )?,
+            load_frames(&fs::read(&path)?, ImageFormat::from_path(&path).ok())?,
         ))
     }
 
-    pub fn load<R: BufRead + Seek>(
+    pub fn load(
         source: ImageSource,
-        reader: R,
-        format: ImageFormat,
+        data: &[u8],
+        format: Option<ImageFormat>,
     ) -> image::ImageResult<Self> {
-        Ok(Self::new(source, load_frames(reader, format)?))
+        Ok(Self::new(source, load_frames(data, format)?))
     }
 
     pub fn get_pixel_wrapped(&self, x: u32, y: u32, t: u32) -> ByteColor {
@@ -201,13 +189,10 @@ pub enum ImageSource {
     Other(String),
 }
 
-fn load_frames<R: BufRead + Seek>(
-    reader: R,
-    format: ImageFormat,
-) -> image::ImageResult<Vec<RgbaImage>> {
+fn load_frames(data: &[u8], format: Option<ImageFormat>) -> image::ImageResult<Vec<RgbaImage>> {
     // Special handling for gifs in case they are animated
     match format {
-        ImageFormat::GIF => Ok(gif::Decoder::new(reader)?
+        Some(ImageFormat::GIF) => Ok(gif::Decoder::new(Cursor::new(data))?
             .into_frames()
             .collect_frames()?
             .into_iter()
@@ -221,8 +206,15 @@ fn load_frames<R: BufRead + Seek>(
             })
             .collect()),
 
-        _ => Ok(vec![imageops::resize(
-            &image::load(reader, format)?.to_rgba(),
+        Some(format) => Ok(vec![imageops::resize(
+            &image::load_from_memory_with_format(data, format)?.to_rgba(),
+            CONSTS.cell_array_width as u32,
+            CONSTS.cell_array_height as u32,
+            FilterType::Gaussian,
+        )]),
+
+        None => Ok(vec![imageops::resize(
+            &image::load_from_memory(data)?.to_rgba(),
             CONSTS.cell_array_width as u32,
             CONSTS.cell_array_height as u32,
             FilterType::Gaussian,
@@ -263,9 +255,10 @@ impl<'a> Generatable<'a> for Image {
     type GenArg = GenArg<'a>;
 
     fn generate_rng<R: Rng + ?Sized>(_rng: &mut R, arg: GenArg<'a>) -> Self {
-        arg.image_preloader
-            .try_get_next()
-            .unwrap_or_else(|| FALLBACK_IMAGE.clone())
+        arg.image_preloader.try_get_next().unwrap_or_else(|| {
+            debug!("Preloader has no image ready, loading fallback");
+            FALLBACK_IMAGE.clone()
+        })
     }
 }
 

@@ -250,7 +250,7 @@ impl MyGame {
             CONSTS.cell_array_history_length,
         );
 
-        let mut image_preloader = Preloader::new(32, RandomImageLoader::new());
+        let mut image_preloader = Preloader::new(32, RandomImageLoader::new);
 
         let mut nodes: Vec<_> = (0..=node::max_node_depth())
             .map(|_| NodeSet::new())

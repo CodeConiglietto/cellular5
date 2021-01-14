@@ -24,15 +24,18 @@ impl<T> Preloader<T>
 where
     T: Debug + Send + 'static,
 {
-    pub fn new<G>(pool_size: usize, mut generator: G) -> Self
+    pub fn new<F, G>(pool_size: usize, generator_fn: F) -> Self
     where
-        G: Generator<Output = T> + Send + 'static,
+        F: FnOnce() -> G + Send + 'static,
+        G: Generator<Output = T>,
     {
         let (sender, receiver) = mpsc::sync_channel(pool_size);
         let running = Arc::new(AtomicBool::new(true));
         let running_child = Arc::clone(&running);
 
         let child_thread = thread::spawn(move || {
+            let mut generator = generator_fn();
+
             debug!(
                 "Preloader child thread {:?} starting up",
                 thread::current().id()

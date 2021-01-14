@@ -7,9 +7,19 @@ use crate::prelude::*;
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum FrameRendererNodes {
     #[mutagen(gen_weight = leaf_node_weight)]
+    #[mutagen(gen_preferred)]
     BasicFade,
     #[mutagen(gen_weight = leaf_node_weight)]
     InterleavedRotate,
+    #[mutagen(gen_weight = leaf_node_weight)]
+    DiscreteTransform,
+    #[mutagen(gen_weight = leaf_node_weight)]
+    // #[mutagen(gen_preferred)]
+    DiscreteRotation {
+        rotation_value: Angle,
+        render_single_frame: Boolean,
+        invert_t_offset: Boolean,
+    },
     #[mutagen(gen_weight = leaf_node_weight)]
     Dripping {invert: Boolean},
     #[mutagen(gen_weight = leaf_node_weight)]
@@ -59,6 +69,8 @@ impl Node for FrameRendererNodes {
         match self {
             FrameRendererNodes::BasicFade => FrameRenderers::BasicFade,
             FrameRendererNodes::InterleavedRotate => FrameRenderers::InterleavedRotate,
+            FrameRendererNodes::DiscreteTransform => FrameRenderers::DiscreteTransform,
+            FrameRendererNodes::DiscreteRotation{rotation_value, render_single_frame, invert_t_offset} => FrameRenderers::DiscreteRotation{rotation_value: *rotation_value, render_single_frame: *render_single_frame, invert_t_offset: *invert_t_offset},
             FrameRendererNodes::Dripping {invert} => FrameRenderers::Dripping{invert: *invert},
             FrameRendererNodes::SpaceOdyssey { axis } => FrameRenderers::SpaceOdyssey {
                 axis: *axis,

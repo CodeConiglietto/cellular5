@@ -12,7 +12,7 @@ pub enum ColorBlendNodes {
     #[mutagen(gen_weight = pipe_node_weight)]
     Invert { child: NodeBox<FloatColorNodes> },
 
-    #[mutagen(gen_weight = branch_node_weight)]
+    #[mutagen(gen_weight = 0.0)]//branch_node_weight)]
     Dissolve {
         color_a: NodeBox<FloatColorNodes>,
         color_b: NodeBox<FloatColorNodes>,

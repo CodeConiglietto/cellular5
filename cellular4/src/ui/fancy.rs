@@ -219,6 +219,7 @@ impl UiBase for Ui {
             ("Alpha", update_stat.alpha_value),
             ("Local Similarity", update_stat.local_similarity_value),
             ("Global Similarity", update_stat.global_similarity_value),
+            ("Graph Stability", update_stat.graph_stability),
         ];
 
         let height = 1 + table_rows.len();

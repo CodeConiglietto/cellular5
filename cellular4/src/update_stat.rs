@@ -22,6 +22,7 @@ pub struct UpdateStat {
     pub alpha_value: f64,
     pub local_similarity_value: f64,
     pub global_similarity_value: f64,
+    pub graph_stability: f64,
     pub cpu_usage: f64,
 }
 
@@ -32,10 +33,14 @@ pub struct UpdateStat {
 impl UpdateStat {
     pub fn should_mutate(&self) -> bool {
         ldbg!(
-            (thread_rng().gen::<f64>() * self.mutation_likelihood()).powf(4.0)
-                * 0.5
+            (thread_rng().gen::<f64>() * self.mutation_likelihood()).powf(3.0)
+                // * 0.5
                 * CONSTS.cell_array_lerp_length as f64
-        ) > thread_rng().gen::<f64>()
+        ) > thread_rng().gen::<f64>() * (1.0 - self.graph_stability)
+        //TODO: The following are placeholders until we can get something better going
+        // || self.activity_value < 0.001
+        // || self.local_similarity_value > 0.999
+        || self.global_similarity_value > 0.99
     }
 
     // pub fn should_mutate(&self) -> bool {
@@ -76,6 +81,7 @@ impl UpdateStat {
             alpha_value: self.alpha_value.min(1.0).max(0.0),
             local_similarity_value: self.local_similarity_value.min(1.0).max(0.0),
             global_similarity_value: self.global_similarity_value.min(1.0).max(0.0),
+            graph_stability: self.graph_stability.min(1.0).max(0.0),
             cpu_usage: self.cpu_usage.min(1.0).max(0.0),
         }
     }
@@ -90,6 +96,7 @@ impl Add<UpdateStat> for UpdateStat {
             alpha_value: self.alpha_value + other.alpha_value,
             local_similarity_value: self.local_similarity_value + other.local_similarity_value,
             global_similarity_value: self.global_similarity_value + other.global_similarity_value,
+            graph_stability: self.graph_stability + other.graph_stability,
             cpu_usage: self.cpu_usage + other.cpu_usage,
         }
     }
@@ -104,6 +111,7 @@ impl Div<f64> for UpdateStat {
             alpha_value: self.alpha_value / other,
             local_similarity_value: self.local_similarity_value / other,
             global_similarity_value: self.global_similarity_value / other,
+            graph_stability: self.graph_stability / other,
             cpu_usage: self.cpu_usage / other,
         }
     }
@@ -118,6 +126,7 @@ impl Mul<f64> for UpdateStat {
             alpha_value: self.alpha_value * other,
             local_similarity_value: self.local_similarity_value * other,
             global_similarity_value: self.global_similarity_value * other,
+            graph_stability: self.graph_stability * other,
             cpu_usage: self.cpu_usage * other,
         }
     }

@@ -1,4 +1,4 @@
-use ggez::{graphics::Image as GgImage, Context};
+use ggez::{graphics::{Drawable, Image as GgImage}, Context};
 
 use std::{
     path::{Path, PathBuf},
@@ -6,6 +6,7 @@ use std::{
     time::SystemTime,
 };
 
+use rand::prelude::*;
 use lazy_static::lazy_static;
 use log::debug;
 use nalgebra::*;
@@ -157,15 +158,15 @@ pub fn init_cell_array(width: usize, height: usize) -> Array3<u8> {
         if c == 3 {
             255
         } else {
-            0
-            // thread_rng().gen::<u8>()
+            // 0
+            thread_rng().gen::<u8>()
         }
     })
 }
 
-pub fn compute_texture(ctx: &mut Context, cell_array: ArrayView3<u8>) -> GgImage {
+pub fn compute_texture(ctx: &mut Context, cell_array: ArrayView3<u8>, use_nearest_neighbour: bool) -> GgImage {
     let (height, width, _) = cell_array.dim();
-    let image = GgImage::from_rgba8(
+    let mut image = GgImage::from_rgba8(
         ctx,
         width as u16,
         height as u16,
@@ -174,20 +175,28 @@ pub fn compute_texture(ctx: &mut Context, cell_array: ArrayView3<u8>) -> GgImage
     .unwrap();
 
     //TODO: figure out if there's some way we can abuse blend modes for novel behaviour
-    // match (thread_rng().gen::<u8>() % 8)
-    // {
-    //     0 => {image.set_blend_mode(Some(ggez::graphics::BlendMode::Add));},
-    //     1 => {image.set_blend_mode(Some(ggez::graphics::BlendMode::Alpha));},
-    //     2 => {image.set_blend_mode(Some(ggez::graphics::BlendMode::Darken));},
-    //     3 => {image.set_blend_mode(Some(ggez::graphics::BlendMode::Invert));},
-    //     4 => {image.set_blend_mode(Some(ggez::graphics::BlendMode::Lighten));},
-    //     5 => {image.set_blend_mode(Some(ggez::graphics::BlendMode::Multiply));},
-    //     6 => {image.set_blend_mode(Some(ggez::graphics::BlendMode::Replace));},
-    //     7 => {image.set_blend_mode(Some(ggez::graphics::BlendMode::Subtract));},
-    //     _ => panic!(),
-    // }
+    //Perhaps we make this a node type that interleaves different blend types so it doesn't white/black out the screen
+    if false
+    {
+        match thread_rng().gen::<u8>() % 8
+        {
+            0 => {image.set_blend_mode(Some(ggez::graphics::BlendMode::Add));},
+            1 => {image.set_blend_mode(Some(ggez::graphics::BlendMode::Alpha));},
+            2 => {image.set_blend_mode(Some(ggez::graphics::BlendMode::Darken));},
+            3 => {image.set_blend_mode(Some(ggez::graphics::BlendMode::Invert));},
+            4 => {image.set_blend_mode(Some(ggez::graphics::BlendMode::Lighten));},
+            5 => {image.set_blend_mode(Some(ggez::graphics::BlendMode::Multiply));},
+            6 => {image.set_blend_mode(Some(ggez::graphics::BlendMode::Replace));},
+            7 => {image.set_blend_mode(Some(ggez::graphics::BlendMode::Subtract));},
+            _ => panic!(),
+        }
+    }
 
-    // image.set_filter(ggez::graphics::FilterMode::Nearest);
+    if use_nearest_neighbour
+    {
+        image.set_filter(ggez::graphics::FilterMode::Nearest);
+    }
+
     image
 }
 

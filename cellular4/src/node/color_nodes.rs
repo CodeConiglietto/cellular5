@@ -5,6 +5,7 @@ use std::{collections::VecDeque, f32::consts::PI};
 use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
 use palette::{encoding::srgb::Srgb, rgb::Rgb, Hsv, Lab, Limited, RgbHue};
 use serde::{Deserialize, Serialize};
+use rand::thread_rng;
 
 use crate::prelude::*;
 
@@ -117,7 +118,19 @@ pub enum FloatColorNodes {
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
+    // #[mutagen(gen_preferred)]
+    FlowAutomata {
+        rho_divisor: Nibble,
+        child_rho: NodeBox<UNFloatNodes>,
+        child_theta: NodeBox<AngleNodes>,
+        child_normaliser: NodeBox<SFloatNormaliserNodes>,
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    // #[mutagen(gen_preferred)]
     TriangleBlendAutomata {
+        reseed_stable: Boolean,
+        rho_divisor: Nibble,
         child_rho: NodeBox<UNFloatNodes>,
         child_theta: NodeBox<AngleNodes>,
         child_normaliser: NodeBox<SFloatNormaliserNodes>,
@@ -166,6 +179,16 @@ pub enum FloatColorNodes {
     PointSetDotBuffer {
         buffer: Buffer<FloatColor>,
         child_point_set: NodeBox<PointSetNodes>,
+        child_color: NodeBox<FloatColorNodes>,
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    IterativeCenteredPolarLineBuffer {
+        buffer: Buffer<FloatColor>,
+        // TODO Replace child_theta and child_rho with a polar coordinate node when they're implemented
+        theta: Angle,
+        theta_delta: Angle,
+        rho: UNFloat,
         child_color: NodeBox<FloatColorNodes>,
     },
 
@@ -240,83 +263,6 @@ impl Node for FloatColorNodes {
                     g: value,
                     b: value,
                     a: value,
-                }
-            }
-            TriangleBlendAutomata {
-                // child_rho,
-                // child_theta,
-                child_normaliser,
-                ..
-            } => {
-                let rho = UNFloat::new(0.1); //child_rho.compute(compute_arg.reborrow());
-                let theta = Angle::new(0.0); //child_theta.compute(compute_arg.reborrow());
-                let normaliser = child_normaliser.compute(compute_arg.reborrow());
-
-                let theta_a = theta;
-                let theta_b = theta + Angle::new(2.0 / 3.0 * PI);
-                let theta_c = theta - Angle::new(2.0 / 3.0 * PI);
-
-                // TODO rewrite this once we have a polar type node
-                let middle = compute_arg.coordinate_set.get_coord_point();
-
-                let hist_t = (compute_arg.reborrow().current_t - 1).max(0);
-
-                let color_a = compute_arg.reborrow().history.get_normalised(
-                    middle.normalised_add(
-                        SNPoint::from_snfloats(
-                            SNFloat::new(rho.into_inner() * f32::sin(theta_a.into_inner())),
-                            SNFloat::new(rho.into_inner() * f32::cos(theta_a.into_inner())),
-                        ),
-                        normaliser,
-                    ),
-                    hist_t,
-                );
-
-                let color_b = compute_arg.reborrow().history.get_normalised(
-                    middle.normalised_add(
-                        SNPoint::from_snfloats(
-                            SNFloat::new(rho.into_inner() * f32::sin(theta_b.into_inner())),
-                            SNFloat::new(rho.into_inner() * f32::cos(theta_b.into_inner())),
-                        ),
-                        normaliser,
-                    ),
-                    hist_t,
-                );
-
-                let color_c = compute_arg.reborrow().history.get_normalised(
-                    middle.normalised_add(
-                        SNPoint::from_snfloats(
-                            SNFloat::new(rho.into_inner() * f32::sin(theta_c.into_inner())),
-                            SNFloat::new(rho.into_inner() * f32::cos(theta_c.into_inner())),
-                        ),
-                        normaliser,
-                    ),
-                    hist_t,
-                );
-
-                let r = UNFloat::new(
-                    (color_a.r.into_inner() + color_b.r.into_inner() + color_c.r.into_inner())
-                        / 3.0,
-                );
-                let g = UNFloat::new(
-                    (color_a.g.into_inner() + color_b.g.into_inner() + color_c.g.into_inner())
-                        / 3.0,
-                );
-                let b = UNFloat::new(
-                    (color_a.b.into_inner() + color_b.b.into_inner() + color_c.b.into_inner())
-                        / 3.0,
-                );
-                let a = UNFloat::new(
-                    (color_a.a.into_inner() + color_b.a.into_inner() + color_c.a.into_inner())
-                        / 3.0,
-                );
-
-                let average = FloatColor { r, g, b, a };
-
-                if average.get_average() > 0.5 {
-                    FloatColor::WHITE
-                } else {
-                    FloatColor::BLACK
                 }
             }
             AbsChildCoords { child } => {
@@ -540,7 +486,125 @@ impl Node for FloatColorNodes {
 
                 FloatColor { r, g, b, a }
             }
+            FlowAutomata {
+                rho_divisor,
+                child_rho,
+                child_theta,
+                child_normaliser,
+                ..
+            } => {
+                let rho = UNFloat::new(child_rho.compute(compute_arg.reborrow()).into_inner() / (rho_divisor.into_inner() + 1) as f32);
+                let theta = child_theta.compute(compute_arg.reborrow());
+                let normaliser = child_normaliser.compute(compute_arg.reborrow());
 
+                // TODO rewrite this once we have a polar type node
+                let middle = compute_arg.coordinate_set.get_coord_point();
+
+                let hist_t = (compute_arg.reborrow().current_t - 1).max(0);
+
+                compute_arg.reborrow().history.get_normalised(
+                    middle.normalised_add(
+                        SNPoint::from_snfloats(
+                            SNFloat::new(rho.into_inner() * f32::sin(theta.into_inner())),
+                            SNFloat::new(rho.into_inner() * f32::cos(theta.into_inner())),
+                        ),
+                        normaliser,
+                    ),
+                    hist_t,
+                )
+            }
+            TriangleBlendAutomata {
+                reseed_stable,
+                rho_divisor,
+                child_rho,
+                child_theta,
+                child_normaliser,
+                ..
+            } => {
+                let rho = UNFloat::new(child_rho.compute(compute_arg.reborrow()).into_inner() / (rho_divisor.into_inner() + 1) as f32);
+                // let rho = UNFloat::new(0.1); //child_rho.compute(compute_arg.reborrow());
+                let theta = child_theta.compute(compute_arg.reborrow());
+                let normaliser = child_normaliser.compute(compute_arg.reborrow());
+
+                let theta_a = theta;
+                let theta_b = theta + Angle::new(2.0 / 3.0 * PI);
+                let theta_c = theta - Angle::new(2.0 / 3.0 * PI);
+
+                // TODO rewrite this once we have a polar type node
+                let middle = compute_arg.coordinate_set.get_coord_point();
+
+                let hist_t = (compute_arg.reborrow().current_t - 1).max(0);
+
+                let color_a = compute_arg.reborrow().history.get_normalised(
+                    middle.normalised_add(
+                        SNPoint::from_snfloats(
+                            SNFloat::new(rho.into_inner() * f32::sin(theta_a.into_inner())),
+                            SNFloat::new(rho.into_inner() * f32::cos(theta_a.into_inner())),
+                        ),
+                        normaliser,
+                    ),
+                    hist_t,
+                );
+
+                let color_b = compute_arg.reborrow().history.get_normalised(
+                    middle.normalised_add(
+                        SNPoint::from_snfloats(
+                            SNFloat::new(rho.into_inner() * f32::sin(theta_b.into_inner())),
+                            SNFloat::new(rho.into_inner() * f32::cos(theta_b.into_inner())),
+                        ),
+                        normaliser,
+                    ),
+                    hist_t,
+                );
+
+                let color_c = compute_arg.reborrow().history.get_normalised(
+                    middle.normalised_add(
+                        SNPoint::from_snfloats(
+                            SNFloat::new(rho.into_inner() * f32::sin(theta_c.into_inner())),
+                            SNFloat::new(rho.into_inner() * f32::cos(theta_c.into_inner())),
+                        ),
+                        normaliser,
+                    ),
+                    hist_t,
+                );
+
+                let r_majority = color_a.r.into_inner() + color_b.r.into_inner() + color_c.r.into_inner() > 1.5;
+                let r = UNFloat::new(
+                    if r_majority {color_a.r.into_inner().max(color_b.r.into_inner().max(color_c.r.into_inner()))
+                    } else {
+                        color_a.r.into_inner().min(color_b.r.into_inner().min(color_c.r.into_inner()))}
+                );
+
+                let g_majority = color_a.g.into_inner() + color_b.g.into_inner() + color_c.g.into_inner() > 1.5;
+                let g = UNFloat::new(
+                    if g_majority {color_a.g.into_inner().max(color_b.g.into_inner().max(color_c.g.into_inner()))
+                    } else {
+                        color_a.g.into_inner().min(color_b.g.into_inner().min(color_c.g.into_inner()))}
+                );
+
+                let b_majority = color_a.b.into_inner() + color_b.b.into_inner() + color_c.b.into_inner() > 1.5;
+                let b = UNFloat::new(
+                    if b_majority {color_a.b.into_inner().max(color_b.b.into_inner().max(color_c.b.into_inner()))
+                    } else {
+                        color_a.b.into_inner().min(color_b.b.into_inner().min(color_c.b.into_inner()))}
+                );
+
+                let a_majority = color_a.a.into_inner() + color_b.a.into_inner() + color_c.a.into_inner() > 1.5;
+                let a = UNFloat::new(
+                    if a_majority {color_a.a.into_inner().max(color_b.a.into_inner().max(color_c.a.into_inner()))
+                    } else {
+                        color_a.a.into_inner().min(color_b.a.into_inner().min(color_c.a.into_inner()))}
+                );
+
+
+                let result = FloatColor { r, g, b, a };
+
+                if (reseed_stable.into_inner() || true) && (result.get_average() == 1.0 || result.get_average() == 0.0){
+                    FloatColor::random(&mut thread_rng())
+                } else {
+                    result
+                }
+            }
             FromByteColor { child } => FloatColor::from(child.compute(compute_arg.reborrow())),
             IfElse {
                 predicate,
@@ -573,6 +637,9 @@ impl Node for FloatColorNodes {
                 buffer[compute_arg.coordinate_set.get_coord_point()]
             }
             PointSetLineBuffer { buffer, .. } => {
+                buffer[compute_arg.coordinate_set.get_coord_point()]
+            }
+            IterativeCenteredPolarLineBuffer { buffer, .. } => {
                 buffer[compute_arg.coordinate_set.get_coord_point()]
             }
             IterativePolarLineBuffer { buffer, .. } => {
@@ -764,6 +831,34 @@ impl<'a> Updatable<'a> for FloatColorNodes {
                 }
             }
 
+            IterativeCenteredPolarLineBuffer {
+                buffer,
+                ref mut theta,
+                theta_delta,
+                rho,
+                child_color,
+            } => {
+                let new_theta = *theta + *theta_delta;
+                let color = child_color.compute(arg.reborrow().into());
+
+                let point = 
+                    SNPoint::from_snfloats(
+                        SNFloat::new(rho.into_inner() * f32::sin(theta.into_inner())),
+                        SNFloat::new(rho.into_inner() * f32::cos(theta.into_inner())),
+                    );
+
+                // TODO rewrite this once we have a polar type node
+                let new_point = 
+                    SNPoint::from_snfloats(
+                        SNFloat::new(rho.into_inner() * f32::sin(new_theta.into_inner())),
+                        SNFloat::new(rho.into_inner() * f32::cos(new_theta.into_inner())),
+                );
+
+                buffer.draw_line(point, new_point, color);
+
+                *theta = new_theta;
+            }
+            
             IterativePolarLineBuffer {
                 buffer,
                 child_theta,

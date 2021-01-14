@@ -118,7 +118,7 @@ fn generatable_enum(
 
                 let c: TokenStream2 = quote! {
                     |mut arg: Self::GenArg| {
-                        (#w) * 10000.0
+                        (#w) * 100.0
                     }
                 };
 

@@ -128,6 +128,7 @@ struct NodeTree {
     compute_offset_node: NodeBox<CoordMapNodes>,
     fade_color_node: NodeBox<FloatColorNodes>,
     fade_color_alpha_multiplier: NodeBox<UNFloatNodes>,
+    scaling_mode_node: NodeBox<BooleanNodes>,
 }
 
 // impl NodeTree {
@@ -222,6 +223,7 @@ struct MyGame {
     //record_tree: bool,
     tree_dirty: bool,
     current_t: usize,
+    last_mutation_t: usize,
     last_render_t: usize,
     cpu_t: CpuInstant,
     rng: DeterministicRng,
@@ -264,12 +266,14 @@ impl MyGame {
                 ctx,
                 CONSTS.cell_array_width,
                 CONSTS.cell_array_height,
+                false,
             ),
             rolling_update_stat_total: UpdateStat {
                 activity_value: 0.0,
                 alpha_value: 0.0,
                 local_similarity_value: 0.0,
                 global_similarity_value: 0.0,
+                graph_stability: 0.0,
                 cpu_usage: 0.0,
             },
             average_update_stat: UpdateStat {
@@ -277,6 +281,7 @@ impl MyGame {
                 alpha_value: 0.0,
                 local_similarity_value: 0.0,
                 global_similarity_value: 0.0,
+                graph_stability: 0.0,
                 cpu_usage: 0.0,
             },
 
@@ -299,6 +304,7 @@ impl MyGame {
             //record_tree: false,
             tree_dirty: false,
             current_t: 0,
+            last_mutation_t: 0,
             last_render_t: 0,
             cpu_t: CpuInstant::now().unwrap(),
             ui,
@@ -450,6 +456,7 @@ impl EventHandler for MyGame {
                 global_similarity_value: f64::from(
                     1.0 - (global_color.get_average() - current_color.get_average()).abs(),
                 ), // / total_cells as f64
+                graph_stability: 0.0, //we don't accumulate this here because we set it below
                 cpu_usage: 0.0, //we don't accumulate this here because we set it below
             }
         };
@@ -471,6 +478,7 @@ impl EventHandler for MyGame {
         if timer::ticks(ctx) % CONSTS.tics_per_update == 0 {
             let next_cpu_t = CpuInstant::now().unwrap();
             let cpu_usage = (next_cpu_t - self.cpu_t).non_idle();
+            let graph_stability = 1.0 - 0.95_f64.powf((current_t - self.last_mutation_t) as f64);
 
             self.average_update_stat =
                 ((self.average_update_stat + self.rolling_update_stat_total) / 2.0).clamp_values();
@@ -482,6 +490,7 @@ impl EventHandler for MyGame {
                 alpha_value: 0.0,
                 local_similarity_value: 0.0,
                 global_similarity_value: 0.0,
+                graph_stability,
                 cpu_usage,
             };
 
@@ -540,6 +549,7 @@ impl EventHandler for MyGame {
                 // if self.record_tree {
                 //     self.node_tree.save("latest");
                 // }
+                self.last_mutation_t = self.current_t;
                 self.tree_dirty = false;
             }
 
@@ -600,8 +610,10 @@ impl EventHandler for MyGame {
                 .root_frame_renderer
                 .compute(step_com_arg.reborrow());
 
+            let use_nearest_neighbour_scaling = self.node_tree.scaling_mode_node.compute(step_com_arg.reborrow()).into_inner();
+
             self.next_history_step.computed_texture =
-                compute_texture(ctx, self.next_history_step.cell_array.view());
+                compute_texture(ctx, self.next_history_step.cell_array.view(), use_nearest_neighbour_scaling);
 
             self.node_tree.update_recursively(step_upd_arg.reborrow());
 
@@ -646,6 +658,8 @@ impl EventHandler for MyGame {
             let lerp_sub =
                 (timer::ticks(ctx) % CONSTS.tics_per_update) as f32 / CONSTS.tics_per_update as f32;
 
+            let fresh_frame = timer::ticks(ctx) % CONSTS.tics_per_update == 0;
+
             for lerp_i in 0..CONSTS.cell_array_lerp_length {
                 let args = RenderArgs {
                     ctx,
@@ -654,6 +668,7 @@ impl EventHandler for MyGame {
                     lerp_sub,
                     lerp_i,
                     blank_texture: &self.blank_texture,
+                    fresh_frame,
                 };
 
                 args.history_step().frame_renderer.draw(args)?;

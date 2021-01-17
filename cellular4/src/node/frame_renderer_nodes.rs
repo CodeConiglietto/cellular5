@@ -6,15 +6,14 @@ use crate::prelude::*;
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum FrameRendererNodes {
-    #[mutagen(gen_weight = leaf_node_weight)]
-    #[mutagen(gen_preferred)]
+    // #[mutagen(gen_weight = leaf_node_weight)]
+    #[mutagen(gen_weight = 50.0)]
     BasicFade,
     #[mutagen(gen_weight = leaf_node_weight)]
     InterleavedRotate,
     #[mutagen(gen_weight = leaf_node_weight)]
     DiscreteTransform,
     #[mutagen(gen_weight = leaf_node_weight)]
-    // #[mutagen(gen_preferred)]
     DiscreteRotation {
         rotation_value: Angle,
         render_single_frame: Boolean,

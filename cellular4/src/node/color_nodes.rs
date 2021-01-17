@@ -118,7 +118,6 @@ pub enum FloatColorNodes {
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
-    // #[mutagen(gen_preferred)]
     FlowAutomata {
         rho_divisor: Nibble,
         child_rho: NodeBox<UNFloatNodes>,
@@ -127,7 +126,6 @@ pub enum FloatColorNodes {
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
-    // #[mutagen(gen_preferred)]
     TriangleBlendAutomata {
         reseed_stable: Boolean,
         rho_divisor: Nibble,
@@ -137,7 +135,6 @@ pub enum FloatColorNodes {
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
-    // #[mutagen(gen_preferred)]
     PolygonBlendAutomata {
         reseed_stable: Boolean,
         child_point_count: NodeBox<NibbleNodes>,
@@ -264,7 +261,7 @@ impl Node for FloatColorNodes {
                     ((compute_arg.coordinate_set.y.into_inner() + 1.0)
                         * 0.5
                         * CONSTS.cell_array_height as f32) as usize,
-                    compute_arg.coordinate_set.t as usize,
+                        (compute_arg.reborrow().current_t - 1).max(0),
                 )
                 .into(),
             Grayscale { child } => {
@@ -1170,7 +1167,7 @@ impl Node for BitColorNodes {
                     ((compute_arg.coordinate_set.y.into_inner() + 1.0)
                         * 0.5
                         * CONSTS.cell_array_height as f32) as usize,
-                    compute_arg.coordinate_set.t as usize,
+                        (compute_arg.reborrow().current_t - 1).max(0),
                 )
                 .into(),
             FromUNFloat { child } => BitColor::from_index(
@@ -1281,7 +1278,7 @@ impl Node for ByteColorNodes {
                 ((compute_arg.coordinate_set.y.into_inner() + 1.0)
                     * 0.5
                     * CONSTS.cell_array_height as f32) as usize,
-                compute_arg.coordinate_set.t as usize,
+                    (compute_arg.reborrow().current_t - 1).max(0),
             ),
             Decompose { r, g, b, a } => ByteColor {
                 r: r.compute(compute_arg.reborrow()),

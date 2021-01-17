@@ -381,8 +381,6 @@ impl FrameRenderers {
                 if args.fresh_frame && (!render_single_frame.into_inner() || args.lerp_i == 0)
                 {
                     let original_alpha = 1.0 - args.back_lerp_val();
-                    let alpha = (1.0 - ((original_alpha * 2.0) - 1.0).abs())
-                        / CONSTS.cell_array_lerp_length as f32;
                     //TODO fix
                     let dest_x = CONSTS.initial_window_width * 0.5;
                     let dest_y = CONSTS.initial_window_height * 0.5;

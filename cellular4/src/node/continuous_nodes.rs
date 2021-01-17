@@ -165,9 +165,9 @@ pub enum SNFloatNodes {
     #[mutagen(gen_weight = branch_node_weight)]
     NoiseFunction {
         noise_function: NoiseFunctions,
-        scale_x_child: NodeBox<NibbleNodes>,
-        scale_y_child: NodeBox<NibbleNodes>,
-        scale_t_child: NodeBox<ByteNodes>,
+        scale_x: Nibble,
+        scale_y: Nibble,
+        scale_t: Byte,
     },
 
     // IterativeMatrixNoiseFunction {//TODO: finish
@@ -284,16 +284,16 @@ impl Node for SNFloatNodes {
 
             NoiseFunction {
                 noise_function,
-                scale_x_child,
-                scale_y_child,
-                scale_t_child,
+                scale_x,
+                scale_y,
+                scale_t,
             } => SNFloat::new_clamped(noise_function.compute(
                 compute_arg.coordinate_set.x.into_inner() as f64
-                    * scale_x_child.compute(compute_arg.reborrow()).into_inner() as f64,
+                    * scale_x.into_inner() as f64,
                 compute_arg.coordinate_set.y.into_inner() as f64
-                    * scale_y_child.compute(compute_arg.reborrow()).into_inner() as f64,
+                    * scale_y.into_inner() as f64,
                 compute_arg.coordinate_set.t as f64
-                    * (scale_t_child.compute(compute_arg.reborrow()).into_inner() / 4) as f64,
+                    * (scale_t.into_inner() / 4) as f64,
             ) as f32),
             // IterativeMatrixNoiseFunction {
             //     noise_function,
@@ -383,9 +383,9 @@ pub enum UNFloatNodes {
     #[mutagen(gen_weight = branch_node_weight)]
     NoiseFunction {//Putting one here and converting to brute force more interesting behaviour- This will more readily convert to a colour than the SNFloat version
         noise_function: NoiseFunctions,
-        scale_x_child: NodeBox<NibbleNodes>,
-        scale_y_child: NodeBox<NibbleNodes>,
-        scale_t_child: NodeBox<ByteNodes>,
+        scale_x: Nibble,
+        scale_y: Nibble,
+        scale_t: Byte,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     CircularAdd {
@@ -510,16 +510,16 @@ impl Node for UNFloatNodes {
             }
             NoiseFunction {
                 noise_function,
-                scale_x_child,
-                scale_y_child,
-                scale_t_child,
+                scale_x,
+                scale_y,
+                scale_t,
             } => SNFloat::new_clamped(noise_function.compute(
                 compute_arg.coordinate_set.x.into_inner() as f64
-                    * scale_x_child.compute(compute_arg.reborrow()).into_inner() as f64,
+                    * scale_x.into_inner() as f64,
                 compute_arg.coordinate_set.y.into_inner() as f64
-                    * scale_y_child.compute(compute_arg.reborrow()).into_inner() as f64,
+                    * scale_y.into_inner() as f64,
                 compute_arg.coordinate_set.t as f64
-                    * (scale_t_child.compute(compute_arg.reborrow()).into_inner() / 4) as f64,
+                    * (scale_t.into_inner() / 4) as f64,
             ) as f32).to_unsigned(),
             InvertNormalised { child } => {
                 UNFloat::new(1.0 - child.compute(compute_arg.reborrow()).into_inner())

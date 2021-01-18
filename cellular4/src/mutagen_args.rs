@@ -14,7 +14,8 @@ pub struct GenArg<'a> {
     pub current_t: usize,
     pub coordinate_set: CoordinateSet,
     pub history: &'a History,
-    pub image_preloader: &'a mut Preloader<Image>,
+    pub image_preloader: &'a Preloader<Image>,
+    pub profiler: &'a mut Option<MutagenProfiler>,
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, GenArg<'a>> for GenArg<'b> {
@@ -26,12 +27,19 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, GenArg<'a>> for GenArg<'b> {
             current_t: self.current_t,
             coordinate_set: self.coordinate_set,
             history: &self.history,
-            image_preloader: &mut self.image_preloader,
+            image_preloader: &self.image_preloader,
+            profiler: &mut self.profiler,
         }
     }
 }
 
-impl<'a> mutagen::State for GenArg<'a> {}
+impl<'a> mutagen::State for GenArg<'a> {
+    fn handle_event(&mut self, event: mutagen::Event) {
+        if let Some(profiler) = &mut self.profiler {
+            profiler.handle_event(event);
+        }
+    }
+}
 
 impl<'a> MutagenArg for GenArg<'a> {
     fn depth(&self) -> usize {
@@ -47,7 +55,8 @@ pub struct MutArg<'a> {
     pub current_t: usize,
     pub coordinate_set: CoordinateSet,
     pub history: &'a History,
-    pub image_preloader: &'a mut Preloader<Image>,
+    pub image_preloader: &'a Preloader<Image>,
+    pub profiler: &'a mut Option<MutagenProfiler>,
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, MutArg<'a>> for MutArg<'b> {
@@ -59,7 +68,8 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, MutArg<'a>> for MutArg<'b> {
             current_t: self.current_t,
             coordinate_set: self.coordinate_set,
             history: &self.history,
-            image_preloader: &mut self.image_preloader,
+            image_preloader: &self.image_preloader,
+            profiler: &mut self.profiler,
         }
     }
 }
@@ -74,11 +84,18 @@ impl<'a> From<MutArg<'a>> for GenArg<'a> {
             coordinate_set: arg.coordinate_set,
             history: arg.history,
             image_preloader: arg.image_preloader,
+            profiler: arg.profiler,
         }
     }
 }
 
-impl<'a> mutagen::State for MutArg<'a> {}
+impl<'a> mutagen::State for MutArg<'a> {
+    fn handle_event(&mut self, event: mutagen::Event) {
+        if let Some(profiler) = &mut self.profiler {
+            profiler.handle_event(event);
+        }
+    }
+}
 
 impl<'a> MutagenArg for MutArg<'a> {
     fn depth(&self) -> usize {
@@ -136,7 +153,8 @@ pub struct UpdArg<'a> {
     pub history: &'a History,
     pub depth: usize,
     pub current_t: usize,
-    pub image_preloader: &'a mut Preloader<Image>,
+    pub image_preloader: &'a Preloader<Image>,
+    pub profiler: &'a mut Option<MutagenProfiler>,
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, UpdArg<'a>> for UpdArg<'b> {
@@ -148,7 +166,8 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, UpdArg<'a>> for UpdArg<'b> {
             history: &self.history,
             depth: self.depth,
             current_t: self.current_t,
-            image_preloader: &mut self.image_preloader,
+            image_preloader: &self.image_preloader,
+            profiler: &mut self.profiler,
         }
     }
 }
@@ -176,11 +195,18 @@ impl<'a> From<GenArg<'a>> for UpdArg<'a> {
             coordinate_set: arg.coordinate_set,
             history: arg.history,
             image_preloader: arg.image_preloader,
+            profiler: arg.profiler,
         }
     }
 }
 
-impl<'a> mutagen::State for UpdArg<'a> {}
+impl<'a> mutagen::State for UpdArg<'a> {
+    fn handle_event(&mut self, event: mutagen::Event) {
+        if let Some(profiler) = &mut self.profiler {
+            profiler.handle_event(event);
+        }
+    }
+}
 
 impl<'a> MutagenArg for UpdArg<'a> {
     fn depth(&self) -> usize {

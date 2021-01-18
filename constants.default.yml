@@ -151,3 +151,6 @@ max_branch_depth: 5
 
 # Don't add this unless you have a smithsonian API key of your own.
 # smithsonian_api_key: "foobarbaz"
+
+mutagen_profiler: false
+mutagen_profiler_graphs: false

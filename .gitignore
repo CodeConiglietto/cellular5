@@ -6,3 +6,5 @@ perf.data
 perf.data.old
 flamegraph.svg
 constants.yml
+profile.json
+profile_graphs/

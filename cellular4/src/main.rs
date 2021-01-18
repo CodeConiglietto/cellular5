@@ -1,6 +1,6 @@
 #![allow(clippy::large_enum_variant)]
 
-use std::fs;
+use std::{fs, rc::Rc};
 
 use cpu_monitor::CpuInstant;
 use ggez::{
@@ -11,7 +11,7 @@ use ggez::{
     input::keyboard,
     timer, Context, ContextBuilder, GameResult,
 };
-use log::{error, info};
+use log::{info, warn};
 use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
 use ndarray::{s, ArrayViewMut1, Axis};
 use rand::prelude::*;
@@ -61,6 +61,7 @@ pub mod node_set;
 pub mod opts;
 pub mod preloader;
 pub mod prelude;
+pub mod profiler;
 pub mod ui;
 pub mod update_stat;
 pub mod util;
@@ -69,6 +70,11 @@ fn main() {
     std::env::set_var("RUST_BACKTRACE", "full");
 
     let opts = Opts::from_args();
+
+    // We initialize the preloader before the ggez context so it is destroyed after the context.
+    // The preloader can take a while to destroy since it may be waiting on IO/network,and we want the window to close responsively
+    let image_preloader = Rc::new(Preloader::new(32, RandomImageLoader::new));
+
     let (mut ctx, mut event_loop) = ContextBuilder::new("cellular4", "CodeBunny")
         .window_mode(
             WindowMode::default()
@@ -87,11 +93,24 @@ fn main() {
         .build()
         .expect("Could not create ggez context!");
 
-    let mut my_game = MyGame::new(&mut ctx, opts);
+    let mut my_game = MyGame::new(&mut ctx, opts, Rc::clone(&image_preloader));
 
     match event::run(&mut ctx, &mut event_loop, &mut my_game) {
-        Ok(_) => info!("Exited cleanly."),
-        Err(e) => error!("Error occurred: {}", e),
+        Ok(_) => println!("Exited cleanly."),
+        Err(e) => println!("Error occurred: {}", e),
+    }
+
+    if CONSTS.mutagen_profiler_graphs {
+        println!("Generating graphs...");
+
+        match MutagenProfiler::load(MutagenProfiler::default_path()) {
+            Ok(profiler) => profiler
+                .save_graphs(MutagenProfiler::default_graphs_path())
+                .unwrap_or_else(|e| warn!("Failed to save profiler graphs: {}", e)),
+            Err(e) => warn!("Failed to load profiler for graphing: {}", e),
+        }
+
+        println!("Done!");
     }
 }
 
@@ -99,7 +118,7 @@ fn setup_logging(ui: &Ui) {
     let image_error_dispatch = fern::Dispatch::new()
         .level(log::LevelFilter::Off)
         .level_for(datatype::image::MODULE_PATH, log::LevelFilter::Error)
-        .chain(fern::log_file("image_errors.log").unwrap());
+        .chain(fern::log_file(util::local_path("image_errors.log")).unwrap());
 
     fern::Dispatch::new()
         .format(|out, message, record| {
@@ -229,17 +248,22 @@ struct MyGame {
     rng: DeterministicRng,
     ui: Ui,
 
-    image_preloader: Preloader<Image>,
+    image_preloader: Rc<Preloader<Image>>,
+    profiler: Option<MutagenProfiler>,
 }
 
 impl MyGame {
-    pub fn new(ctx: &mut Context, opts: Opts) -> MyGame {
+    pub fn new(ctx: &mut Context, opts: Opts, image_preloader: Rc<Preloader<Image>>) -> MyGame {
         if let Some(seed) = opts.seed {
             info!("Manually setting RNG seed");
             *RNG_SEED.lock().unwrap() = seed;
         }
 
-        fs::write("last_seed.txt", &RNG_SEED.lock().unwrap().to_string()).unwrap();
+        fs::write(
+            util::local_path("last_seed.txt"),
+            &RNG_SEED.lock().unwrap().to_string(),
+        )
+        .unwrap();
 
         let mut rng = DeterministicRng::new();
 
@@ -250,8 +274,6 @@ impl MyGame {
             CONSTS.cell_array_history_length,
         );
 
-        let mut image_preloader = Preloader::new(32, RandomImageLoader::new);
-
         let mut nodes: Vec<_> = (0..=node::max_node_depth())
             .map(|_| NodeSet::new())
             .collect();
@@ -259,6 +281,17 @@ impl MyGame {
 
         let ui = Ui::new();
         setup_logging(&ui);
+
+        let mut profiler = if CONSTS.mutagen_profiler {
+            Some(
+                MutagenProfiler::load(MutagenProfiler::default_path()).unwrap_or_else(|e| {
+                    warn!("Failed to load profiler data: {}", e);
+                    MutagenProfiler::new()
+                }),
+            )
+        } else {
+            None
+        };
 
         MyGame {
             blank_texture: compute_blank_texture(ctx),
@@ -294,7 +327,8 @@ impl MyGame {
                     current_t: 0,
                     history: &history,
                     coordinate_set: history.history_steps[0].update_coordinate,
-                    image_preloader: &mut image_preloader,
+                    image_preloader: &*image_preloader,
+                    profiler: &mut profiler,
                 },
             ),
 
@@ -311,6 +345,7 @@ impl MyGame {
             rng,
             history,
             image_preloader,
+            profiler,
         }
     }
 }
@@ -457,7 +492,7 @@ impl EventHandler for MyGame {
                     1.0 - (global_color.get_average() - current_color.get_average()).abs(),
                 ), // / total_cells as f64
                 graph_stability: 0.0, //we don't accumulate this here because we set it below
-                cpu_usage: 0.0, //we don't accumulate this here because we set it below
+                cpu_usage: 0.0,       //we don't accumulate this here because we set it below
             }
         };
 
@@ -531,6 +566,7 @@ impl EventHandler for MyGame {
                         coordinate_set: history_step.update_coordinate,
                         history: &self.history,
                         image_preloader: &mut self.image_preloader,
+                        profiler: &mut self.profiler,
                     },
                 );
                 self.node_tree.root_frame_renderer.mutate_rng(
@@ -543,6 +579,7 @@ impl EventHandler for MyGame {
                         coordinate_set: history_step.update_coordinate,
                         history: &self.history,
                         image_preloader: &mut self.image_preloader,
+                        profiler: &mut self.profiler,
                     },
                 );
                 // // info!("{:#?}", &self.root_node);
@@ -565,6 +602,7 @@ impl EventHandler for MyGame {
                 data: &mut self.data,
                 depth: 0,
                 image_preloader: &mut self.image_preloader,
+                profiler: &mut self.profiler,
                 current_t,
             };
 
@@ -589,6 +627,7 @@ impl EventHandler for MyGame {
                 data: &mut self.data,
                 depth: 0,
                 image_preloader: &mut self.image_preloader,
+                profiler: &mut self.profiler,
                 current_t,
             };
 
@@ -610,10 +649,17 @@ impl EventHandler for MyGame {
                 .root_frame_renderer
                 .compute(step_com_arg.reborrow());
 
-            let use_nearest_neighbour_scaling = self.node_tree.scaling_mode_node.compute(step_com_arg.reborrow()).into_inner();
+            let use_nearest_neighbour_scaling = self
+                .node_tree
+                .scaling_mode_node
+                .compute(step_com_arg.reborrow())
+                .into_inner();
 
-            self.next_history_step.computed_texture =
-                compute_texture(ctx, self.next_history_step.cell_array.view(), use_nearest_neighbour_scaling);
+            self.next_history_step.computed_texture = compute_texture(
+                ctx,
+                self.next_history_step.cell_array.view(),
+                use_nearest_neighbour_scaling,
+            );
 
             self.node_tree.update_recursively(step_upd_arg.reborrow());
 
@@ -626,6 +672,7 @@ impl EventHandler for MyGame {
                     nodes: children,
                     data: &mut self.data,
                     image_preloader: &mut self.image_preloader,
+                    profiler: &mut self.profiler,
                     depth,
                     current_t,
                 };
@@ -641,6 +688,11 @@ impl EventHandler for MyGame {
             );
 
             self.ui.draw(&self.average_update_stat);
+            if let Some(profiler) = &self.profiler {
+                profiler
+                    .save(MutagenProfiler::default_path())
+                    .unwrap_or_else(|e| warn!("Failed to save profiler data: {}", e));
+            }
 
             self.current_t += 1;
             self.cpu_t = next_cpu_t;

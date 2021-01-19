@@ -9,6 +9,9 @@ pub use smithsonian::*;
 mod lorem_picsum;
 pub use lorem_picsum::*;
 
+mod gfycat;
+pub use gfycat::*;
+
 pub trait ImageDownloader {
     fn download_image(
         &mut self,

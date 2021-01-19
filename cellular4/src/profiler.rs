@@ -1,6 +1,6 @@
 use std::{
     borrow::Cow,
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fmt::Write as FmtWrite,
     fs,
     io::Write as IoWrite,
@@ -9,6 +9,7 @@ use std::{
 };
 
 use failure::{ensure, format_err, Fallible};
+use lazy_static::lazy_static;
 use mutagen::{Event, EventKind};
 use serde::{Deserialize, Serialize};
 
@@ -57,13 +58,20 @@ impl MutagenProfiler {
     }
 
     pub fn handle_event(&mut self, event: Event) {
-        let data = match event.kind {
-            EventKind::Generate => &mut self.generated,
-            EventKind::Mutate => &mut self.mutated,
-            EventKind::Update => &mut self.updated,
-        };
+        lazy_static! {
+            pub static ref KEY_BLACKLIST: HashSet<&'static str> =
+                ["NodeSet", "NodeTree"].iter().copied().collect();
+        }
 
-        *data.entry(event.key).or_insert(0) += 1;
+        if !KEY_BLACKLIST.contains(event.key.as_ref()) {
+            let data = match event.kind {
+                EventKind::Generate => &mut self.generated,
+                EventKind::Mutate => &mut self.mutated,
+                EventKind::Update => &mut self.updated,
+            };
+
+            *data.entry(event.key).or_insert(0) += 1;
+        }
     }
 }
 

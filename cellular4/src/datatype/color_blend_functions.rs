@@ -2,11 +2,13 @@ use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    datatype::{continuous::*, colors::*, discrete::*},
+    datatype::{colors::*, continuous::*, discrete::*},
     mutagen_args::*,
 };
 
-#[derive(Clone, Copy, Debug, Serialize, Deserialize, Generatable, Mutatable, UpdatableRecursively)]
+#[derive(
+    Clone, Copy, Debug, Serialize, Deserialize, Generatable, Mutatable, UpdatableRecursively,
+)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum ColorBlendFunctions {
     Dissolve,
@@ -15,12 +17,10 @@ pub enum ColorBlendFunctions {
 }
 
 impl ColorBlendFunctions {
-    pub fn blend(self, a: FloatColor, b: FloatColor) -> FloatColor
-    {
+    pub fn blend(self, a: FloatColor, b: FloatColor) -> FloatColor {
         match self {
             Self::Dissolve => {
-                if Boolean::random(&mut rand::thread_rng()).into_inner()
-                {
+                if Boolean::random(&mut rand::thread_rng()).into_inner() {
                     a
                 } else {
                     b

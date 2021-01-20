@@ -15,7 +15,7 @@ pub struct RenderArgs<'a> {
     pub current_t: usize,
     pub lerp_sub: f32,
     pub lerp_i: usize,
-    pub fresh_frame: bool,//Hack, expose this as function instead
+    pub fresh_frame: bool, //Hack, expose this as function instead
 }
 
 impl<'a> RenderArgs<'a> {
@@ -63,7 +63,9 @@ pub enum FrameRenderers {
         fade_color: FloatColor,
         fade_alpha_multiplier: UNFloat,
     },
-    Dripping {invert: Boolean},
+    Dripping {
+        invert: Boolean,
+    },
     SpaceOdyssey {
         axis: Boolean,
     },
@@ -126,10 +128,10 @@ impl FrameRenderers {
                         .dest([dest_x, dest_y])
                         .scale([scale_x, scale_y]),
                 )?;
-            },
-            FrameRenderers::DiscreteTransform => {//TODO FIX ME
-                if args.fresh_frame
-                {
+            }
+            FrameRenderers::DiscreteTransform => {
+                //TODO FIX ME
+                if args.fresh_frame {
                     let dest_x = CONSTS.initial_window_width * 0.5;
                     let dest_y = CONSTS.initial_window_height * 0.5;
 
@@ -141,18 +143,13 @@ impl FrameRenderers {
                         args.ctx,
                         &args.history_step().computed_texture,
                         DrawParam::new()
-                            .color(GgColor::new(
-                                1.0,
-                                1.0,
-                                1.0,
-                                1.0 / args.history_len() as f32,
-                            ))
+                            .color(GgColor::new(1.0, 1.0, 1.0, 1.0 / args.history_len() as f32))
                             .offset([0.5, 0.5])
                             .dest([dest_x, dest_y])
                             .scale([scale_x * scalar, scale_y * scalar]),
                     )?;
                 }
-            },
+            }
             FrameRenderers::InterleavedRotate => {
                 let original_alpha = 1.0 - args.back_lerp_val();
                 let alpha = (1.0 - ((original_alpha * 2.0) - 1.0).abs())
@@ -164,8 +161,14 @@ impl FrameRenderers {
                 let scale_x = CONSTS.initial_window_width / CONSTS.cell_array_width as f32;
                 let scale_y = CONSTS.initial_window_height / CONSTS.cell_array_height as f32;
                 //TODO fix
-                let invert = (args.history_step().update_coordinate.get_byte_t().into_inner() % 2) == 0;
-                let inversion_scalar = if invert {-1.0} else {1.0};
+                let invert = (args
+                    .history_step()
+                    .update_coordinate
+                    .get_byte_t()
+                    .into_inner()
+                    % 2)
+                    == 0;
+                let inversion_scalar = if invert { -1.0 } else { 1.0 };
                 ggez::graphics::draw(
                     args.ctx,
                     &args.history_step().computed_texture,
@@ -180,13 +183,12 @@ impl FrameRenderers {
                         .dest([dest_x, dest_y])
                         .scale([scale_x * inversion_scalar, scale_y])
                         .rotation(
-                            PI
-                            * original_alpha
-                            * args.history_step().root_scalar.into_inner() 
+                            PI * original_alpha
+                                * args.history_step().root_scalar.into_inner()
                                 * inversion_scalar,
                         ),
                 )?;
-            },
+            }
             FrameRenderers::FadeAndChild {
                 child,
                 fade_color,
@@ -228,16 +230,20 @@ impl FrameRenderers {
                 }
                 child.draw(args).unwrap();
             }
-            FrameRenderers::Dripping {invert} => {
+            FrameRenderers::Dripping { invert } => {
                 let original_alpha = 1.0 - args.back_lerp_val();
 
                 let dest_x = CONSTS.initial_window_width * 0.5;
-                let dest_y = if invert.into_inner() {CONSTS.initial_window_height} else {0.0};
+                let dest_y = if invert.into_inner() {
+                    CONSTS.initial_window_height
+                } else {
+                    0.0
+                };
 
                 let scale_x = CONSTS.initial_window_width / CONSTS.cell_array_width as f32;
                 let scale_y = CONSTS.initial_window_height / CONSTS.cell_array_height as f32;
 
-                let offset_y = if invert.into_inner() {1.0} else {0.0};
+                let offset_y = if invert.into_inner() { 1.0 } else { 0.0 };
 
                 ggez::graphics::draw(
                     args.ctx,
@@ -378,8 +384,7 @@ impl FrameRenderers {
                 render_single_frame,
                 invert_t_offset,
             } => {
-                if args.fresh_frame && (!render_single_frame.into_inner() || args.lerp_i == 0)
-                {
+                if args.fresh_frame && (!render_single_frame.into_inner() || args.lerp_i == 0) {
                     let original_alpha = 1.0 - args.back_lerp_val();
                     //TODO fix
                     let dest_x = CONSTS.initial_window_width * 0.5;
@@ -388,20 +393,20 @@ impl FrameRenderers {
                     let scale_x = CONSTS.initial_window_width / CONSTS.cell_array_width as f32;
                     let scale_y = CONSTS.initial_window_height / CONSTS.cell_array_height as f32;
 
-                    let t_offset = if invert_t_offset.into_inner() {args.lerp_len() - args.lerp_i} else {args.lerp_i};
+                    let t_offset = if invert_t_offset.into_inner() {
+                        args.lerp_len() - args.lerp_i
+                    } else {
+                        args.lerp_i
+                    };
 
-                    let angle = (rotation_value.into_inner()) * (args.current_t + (t_offset)) as f32;
+                    let angle =
+                        (rotation_value.into_inner()) * (args.current_t + (t_offset)) as f32;
 
                     ggez::graphics::draw(
                         args.ctx,
                         &args.history_step().computed_texture,
                         DrawParam::new()
-                            .color(GgColor::new(
-                                1.0,
-                                1.0,
-                                1.0,
-                                1.0 / args.history_len() as f32,
-                            ))
+                            .color(GgColor::new(1.0, 1.0, 1.0, 1.0 / args.history_len() as f32))
                             .offset([0.5, 0.5])
                             .dest([dest_x, dest_y])
                             .scale([scale_x, scale_y])

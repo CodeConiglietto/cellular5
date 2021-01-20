@@ -20,7 +20,7 @@ pub enum FrameRendererNodes {
         invert_t_offset: Boolean,
     },
     #[mutagen(gen_weight = leaf_node_weight)]
-    Dripping {invert: Boolean},
+    Dripping { invert: Boolean },
     #[mutagen(gen_weight = leaf_node_weight)]
     SpaceOdyssey { axis: Boolean },
     #[mutagen(gen_weight = leaf_node_weight)]
@@ -69,11 +69,19 @@ impl Node for FrameRendererNodes {
             FrameRendererNodes::BasicFade => FrameRenderers::BasicFade,
             FrameRendererNodes::InterleavedRotate => FrameRenderers::InterleavedRotate,
             FrameRendererNodes::DiscreteTransform => FrameRenderers::DiscreteTransform,
-            FrameRendererNodes::DiscreteRotation{rotation_value, render_single_frame, invert_t_offset} => FrameRenderers::DiscreteRotation{rotation_value: *rotation_value, render_single_frame: *render_single_frame, invert_t_offset: *invert_t_offset},
-            FrameRendererNodes::Dripping {invert} => FrameRenderers::Dripping{invert: *invert},
-            FrameRendererNodes::SpaceOdyssey { axis } => FrameRenderers::SpaceOdyssey {
-                axis: *axis,
+            FrameRendererNodes::DiscreteRotation {
+                rotation_value,
+                render_single_frame,
+                invert_t_offset,
+            } => FrameRenderers::DiscreteRotation {
+                rotation_value: *rotation_value,
+                render_single_frame: *render_single_frame,
+                invert_t_offset: *invert_t_offset,
             },
+            FrameRendererNodes::Dripping { invert } => FrameRenderers::Dripping { invert: *invert },
+            FrameRendererNodes::SpaceOdyssey { axis } => {
+                FrameRenderers::SpaceOdyssey { axis: *axis }
+            }
             FrameRendererNodes::InfiniZoom { invert_direction } => FrameRenderers::InfiniZoom {
                 invert_direction: *invert_direction,
             },

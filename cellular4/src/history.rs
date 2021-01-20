@@ -16,11 +16,20 @@ pub struct HistoryStep {
 }
 
 impl HistoryStep {
-    pub fn new(ctx: &mut Context, array_width: usize, array_height: usize, use_nearest_neighbour_scaling: bool) -> Self {
+    pub fn new(
+        ctx: &mut Context,
+        array_width: usize,
+        array_height: usize,
+        use_nearest_neighbour_scaling: bool,
+    ) -> Self {
         let cell_array = init_cell_array(array_width, array_height);
 
         Self {
-            computed_texture: compute_texture(ctx, cell_array.view(), use_nearest_neighbour_scaling),
+            computed_texture: compute_texture(
+                ctx,
+                cell_array.view(),
+                use_nearest_neighbour_scaling,
+            ),
             cell_array,
             update_coordinate: CoordinateSet {
                 x: SNFloat::ZERO,

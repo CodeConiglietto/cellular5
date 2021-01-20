@@ -159,13 +159,19 @@ pub enum PointSetGenerator {
 
     Moore,
     VonNeumann,
-    Uniform { count: Byte },
-    Poisson { count: Byte, radius: UNFloat },
-    Spiral { 
-        count: Byte, 
-        scalar: UNFloat, 
-        maximum: Angle, 
-        linear: Boolean, nonlinearity_factor_halved: UNFloat//This is the easiest way to introduce a variable nonlinearity which includes both squaring and square rooting
+    Uniform {
+        count: Byte,
+    },
+    Poisson {
+        count: Byte,
+        radius: UNFloat,
+    },
+    Spiral {
+        count: Byte,
+        scalar: UNFloat,
+        maximum: Angle,
+        linear: Boolean,
+        nonlinearity_factor_halved: UNFloat, //This is the easiest way to introduce a variable nonlinearity which includes both squaring and square rooting
     },
 }
 
@@ -212,7 +218,13 @@ impl PointSetGenerator {
                     normaliser,
                 )
             }
-            PointSetGenerator::Spiral { count, scalar, maximum, linear, nonlinearity_factor_halved } => {
+            PointSetGenerator::Spiral {
+                count,
+                scalar,
+                maximum,
+                linear,
+                nonlinearity_factor_halved,
+            } => {
                 let count = count.into_inner().max(1);
                 let scalar = scalar.into_inner();
                 let maximum = maximum.into_inner();
@@ -223,7 +235,14 @@ impl PointSetGenerator {
                     .map(|i| {
                         let rho = i as f32 / count as f32;
 
-                        let theta = count as f32 * maximum * scalar * if linear {rho} else{rho.powf(nonlinearity_factor)};
+                        let theta = count as f32
+                            * maximum
+                            * scalar
+                            * if linear {
+                                rho
+                            } else {
+                                rho.powf(nonlinearity_factor)
+                            };
                         SNPoint::from_snfloats(
                             SNFloat::new(rho * f32::sin(theta)),
                             SNFloat::new(rho * f32::cos(theta)),

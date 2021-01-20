@@ -288,12 +288,9 @@ impl Node for SNFloatNodes {
                 scale_y,
                 scale_t,
             } => SNFloat::new_clamped(noise_function.compute(
-                compute_arg.coordinate_set.x.into_inner() as f64
-                    * scale_x.into_inner() as f64,
-                compute_arg.coordinate_set.y.into_inner() as f64
-                    * scale_y.into_inner() as f64,
-                compute_arg.coordinate_set.t as f64
-                    * (scale_t.into_inner() / 4) as f64,
+                compute_arg.coordinate_set.x.into_inner() as f64 * scale_x.into_inner() as f64,
+                compute_arg.coordinate_set.y.into_inner() as f64 * scale_y.into_inner() as f64,
+                compute_arg.coordinate_set.t as f64 * (scale_t.into_inner() / 4) as f64,
             ) as f32),
             // IterativeMatrixNoiseFunction {
             //     noise_function,
@@ -381,7 +378,8 @@ pub enum UNFloatNodes {
         child_b: NodeBox<UNFloatNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
-    NoiseFunction {//Putting one here and converting to brute force more interesting behaviour- This will more readily convert to a colour than the SNFloat version
+    NoiseFunction {
+        //Putting one here and converting to brute force more interesting behaviour- This will more readily convert to a colour than the SNFloat version
         noise_function: NoiseFunctions,
         scale_x: Nibble,
         scale_y: Nibble,
@@ -514,13 +512,11 @@ impl Node for UNFloatNodes {
                 scale_y,
                 scale_t,
             } => SNFloat::new_clamped(noise_function.compute(
-                compute_arg.coordinate_set.x.into_inner() as f64
-                    * scale_x.into_inner() as f64,
-                compute_arg.coordinate_set.y.into_inner() as f64
-                    * scale_y.into_inner() as f64,
-                compute_arg.coordinate_set.t as f64
-                    * (scale_t.into_inner() / 4) as f64,
-            ) as f32).to_unsigned(),
+                compute_arg.coordinate_set.x.into_inner() as f64 * scale_x.into_inner() as f64,
+                compute_arg.coordinate_set.y.into_inner() as f64 * scale_y.into_inner() as f64,
+                compute_arg.coordinate_set.t as f64 * (scale_t.into_inner() / 4) as f64,
+            ) as f32)
+            .to_unsigned(),
             InvertNormalised { child } => {
                 UNFloat::new(1.0 - child.compute(compute_arg.reborrow()).into_inner())
             }

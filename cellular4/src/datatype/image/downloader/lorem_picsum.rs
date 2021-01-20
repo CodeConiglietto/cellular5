@@ -1,6 +1,5 @@
 use failure::{format_err, Fallible};
 use image::ImageFormat;
-use log::debug;
 use reqwest::blocking::Client as HttpClient;
 
 use crate::{
@@ -45,8 +44,6 @@ impl ImageDownloader for LoremPicsum {
 
         let name = format!("{} (Lorem Picsum)", &filename);
         let format = ImageFormat::from_path(&filename).ok();
-
-        debug!("Downloaded image: {}", name);
 
         Ok(Image::load(ImageSource::Other(name), &buf, format)?)
     }

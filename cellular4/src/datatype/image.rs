@@ -1,5 +1,5 @@
 use std::{
-    fmt::{self, Debug, Formatter},
+    fmt::{self, Debug, Display, Formatter},
     fs,
     io::Cursor,
     path::{Path, PathBuf},
@@ -12,7 +12,7 @@ use lazy_static::lazy_static;
 use log::{debug, error, info, warn};
 use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
 use rand::prelude::*;
-use reqwest::blocking::Client as HttpClient;
+use reqwest::blocking::{Client as HttpClient, ClientBuilder as HttpClientBuilder};
 use serde::{de::Deserializer, ser::Serializer, Deserialize, Serialize};
 
 use crate::{
@@ -48,7 +48,13 @@ pub struct RandomImageLoader {
 
 impl RandomImageLoader {
     pub fn new() -> Self {
-        let mut http = HttpClient::new();
+        // Cloudflare likes to randomly block user-agents that don't look like a browser, so we spoof a regular user-agent
+        const USER_AGENT: &str = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36";
+
+        let mut http = HttpClientBuilder::new()
+            //.user_agent(USER_AGENT)
+            .build()
+            .expect("Failed to initialize HTTP client");
 
         let mut downloaders: Vec<Box<dyn ImageDownloader + Send>> =
             vec![Box::new(LoremPicsum::new())];
@@ -85,11 +91,15 @@ impl RandomImageLoader {
     }
 
     fn download_image(&mut self) -> Fallible<Image> {
-        Ok(self
+        let image = self
             .downloaders
             .choose_mut(&mut self.rng)
             .ok_or_else(|| format_err!("No downloaders available"))?
-            .download_image(&mut self.rng, &mut self.http)?)
+            .download_image(&mut self.rng, &mut self.http)?;
+
+        debug!("Downloaded image: {}", image.source());
+
+        Ok(image)
     }
 }
 
@@ -189,6 +199,10 @@ impl Image {
         )
     }
 
+    pub fn source(&self) -> &ImageSource {
+        &self.0.source
+    }
+
     pub fn info(&self) -> ImageInfo {
         ImageInfo {
             source: self.0.source.clone(),
@@ -201,6 +215,16 @@ pub enum ImageSource {
     Fallback,
     Local(PathBuf),
     Other(String),
+}
+
+impl Display for ImageSource {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        match self {
+            ImageSource::Fallback => write!(f, "Fallback"),
+            ImageSource::Local(p) => write!(f, "{}", p.to_string_lossy()),
+            ImageSource::Other(s) => write!(f, "{}", s),
+        }
+    }
 }
 
 fn load_frames(data: &[u8], format: Option<ImageFormat>) -> image::ImageResult<Vec<RgbaImage>> {

@@ -1,9 +1,11 @@
+use std::fmt::{self, Display, Formatter};
+
 use failure::{format_err, Fallible};
 use image::ImageFormat;
-use log::debug;
+use log::{debug, warn};
 use rand::prelude::*;
 use reqwest::{blocking::Client as HttpClient, StatusCode};
-use serde::{Deserialize, Serialize};
+use serde::{de::Deserializer, Deserialize, Serialize};
 
 use crate::{
     datatype::image::{downloader::ImageDownloader, Image, ImageSource},
@@ -12,23 +14,33 @@ use crate::{
 
 mod endpoints {
     pub const TOKEN: &str = "https://api.gfycat.com/v1/oauth/token";
-    pub const TRENDING: &str = "https://api.gfycat.com/v1/reactions/populated";
+    pub const TRENDING: &str = "https://api.gfycat.com/v1/gfycats/trending";
+    pub const TRENDING_TAGS: &str = "https://api.gfycat.com/v1/tags/trending";
 }
 
 pub struct Gfycat {
     client_id: String,
     client_secret: String,
     token: Token,
+    tags: Vec<String>,
 }
 
 impl Gfycat {
     pub fn new(client_id: String, client_secret: String, http: &mut HttpClient) -> Fallible<Self> {
         let token = auth(&client_id, &client_secret, http)?;
+        let tags = http
+            .get(endpoints::TRENDING_TAGS)
+            .query(&[("tagCount", "100")])
+            .bearer_auth(&token.access_token)
+            .send()?
+            .error_for_status()?
+            .json()?;
 
         Ok(Self {
             client_id,
             client_secret,
             token,
+            tags,
         })
     }
 }
@@ -52,33 +64,65 @@ impl ImageDownloader for Gfycat {
         rng: &mut DeterministicRng,
         http: &mut HttpClient,
     ) -> Fallible<Image> {
-        let mut response = http
-            .get(endpoints::TRENDING)
-            .query(&[("tagName", "trending")])
-            .bearer_auth(&self.token.access_token)
-            .send()?;
+        let items = loop {
+            if self.tags.is_empty() {
+                return Err(format_err!("No tags available"));
+            }
 
-        if response.status() == StatusCode::UNAUTHORIZED {
-            debug!("Unauthorized response, reauthenticating");
-            self.token = auth(&self.client_id, &self.client_secret, http)?;
+            let tag_idx = rng.gen_range(0, self.tags.len());
+            let tag = &self.tags[tag_idx];
 
-            response = http
+            debug!("Querying tag {}", tag);
+
+            let request = http
                 .get(endpoints::TRENDING)
-                .query(&[("tagName", "trending")])
-                .bearer_auth(&self.token.access_token)
+                .query(&[("tagName", tag.as_str()), ("count", "100")])
+                .bearer_auth(&self.token.access_token);
+
+            let mut response = request
+                .try_clone()
+                .ok_or_else(|| format_err!("Failed to clone request"))?
                 .send()?;
-        }
 
-        let response: TrendingResponse = response.error_for_status()?.json()?;
+            if response.status() == StatusCode::UNAUTHORIZED {
+                debug!("Unauthorized response, reauthenticating");
+                self.token = auth(&self.client_id, &self.client_secret, http)?;
+                response = request.send()?;
+            }
 
-        let entry = response
-            .gfycats
+            let response: TrendingResponse = response.error_for_status()?.json()?;
+            let mut items = response.gfycats;
+            items.retain(|e| e.published && !e.nsfw);
+
+            if items.is_empty() {
+                warn!("Discarding tag {}: no images found", tag);
+                self.tags.remove(tag_idx);
+            } else {
+                debug!("Found {} images for tag {}", items.len(), tag);
+                break items;
+            }
+        };
+
+        let entry = items
             .choose(rng)
             .ok_or_else(|| format_err!("No results returned"))?;
 
         let mut buf = Vec::new();
-        let mut response = http.get(&entry.gif_url).send()?.error_for_status()?;
+        let mut response = http
+            .get(&entry.max_2_mb_gif)
+            .bearer_auth(&self.token.access_token)
+            .send()?;
+
         response.copy_to(&mut buf)?;
+
+        if !response.status().is_success() {
+            let error: Result<ErrorResponse, _> = serde_json::from_slice(&buf);
+
+            return match error {
+                Ok(error) => Err(format_err!("{}", error)),
+                Err(e) => Err(format_err!("{} ({})", String::from_utf8_lossy(&buf), e)),
+            };
+        }
 
         let name = format!("{} (Gfycat)", &entry.title);
 
@@ -119,5 +163,43 @@ struct TrendingResponse {
 struct GfycatEntry {
     gfy_id: String,
     gif_url: String,
+    #[serde(rename = "max1mbGif")]
+    max_1_mb_gif: String,
+    #[serde(rename = "max2mbGif")]
+    max_2_mb_gif: String,
     title: String,
+    #[serde(deserialize_with = "bool_from_int")]
+    published: bool,
+    #[serde(deserialize_with = "bool_from_int")]
+    nsfw: bool,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ErrorResponse {
+    error_message: ErrorMessage,
+}
+
+impl Display for ErrorResponse {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{} ({})",
+            self.error_message.code, self.error_message.description
+        )
+    }
+}
+
+#[derive(Deserialize)]
+struct ErrorMessage {
+    code: String,
+    description: String,
+}
+
+fn bool_from_int<'de, D>(deserializer: D) -> Result<bool, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let int = u8::deserialize(deserializer)?;
+    Ok(int != 0)
 }

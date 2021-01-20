@@ -153,10 +153,10 @@ impl ImageDownloader for Gfycat {
         let items = loop {
             let list = match (self.tags.is_empty(), self.config.search_terms.is_empty()) {
                 (false, false) => {
-                    if rng.gen_bool(0.5) {
-                        self.download_from_search(rng, http)?
-                    } else {
+                    if rng.gen_bool(self.config.trending_weight) {
                         self.download_from_trending_tag(rng, http)?
+                    } else {
+                        self.download_from_search(rng, http)?
                     }
                 }
 

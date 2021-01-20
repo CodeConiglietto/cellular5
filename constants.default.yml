@@ -157,6 +157,7 @@ max_branch_depth: 5
 #   client_id: "foobarbaz"
 #   client_secret: "foobarbaz"
 #   trending: true
+#   trending_weight: 0.5
 #   exclude_nsfw: true
 #   # You can omit this to just search trending
 #   # search_terms:

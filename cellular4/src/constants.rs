@@ -103,7 +103,22 @@ pub struct GfycatConfig {
     pub client_id: String,
     pub client_secret: String,
     pub trending: bool,
+    pub trending_weight: f64,
     pub exclude_nsfw: bool,
     #[serde(default)]
     pub search_terms: Vec<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn deserialize_default_constants() {
+        let _: Constants = serde_yaml::from_str(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../constants.default.yml"
+        )))
+        .unwrap();
+    }
 }

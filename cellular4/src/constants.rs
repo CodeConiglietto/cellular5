@@ -102,7 +102,8 @@ pub struct Constants {
 pub struct GfycatConfig {
     pub client_id: String,
     pub client_secret: String,
+    pub trending: bool,
+    pub exclude_nsfw: bool,
     #[serde(default)]
     pub search_terms: Vec<String>,
-    pub trending: bool,
 }

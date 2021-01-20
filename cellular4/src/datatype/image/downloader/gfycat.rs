@@ -118,7 +118,7 @@ impl Gfycat {
 
         let response: SearchResponse = response.error_for_status()?.json()?;
         let mut items = response.gfycats;
-        items.retain(|e| e.published && !e.nsfw);
+        items.retain(|e| e.published && (!self.config.exclude_nsfw || !e.nsfw));
 
         if items.is_empty() {
             warn!("Discarding search term {}: no images found", term);

@@ -92,7 +92,14 @@ pub struct Constants {
     pub max_branch_depth: usize,
 
     pub smithsonian_api_key: Option<String>,
+    pub gfycat_api_key: Option<OAuthKey>,
 
     pub mutagen_profiler: bool,
     pub mutagen_profiler_graphs: bool,
+}
+
+#[derive(Deserialize)]
+pub struct OAuthKey {
+    pub client_id: String,
+    pub client_secret: String,
 }

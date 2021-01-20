@@ -146,10 +146,9 @@ impl ImageDownloader for Smithsonian {
 }
 
 #[derive(Deserialize)]
+#[allow(dead_code)]
 struct Response<T> {
-    #[allow(dead_code)]
     status: u16,
-    #[allow(dead_code)]
     #[serde(rename = "responseCode")]
     response_code: u16,
     response: T,
@@ -167,8 +166,8 @@ struct Search {
 }
 
 #[derive(Deserialize)]
+#[allow(dead_code)]
 struct Row {
-    #[allow(dead_code)]
     id: String,
     content: Content,
 }
@@ -192,10 +191,10 @@ struct OnlineMedia {
 }
 
 #[derive(Deserialize)]
+#[allow(dead_code)]
 struct Media {
     #[serde(rename = "type")]
     pub _type: String,
-    #[allow(dead_code)]
     pub content: String,
     #[serde(default)]
     pub resources: Vec<Resource>,

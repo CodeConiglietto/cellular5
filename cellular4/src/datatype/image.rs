@@ -63,6 +63,20 @@ impl RandomImageLoader {
             }
         }
 
+        if let Some(api_key) = &CONSTS.gfycat_api_key {
+            match Gfycat::new(
+                api_key.client_id.clone(),
+                api_key.client_secret.clone(),
+                &mut http,
+            ) {
+                Ok(s) => {
+                    info!("Initialized Gfycat API");
+                    downloaders.push(Box::new(s));
+                }
+                Err(e) => error!("Failed to initialize Gfycat API: {}", e),
+            }
+        }
+
         Self {
             rng: DeterministicRng::new(),
             http,

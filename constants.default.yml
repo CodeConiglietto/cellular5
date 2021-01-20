@@ -153,9 +153,14 @@ max_branch_depth: 5
 # smithsonian_api_key: "foobarbaz"
 
 # Don't add this unless you have a Gfycat API key of your own.
-# gfycat_api_key:
+# gfycat:
 #   client_id: "foobarbaz"
 #   client_secret: "foobarbaz"
+#   trending: true
+#   # You can omit this to just search trending
+#   # search_terms:
+#   #   - bepis
+#   #   - bunny
 
 mutagen_profiler: false
 mutagen_profiler_graphs: false

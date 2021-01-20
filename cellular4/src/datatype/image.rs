@@ -12,7 +12,7 @@ use lazy_static::lazy_static;
 use log::{debug, error, info, warn};
 use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
 use rand::prelude::*;
-use reqwest::blocking::{Client as HttpClient, ClientBuilder as HttpClientBuilder};
+use reqwest::blocking::Client as HttpClient;
 use serde::{de::Deserializer, ser::Serializer, Deserialize, Serialize};
 
 use crate::{
@@ -48,13 +48,7 @@ pub struct RandomImageLoader {
 
 impl RandomImageLoader {
     pub fn new() -> Self {
-        // Cloudflare likes to randomly block user-agents that don't look like a browser, so we spoof a regular user-agent
-        const USER_AGENT: &str = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/87.0.4280.141 Safari/537.36";
-
-        let mut http = HttpClientBuilder::new()
-            //.user_agent(USER_AGENT)
-            .build()
-            .expect("Failed to initialize HTTP client");
+        let mut http = HttpClient::new();
 
         let mut downloaders: Vec<Box<dyn ImageDownloader + Send>> =
             vec![Box::new(LoremPicsum::new())];
@@ -69,12 +63,8 @@ impl RandomImageLoader {
             }
         }
 
-        if let Some(api_key) = &CONSTS.gfycat_api_key {
-            match Gfycat::new(
-                api_key.client_id.clone(),
-                api_key.client_secret.clone(),
-                &mut http,
-            ) {
+        if let Some(config) = &CONSTS.gfycat {
+            match Gfycat::new(config, &mut http) {
                 Ok(s) => {
                     info!("Initialized Gfycat API");
                     downloaders.push(Box::new(s));

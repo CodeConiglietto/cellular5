@@ -5,9 +5,13 @@ use image::ImageFormat;
 use log::{debug, warn};
 use rand::prelude::*;
 use reqwest::{blocking::Client as HttpClient, StatusCode};
-use serde::{de::Deserializer, Deserialize, Serialize};
+use serde::{
+    de::{self, Deserializer, Visitor},
+    Deserialize, Serialize,
+};
 
 use crate::{
+    constants::GfycatConfig,
     datatype::image::{downloader::ImageDownloader, Image, ImageSource},
     util::DeterministicRng,
 };
@@ -16,32 +20,114 @@ mod endpoints {
     pub const TOKEN: &str = "https://api.gfycat.com/v1/oauth/token";
     pub const TRENDING: &str = "https://api.gfycat.com/v1/gfycats/trending";
     pub const TRENDING_TAGS: &str = "https://api.gfycat.com/v1/tags/trending";
+    pub const SEARCH: &str = "https://api.gfycat.com/v1/gfycats/search";
 }
 
 pub struct Gfycat {
-    client_id: String,
-    client_secret: String,
+    config: GfycatConfig,
     token: Token,
     tags: Vec<String>,
 }
 
 impl Gfycat {
-    pub fn new(client_id: String, client_secret: String, http: &mut HttpClient) -> Fallible<Self> {
-        let token = auth(&client_id, &client_secret, http)?;
-        let tags = http
-            .get(endpoints::TRENDING_TAGS)
-            .query(&[("tagCount", "100")])
-            .bearer_auth(&token.access_token)
-            .send()?
-            .error_for_status()?
-            .json()?;
+    pub fn new(config: &GfycatConfig, http: &mut HttpClient) -> Fallible<Self> {
+        let token = auth(&config.client_id, &config.client_secret, http)?;
+        let tags = if config.trending {
+            http.get(endpoints::TRENDING_TAGS)
+                .query(&[("tagCount", "100")])
+                .bearer_auth(&token.access_token)
+                .send()?
+                .error_for_status()?
+                .json()?
+        } else {
+            Vec::new()
+        };
 
         Ok(Self {
-            client_id,
-            client_secret,
+            config: config.clone(),
             token,
             tags,
         })
+    }
+
+    fn download_from_trending_tag(
+        &mut self,
+        rng: &mut DeterministicRng,
+        http: &mut HttpClient,
+    ) -> Fallible<Option<Vec<GfycatEntry>>> {
+        let idx = rng.gen_range(0, self.tags.len());
+        let tag = &self.tags[idx];
+
+        debug!("Querying tag {}", tag);
+
+        let request = http
+            .get(endpoints::TRENDING)
+            .query(&[("tagName", tag.as_str()), ("count", "100")])
+            .bearer_auth(&self.token.access_token);
+
+        let mut response = request
+            .try_clone()
+            .ok_or_else(|| format_err!("Failed to clone request"))?
+            .send()?;
+
+        if response.status() == StatusCode::UNAUTHORIZED {
+            debug!("Unauthorized response, reauthenticating");
+            self.token = auth(&self.config.client_id, &self.config.client_secret, http)?;
+            response = request.send()?;
+        }
+
+        let response: TrendingResponse = response.error_for_status()?.json()?;
+        let mut items = response.gfycats;
+        items.retain(|e| e.published && !e.nsfw);
+
+        if items.is_empty() {
+            warn!("Discarding tag {}: no images found", tag);
+            self.tags.remove(idx);
+            Ok(None)
+        } else {
+            debug!("Found {} images for tag {}", items.len(), tag);
+            Ok(Some(items))
+        }
+    }
+
+    fn download_from_search(
+        &mut self,
+        rng: &mut DeterministicRng,
+        http: &mut HttpClient,
+    ) -> Fallible<Option<Vec<GfycatEntry>>> {
+        let idx = rng.gen_range(0, self.config.search_terms.len());
+        let term = &self.config.search_terms[idx];
+
+        debug!("Querying search term {}", term);
+
+        let request = http
+            .get(endpoints::SEARCH)
+            .query(&[("search_text", term.as_str()), ("count", "100")])
+            .bearer_auth(&self.token.access_token);
+
+        let mut response = request
+            .try_clone()
+            .ok_or_else(|| format_err!("Failed to clone request"))?
+            .send()?;
+
+        if response.status() == StatusCode::UNAUTHORIZED {
+            debug!("Unauthorized response, reauthenticating");
+            self.token = auth(&self.config.client_id, &self.config.client_secret, http)?;
+            response = request.send()?;
+        }
+
+        let response: SearchResponse = response.error_for_status()?.json()?;
+        let mut items = response.gfycats;
+        items.retain(|e| e.published && !e.nsfw);
+
+        if items.is_empty() {
+            warn!("Discarding search term {}: no images found", term);
+            self.config.search_terms.remove(idx);
+            Ok(None)
+        } else {
+            debug!("Found {} images for search term {}", items.len(), term);
+            Ok(Some(items))
+        }
     }
 }
 
@@ -65,41 +151,23 @@ impl ImageDownloader for Gfycat {
         http: &mut HttpClient,
     ) -> Fallible<Image> {
         let items = loop {
-            if self.tags.is_empty() {
-                return Err(format_err!("No tags available"));
-            }
+            let list = match (self.tags.is_empty(), self.config.search_terms.is_empty()) {
+                (false, false) => {
+                    if rng.gen_bool(0.5) {
+                        self.download_from_search(rng, http)?
+                    } else {
+                        self.download_from_trending_tag(rng, http)?
+                    }
+                }
 
-            let tag_idx = rng.gen_range(0, self.tags.len());
-            let tag = &self.tags[tag_idx];
+                (true, false) => self.download_from_search(rng, http)?,
+                (false, true) => self.download_from_trending_tag(rng, http)?,
 
-            debug!("Querying tag {}", tag);
+                (true, true) => return Err(format_err!("No tags or search terms available")),
+            };
 
-            let request = http
-                .get(endpoints::TRENDING)
-                .query(&[("tagName", tag.as_str()), ("count", "100")])
-                .bearer_auth(&self.token.access_token);
-
-            let mut response = request
-                .try_clone()
-                .ok_or_else(|| format_err!("Failed to clone request"))?
-                .send()?;
-
-            if response.status() == StatusCode::UNAUTHORIZED {
-                debug!("Unauthorized response, reauthenticating");
-                self.token = auth(&self.client_id, &self.client_secret, http)?;
-                response = request.send()?;
-            }
-
-            let response: TrendingResponse = response.error_for_status()?.json()?;
-            let mut items = response.gfycats;
-            items.retain(|e| e.published && !e.nsfw);
-
-            if items.is_empty() {
-                warn!("Discarding tag {}: no images found", tag);
-                self.tags.remove(tag_idx);
-            } else {
-                debug!("Found {} images for tag {}", items.len(), tag);
-                break items;
+            if let Some(list) = list {
+                break list;
             }
         };
 
@@ -158,6 +226,14 @@ struct TrendingResponse {
 }
 
 #[derive(Deserialize)]
+#[allow(dead_code)]
+struct SearchResponse {
+    found: u64,
+    cursor: String,
+    gfycats: Vec<GfycatEntry>,
+}
+
+#[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[allow(dead_code)]
 struct GfycatEntry {
@@ -200,6 +276,78 @@ fn bool_from_int<'de, D>(deserializer: D) -> Result<bool, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let int = u8::deserialize(deserializer)?;
-    Ok(int != 0)
+    deserializer.deserialize_any(BoolFromIntVisitor)
+}
+
+struct BoolFromIntVisitor;
+
+impl<'de> Visitor<'de> for BoolFromIntVisitor {
+    type Value = bool;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("an integer or string")
+    }
+
+    fn visit_i8<E>(self, value: i8) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(value != 0)
+    }
+
+    fn visit_i16<E>(self, value: i16) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(value != 0)
+    }
+
+    fn visit_i32<E>(self, value: i32) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(value != 0)
+    }
+
+    fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(value != 0)
+    }
+
+    fn visit_u8<E>(self, value: u8) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(value != 0)
+    }
+
+    fn visit_u16<E>(self, value: u16) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(value != 0)
+    }
+
+    fn visit_u32<E>(self, value: u32) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(value != 0)
+    }
+
+    fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(value != 0)
+    }
+
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(value != "0")
+    }
 }

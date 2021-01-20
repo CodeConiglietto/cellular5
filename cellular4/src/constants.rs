@@ -92,14 +92,17 @@ pub struct Constants {
     pub max_branch_depth: usize,
 
     pub smithsonian_api_key: Option<String>,
-    pub gfycat_api_key: Option<OAuthKey>,
+    pub gfycat: Option<GfycatConfig>,
 
     pub mutagen_profiler: bool,
     pub mutagen_profiler_graphs: bool,
 }
 
-#[derive(Deserialize)]
-pub struct OAuthKey {
+#[derive(Clone, Deserialize)]
+pub struct GfycatConfig {
     pub client_id: String,
     pub client_secret: String,
+    #[serde(default)]
+    pub search_terms: Vec<String>,
+    pub trending: bool,
 }

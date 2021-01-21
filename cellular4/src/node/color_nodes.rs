@@ -149,7 +149,6 @@ pub enum FloatColorNodes {
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
-    #[mutagen(gen_preferred)]
     PolygonAddSubtractAutomata {
         reseed_stable: Boolean,
         child_point_count: NodeBox<NibbleNodes>,

@@ -385,7 +385,6 @@ impl FrameRenderers {
                 invert_t_offset,
             } => {
                 if args.fresh_frame && (!render_single_frame.into_inner() || args.lerp_i == 0) {
-                    let original_alpha = 1.0 - args.back_lerp_val();
                     //TODO fix
                     let dest_x = CONSTS.initial_window_width * 0.5;
                     let dest_y = CONSTS.initial_window_height * 0.5;

@@ -167,7 +167,7 @@ pub enum SNFloatNodes {
         noise_function: NoiseFunctions,
         scale_x: Nibble,
         scale_y: Nibble,
-        scale_t: Byte,
+        scale_t: UNFloat,
     },
 
     // IterativeMatrixNoiseFunction {//TODO: finish
@@ -290,7 +290,7 @@ impl Node for SNFloatNodes {
             } => SNFloat::new_clamped(noise_function.compute(
                 compute_arg.coordinate_set.x.into_inner() as f64 * scale_x.into_inner() as f64,
                 compute_arg.coordinate_set.y.into_inner() as f64 * scale_y.into_inner() as f64,
-                compute_arg.coordinate_set.t as f64 * (scale_t.into_inner() / 4) as f64,
+                compute_arg.coordinate_set.t as f64 * (scale_t.into_inner() / 4.0) as f64,
             ) as f32),
             // IterativeMatrixNoiseFunction {
             //     noise_function,
@@ -383,7 +383,7 @@ pub enum UNFloatNodes {
         noise_function: NoiseFunctions,
         scale_x: Nibble,
         scale_y: Nibble,
-        scale_t: Byte,
+        scale_t: UNFloat,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     CircularAdd {
@@ -514,7 +514,7 @@ impl Node for UNFloatNodes {
             } => SNFloat::new_clamped(noise_function.compute(
                 compute_arg.coordinate_set.x.into_inner() as f64 * scale_x.into_inner() as f64,
                 compute_arg.coordinate_set.y.into_inner() as f64 * scale_y.into_inner() as f64,
-                compute_arg.coordinate_set.t as f64 * (scale_t.into_inner() / 4) as f64,
+                compute_arg.coordinate_set.t as f64 * (scale_t.into_inner() / 4.0) as f64,
             ) as f32)
             .to_unsigned(),
             InvertNormalised { child } => {

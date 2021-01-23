@@ -95,6 +95,7 @@ where
             coordinate_set: arg.coordinate_set,
             history: arg.history,
             current_t: arg.current_t,
+            gamepads: arg.gamepads,
         })
     }
 }
@@ -147,6 +148,7 @@ where
             coordinate_set,
             image_preloader,
             profiler,
+            gamepads,
         } = arg;
 
         let nodes_len = nodes.len();
@@ -188,6 +190,7 @@ where
                 coordinate_set,
                 image_preloader,
                 profiler: &mut None,
+                gamepads,
             };
 
             ldbg!(crate::node::mutagen_functions::leaf_node_weight(
@@ -213,6 +216,7 @@ where
                     coordinate_set,
                     image_preloader,
                     profiler,
+                    gamepads,
                 },
             ),
             last_accessed: current_t,
@@ -255,6 +259,7 @@ where
                     coordinate_set: arg.coordinate_set,
                     image_preloader: arg.image_preloader,
                     profiler: arg.profiler,
+                    gamepads: arg.gamepads,
                 },
             );
         }
@@ -285,6 +290,7 @@ where
                 current_t: arg.current_t,
                 image_preloader: arg.image_preloader,
                 profiler: arg.profiler,
+                gamepads: arg.gamepads,
             });
         }
     }
@@ -312,6 +318,7 @@ where
                 current_t: arg.current_t,
                 image_preloader: arg.image_preloader,
                 profiler: arg.profiler,
+                gamepads: arg.gamepads,
             });
         }
     }

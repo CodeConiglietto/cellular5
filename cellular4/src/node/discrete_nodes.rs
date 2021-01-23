@@ -83,6 +83,11 @@ pub enum BooleanNodes {
     //     child:NodeBox<BooleanNodes>,
     //     point_set: PointSet,
     // },
+    #[mutagen(gen_weight = gamepad_node_weight)]
+    FromGamepadButton {
+        button: GamepadButton,
+        id: GamepadId,
+    },
 }
 
 impl Node for BooleanNodes {
@@ -209,6 +214,9 @@ impl Node for BooleanNodes {
             //         value: true_count > offsets.len() / 2,
             //     }
             // }
+            FromGamepadButton { button, id } => Boolean {
+                value: compute_arg.gamepads[*id].button(*button),
+            },
         }
     }
 }
@@ -266,6 +274,8 @@ pub enum NibbleNodes {
         child_b: NodeBox<NibbleNodes>,
     },
     // InvertNormalised { child:NodeBox<NibbleNodes> },
+    #[mutagen(gen_weight = gamepad_node_weight)]
+    FromGamepadFaceButtons { id: GamepadId },
 }
 
 impl Node for NibbleNodes {
@@ -332,6 +342,15 @@ impl Node for NibbleNodes {
                 } else {
                     child_b.compute(compute_arg.reborrow())
                 }
+            }
+            FromGamepadFaceButtons { id } => {
+                let gamepad = &compute_arg.gamepads[*id];
+                Nibble::new(
+                    u8::from(gamepad.button(GamepadButton::North))
+                        | u8::from(gamepad.button(GamepadButton::West)) << 1
+                        | u8::from(gamepad.button(GamepadButton::East)) << 2
+                        | u8::from(gamepad.button(GamepadButton::South)) << 3,
+                )
             }
         }
     }

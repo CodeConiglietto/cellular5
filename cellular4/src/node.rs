@@ -74,6 +74,14 @@ pub mod mutagen_functions {
         }
     }
 
+    pub fn gamepad_node_weight<T: MutagenArg>(arg: T) -> f64 {
+        if arg.gamepads().gamepads.is_empty() {
+            0.0
+        } else {
+            leaf_node_weight(arg)
+        }
+    }
+
     #[cfg(test)]
     mod tests {
         use super::*;

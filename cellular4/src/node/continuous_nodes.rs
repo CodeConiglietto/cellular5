@@ -215,6 +215,9 @@ pub enum SNFloatNodes {
         child_a: NodeBox<SNFloatNodes>,
         child_b: NodeBox<SNFloatNodes>,
     },
+
+    #[mutagen(gen_weight = gamepad_node_weight)]
+    FromGamepadAxis { axis: GamepadAxis, id: GamepadId },
 }
 
 impl Node for SNFloatNodes {
@@ -347,6 +350,8 @@ impl Node for SNFloatNodes {
                     child_b.compute(compute_arg.reborrow())
                 }
             }
+
+            FromGamepadAxis { axis, id } => SNFloat::new(compute_arg.gamepads[*id].axis(*axis)),
         }
     }
 }

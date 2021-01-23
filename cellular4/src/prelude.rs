@@ -9,6 +9,7 @@ pub use crate::{
         continuous::*, discrete::*, distance_functions::*, frame_renderers::*, image::*,
         iterative_results::*, matrices::*, noisefunctions::*, point_sets::*, points::*,
     },
+    gamepad::*,
     history::*,
     mutagen_args::*,
     node::{

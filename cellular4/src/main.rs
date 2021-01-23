@@ -13,7 +13,7 @@ use ggez::{
 };
 use log::{info, warn};
 use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
-use ndarray::{s, ArrayViewMut1, Axis};
+use ndarray::{s, ArrayViewMut1, Axis as NdAxis};
 use rand::prelude::*;
 use rayon::prelude::*;
 use structopt::StructOpt;
@@ -54,6 +54,7 @@ pub mod constants;
 pub mod coordinate_set;
 pub mod data_set;
 pub mod datatype;
+pub mod gamepad;
 pub mod history;
 pub mod mutagen_args;
 pub mod node;
@@ -228,6 +229,7 @@ struct MyGame {
     next_history_step: HistoryStep,
 
     blank_texture: GgImage,
+    gamepads: Gamepads,
 
     //The rolling total used to calculate the average per update instead of per slice
     rolling_update_stat_total: UpdateStat,
@@ -293,6 +295,8 @@ impl MyGame {
             None
         };
 
+        let gamepads = Gamepads::new();
+
         MyGame {
             blank_texture: compute_blank_texture(ctx),
             next_history_step: HistoryStep::new(
@@ -329,6 +333,7 @@ impl MyGame {
                     coordinate_set: history.history_steps[0].update_coordinate,
                     image_preloader: &*image_preloader,
                     profiler: &mut profiler,
+                    gamepads: &gamepads,
                 },
             ),
 
@@ -346,6 +351,7 @@ impl MyGame {
             history,
             image_preloader,
             profiler,
+            gamepads,
         }
     }
 }
@@ -409,10 +415,30 @@ impl EventHandler for MyGame {
         // }
     }
 
+    fn gamepad_button_down_event(&mut self, ctx: &mut Context, _btn: GgButton, id: GgGamepadId) {
+        self.gamepads.register_gamepad(ctx, id);
+    }
+
+    fn gamepad_button_up_event(&mut self, ctx: &mut Context, _btn: GgButton, id: GgGamepadId) {
+        self.gamepads.register_gamepad(ctx, id);
+    }
+
+    fn gamepad_axis_event(
+        &mut self,
+        ctx: &mut Context,
+        _axis: GgAxis,
+        _value: f32,
+        id: GgGamepadId,
+    ) {
+        self.gamepads.register_gamepad(ctx, id);
+    }
+
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
         if keyboard::is_key_pressed(ctx, KeyCode::Space) {
             self.tree_dirty = true;
         }
+
+        self.gamepads.update(ctx);
 
         let current_t = self.current_t;
 
@@ -424,9 +450,10 @@ impl EventHandler for MyGame {
             self.next_history_step
                 .cell_array
                 .slice_mut(s![slice_y_range, .., ..]);
-        let new_update_iter = new_update_slice.lanes_mut(Axis(2));
+        let new_update_iter = new_update_slice.lanes_mut(NdAxis(2));
 
         let history = &self.history;
+        let gamepads = &self.gamepads;
 
         //let rule_sets = self.rule_sets;
 
@@ -451,6 +478,7 @@ impl EventHandler for MyGame {
                     },
                     history,
                     depth: 0,
+                    gamepads,
                 }),
             );
 
@@ -567,6 +595,7 @@ impl EventHandler for MyGame {
                         history: &self.history,
                         image_preloader: &mut self.image_preloader,
                         profiler: &mut self.profiler,
+                        gamepads: &self.gamepads,
                     },
                 );
                 self.node_tree.root_frame_renderer.mutate_rng(
@@ -580,6 +609,7 @@ impl EventHandler for MyGame {
                         history: &self.history,
                         image_preloader: &mut self.image_preloader,
                         profiler: &mut self.profiler,
+                        gamepads: &self.gamepads,
                     },
                 );
                 // // info!("{:#?}", &self.root_node);
@@ -603,6 +633,7 @@ impl EventHandler for MyGame {
                 depth: 0,
                 image_preloader: &mut self.image_preloader,
                 profiler: &mut self.profiler,
+                gamepads: &self.gamepads,
                 current_t,
             };
 
@@ -628,6 +659,7 @@ impl EventHandler for MyGame {
                 depth: 0,
                 image_preloader: &mut self.image_preloader,
                 profiler: &mut self.profiler,
+                gamepads: &self.gamepads,
                 current_t,
             };
 
@@ -673,6 +705,7 @@ impl EventHandler for MyGame {
                     data: &mut self.data,
                     image_preloader: &mut self.image_preloader,
                     profiler: &mut self.profiler,
+                    gamepads: &self.gamepads,
                     depth,
                     current_t,
                 };

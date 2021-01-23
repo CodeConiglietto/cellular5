@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 pub trait MutagenArg {
     fn depth(&self) -> usize;
+    fn gamepads(&self) -> &Gamepads;
 }
 
 #[derive(Debug)]
@@ -16,6 +17,7 @@ pub struct GenArg<'a> {
     pub history: &'a History,
     pub image_preloader: &'a Preloader<Image>,
     pub profiler: &'a mut Option<MutagenProfiler>,
+    pub gamepads: &'a Gamepads,
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, GenArg<'a>> for GenArg<'b> {
@@ -29,6 +31,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, GenArg<'a>> for GenArg<'b> {
             history: &self.history,
             image_preloader: &self.image_preloader,
             profiler: &mut self.profiler,
+            gamepads: &self.gamepads,
         }
     }
 }
@@ -45,6 +48,10 @@ impl<'a> MutagenArg for GenArg<'a> {
     fn depth(&self) -> usize {
         self.depth.saturating_sub(1) // Subtract 1 since NodeBox adds 1 earlier than the mutagen code will see it
     }
+
+    fn gamepads(&self) -> &Gamepads {
+        &self.gamepads
+    }
 }
 
 #[derive(Debug)]
@@ -57,6 +64,7 @@ pub struct MutArg<'a> {
     pub history: &'a History,
     pub image_preloader: &'a Preloader<Image>,
     pub profiler: &'a mut Option<MutagenProfiler>,
+    pub gamepads: &'a Gamepads,
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, MutArg<'a>> for MutArg<'b> {
@@ -70,6 +78,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, MutArg<'a>> for MutArg<'b> {
             history: &self.history,
             image_preloader: &self.image_preloader,
             profiler: &mut self.profiler,
+            gamepads: &self.gamepads,
         }
     }
 }
@@ -85,6 +94,7 @@ impl<'a> From<MutArg<'a>> for GenArg<'a> {
             history: arg.history,
             image_preloader: arg.image_preloader,
             profiler: arg.profiler,
+            gamepads: arg.gamepads,
         }
     }
 }
@@ -101,6 +111,10 @@ impl<'a> MutagenArg for MutArg<'a> {
     fn depth(&self) -> usize {
         self.depth.saturating_sub(1) // Subtract 1 since NodeBox adds 1 earlier than the mutagen code will see it
     }
+
+    fn gamepads(&self) -> &Gamepads {
+        &self.gamepads
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -111,6 +125,7 @@ pub struct ComArg<'a> {
     pub history: &'a History,
     pub depth: usize,
     pub current_t: usize,
+    pub gamepads: &'a Gamepads,
 }
 
 impl<'a> ComArg<'a> {
@@ -133,6 +148,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, ComArg<'a>> for ComArg<'b> {
             history: &self.history,
             depth: self.depth,
             current_t: self.current_t,
+            gamepads: &self.gamepads,
         }
     }
 }
@@ -142,6 +158,10 @@ impl<'a> mutagen::State for ComArg<'a> {}
 impl<'a> MutagenArg for ComArg<'a> {
     fn depth(&self) -> usize {
         self.depth.saturating_sub(1) // Subtract 1 since NodeBox adds 1 earlier than the mutagen code will see it
+    }
+
+    fn gamepads(&self) -> &Gamepads {
+        &self.gamepads
     }
 }
 
@@ -155,6 +175,7 @@ pub struct UpdArg<'a> {
     pub current_t: usize,
     pub image_preloader: &'a Preloader<Image>,
     pub profiler: &'a mut Option<MutagenProfiler>,
+    pub gamepads: &'a Gamepads,
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, UpdArg<'a>> for UpdArg<'b> {
@@ -168,6 +189,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, UpdArg<'a>> for UpdArg<'b> {
             current_t: self.current_t,
             image_preloader: &self.image_preloader,
             profiler: &mut self.profiler,
+            gamepads: &self.gamepads,
         }
     }
 }
@@ -181,6 +203,7 @@ impl<'a> From<UpdArg<'a>> for ComArg<'a> {
             history: arg.history,
             depth: arg.depth,
             current_t: arg.current_t,
+            gamepads: arg.gamepads,
         }
     }
 }
@@ -196,6 +219,7 @@ impl<'a> From<GenArg<'a>> for UpdArg<'a> {
             history: arg.history,
             image_preloader: arg.image_preloader,
             profiler: arg.profiler,
+            gamepads: arg.gamepads,
         }
     }
 }
@@ -211,6 +235,10 @@ impl<'a> mutagen::State for UpdArg<'a> {
 impl<'a> MutagenArg for UpdArg<'a> {
     fn depth(&self) -> usize {
         self.depth.saturating_sub(1) // Subtract 1 since NodeBox adds 1 earlier than the mutagen code will see it
+    }
+
+    fn gamepads(&self) -> &Gamepads {
+        &self.gamepads
     }
 }
 
@@ -228,4 +256,8 @@ impl<'a> From<GenArg<'a>> for () {
 
 impl<'a> From<MutArg<'a>> for () {
     fn from(_arg: MutArg<'a>) -> Self {}
+}
+
+impl<'a> From<UpdArg<'a>> for () {
+    fn from(_arg: UpdArg<'a>) -> Self {}
 }

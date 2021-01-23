@@ -1,7 +1,9 @@
+use std::f32::consts::PI;
+
 use approx::abs_diff_eq;
 use ggez::graphics::Color as GgColor;
 use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
-use palette::rgb::Rgb;
+use palette::{encoding::srgb::Srgb, rgb::Rgb, Hsv, RgbHue};
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -85,6 +87,22 @@ pub fn float_color_from_pallette_rgb(rgb: Rgb, alpha: f32) -> FloatColor {
         b: UNFloat::new(rgb.blue as f32),
         a: UNFloat::new(alpha),
     }
+}
+
+/// Expects all inputs and outputs to be between 0.0 and 1.0
+pub fn rgb_tuple_to_hsv_tuple(r: f32, g: f32, b: f32) -> (f32, f32, f32) {
+    let (h, s, v) = Hsv::<Srgb, _>::from(Rgb::<Srgb, _>::new(r, g, b)).into_components();
+    (h.to_positive_radians() / (2.0 * PI), s, v)
+}
+
+/// Expects all inputs and outputs to be between 0.0 and 1.0
+pub fn hsv_tuple_to_rgb_tuple(h: f32, s: f32, v: f32) -> (f32, f32, f32) {
+    Rgb::<Srgb, _>::from(Hsv::<Srgb, _>::new(
+        RgbHue::from_radians(h * 2.0 * PI),
+        s,
+        v,
+    ))
+    .into_components()
 }
 
 #[derive(Serialize, Deserialize, Copy, Clone, Debug, PartialEq, Eq)]

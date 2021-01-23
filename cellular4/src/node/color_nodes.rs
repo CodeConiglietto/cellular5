@@ -30,6 +30,16 @@ pub enum FloatColorNodes {
     AbsChildCoords { child: NodeBox<FloatColorNodes> },
     #[mutagen(gen_weight = pipe_node_weight)]
     InvertXBlendChild { child: NodeBox<FloatColorNodes> },
+    #[mutagen(gen_weight = pipe_node_weight)]
+    HueTShifting {
+        child: NodeBox<FloatColorNodes>,
+        scaling_factor: SNFloat,
+    },
+    #[mutagen(gen_weight = branch_node_weight)]
+    HueShifting {
+        child: NodeBox<FloatColorNodes>,
+        child_shift_value: NodeBox<SNFloatNodes>,
+    },
 
     #[mutagen(gen_weight = branch_node_weight)]
     RGB {
@@ -306,6 +316,63 @@ impl Node for FloatColorNodes {
                 let color_b = child.compute(compute_arg.reborrow().replace_coords(&new_point));
 
                 color_a.lerp(color_b, UNFloat::new(0.5))
+            }
+            HueTShifting {
+                child,
+                scaling_factor,
+            } => {
+                let color = child.compute(compute_arg.reborrow());
+
+                let hsv_tuple = rgb_tuple_to_hsv_tuple(
+                    color.r.into_inner(),
+                    color.g.into_inner(),
+                    color.b.into_inner(),
+                );
+
+                let rgb_tuple = hsv_tuple_to_rgb_tuple(
+                    hsv_tuple.0
+                        + compute_arg
+                            .reborrow()
+                            .coordinate_set
+                            .get_unfloat_t()
+                            .into_inner()
+                            * scaling_factor.into_inner(),
+                    hsv_tuple.1,
+                    hsv_tuple.2,
+                );
+
+                FloatColor {
+                    r: UNFloat::new(rgb_tuple.0),
+                    g: UNFloat::new(rgb_tuple.1),
+                    b: UNFloat::new(rgb_tuple.2),
+                    a: color.a,
+                }
+            }
+            HueShifting {
+                child,
+                child_shift_value,
+            } => {
+                let color = child.compute(compute_arg.reborrow());
+                let shift_value = child_shift_value.compute(compute_arg.reborrow());
+
+                let hsv_tuple = rgb_tuple_to_hsv_tuple(
+                    color.r.into_inner(),
+                    color.g.into_inner(),
+                    color.b.into_inner(),
+                );
+
+                let rgb_tuple = hsv_tuple_to_rgb_tuple(
+                    hsv_tuple.0 + shift_value.into_inner(),
+                    hsv_tuple.1,
+                    hsv_tuple.2,
+                );
+
+                FloatColor {
+                    r: UNFloat::new(rgb_tuple.0),
+                    g: UNFloat::new(rgb_tuple.1),
+                    b: UNFloat::new(rgb_tuple.2),
+                    a: color.a,
+                }
             }
             RGB { r, g, b, a } => FloatColor {
                 r: r.compute(compute_arg.reborrow()),

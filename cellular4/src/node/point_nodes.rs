@@ -86,8 +86,8 @@ impl Node for SNPointNodes {
                 let (x, y) = axes.axes();
 
                 SNPoint::new(Point2::new(
-                    compute_arg.gamepads[*id].axis(x),
-                    compute_arg.gamepads[*id].axis(y),
+                    compute_arg.gamepads[*id].axis_states.get(x).value,
+                    compute_arg.gamepads[*id].axis_states.get(y).value,
                 ))
             }
         }
@@ -112,6 +112,13 @@ impl<'a> Updatable<'a> for SNPointNodes {
                     child_point.compute(arg.reborrow().into()),
                     child_normaliser.compute(arg.reborrow().into()),
                 );
+            }
+
+            FromGamepadAxes { axes, id } => {
+                let (x, y) = axes.axes();
+
+                arg.gamepads[*id].axis_states.get_mut(x).in_use = true;
+                arg.gamepads[*id].axis_states.get_mut(y).in_use = true;
             }
 
             _ => {}

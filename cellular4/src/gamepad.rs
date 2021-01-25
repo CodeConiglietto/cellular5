@@ -1,10 +1,10 @@
-use std::{collections::HashSet, ops::Index};
+use std::{
+    collections::HashSet,
+    ops::{Index, IndexMut},
+};
 
 use ggez::{
-    input::gamepad::{
-        self,
-        gilrs::ev::{state::GamepadState, Code},
-    },
+    input::gamepad::{self, gilrs::ev::state::AxisData},
     Context,
 };
 use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
@@ -44,6 +44,12 @@ impl Gamepads {
             gamepad.update(ctx);
         }
     }
+
+    pub fn clear_in_use(&mut self) {
+        for gamepad in self.gamepads.iter_mut() {
+            gamepad.clear_in_use();
+        }
+    }
 }
 
 impl Index<GamepadId> for Gamepads {
@@ -54,12 +60,17 @@ impl Index<GamepadId> for Gamepads {
     }
 }
 
+impl IndexMut<GamepadId> for Gamepads {
+    fn index_mut(&mut self, idx: GamepadId) -> &mut Self::Output {
+        &mut self.gamepads[idx.0]
+    }
+}
+
 #[derive(Debug)]
 pub struct Gamepad {
-    id: GgGamepadId,
-    state: GamepadState,
-    button_map: ButtonMap,
-    axis_map: AxisMap,
+    pub id: GgGamepadId,
+    pub button_states: ButtonStates,
+    pub axis_states: AxisStates,
 }
 
 impl Gamepad {
@@ -67,38 +78,21 @@ impl Gamepad {
         let gamepad = gamepad::gamepad(ctx, id);
         Self {
             id,
-            state: gamepad.state().clone(),
-            button_map: ButtonMap::new(&gamepad),
-            axis_map: AxisMap::new(&gamepad),
+            button_states: ButtonStates::new(&gamepad),
+            axis_states: AxisStates::new(&gamepad),
         }
     }
 
     pub fn update(&mut self, ctx: &Context) {
-        self.state = gamepad::gamepad(ctx, self.id).state().clone();
+        let gamepad = gamepad::gamepad(ctx, self.id);
+        // FIXME Do not reset in_use here
+        self.button_states.update(&gamepad);
+        self.axis_states.update(&gamepad);
     }
 
-    pub fn button(&self, btn: GamepadButton) -> bool {
-        if let Some(data) = self
-            .button_map
-            .map(btn)
-            .and_then(|code| self.state.button_data(code))
-        {
-            data.is_pressed()
-        } else {
-            false
-        }
-    }
-
-    pub fn axis(&self, axis: GamepadAxis) -> f32 {
-        if let Some(data) = self
-            .axis_map
-            .map(axis)
-            .and_then(|code| self.state.axis_data(code))
-        {
-            data.value()
-        } else {
-            0.0
-        }
+    pub fn clear_in_use(&mut self) {
+        self.button_states.clear_in_use();
+        self.axis_states.clear_in_use();
     }
 }
 
@@ -172,6 +166,7 @@ impl From<GamepadButton> for GgButton {
 
 impl<'a> Updatable<'a> for GamepadButton {
     type UpdateArg = ();
+
     fn update(&mut self, _arg: Self::UpdateArg) {}
 }
 
@@ -180,60 +175,136 @@ impl<'a> UpdatableRecursively<'a> for GamepadButton {
 }
 
 #[derive(Debug)]
-struct ButtonMap {
-    south: Option<Code>,
-    east: Option<Code>,
-    north: Option<Code>,
-    west: Option<Code>,
-    left_trigger: Option<Code>,
-    left_trigger_2: Option<Code>,
-    right_trigger: Option<Code>,
-    right_trigger_2: Option<Code>,
-    left_thumb: Option<Code>,
-    right_thumb: Option<Code>,
-    d_pad_up: Option<Code>,
-    d_pad_down: Option<Code>,
-    d_pad_left: Option<Code>,
-    d_pad_right: Option<Code>,
+pub struct ButtonStates {
+    pub south: ButtonState,
+    pub east: ButtonState,
+    pub north: ButtonState,
+    pub west: ButtonState,
+    pub left_trigger: ButtonState,
+    pub left_trigger_2: ButtonState,
+    pub right_trigger: ButtonState,
+    pub right_trigger_2: ButtonState,
+    pub left_thumb: ButtonState,
+    pub right_thumb: ButtonState,
+    pub d_pad_up: ButtonState,
+    pub d_pad_down: ButtonState,
+    pub d_pad_left: ButtonState,
+    pub d_pad_right: ButtonState,
 }
 
-impl ButtonMap {
-    fn new(gamepad: &GgGamepad) -> Self {
+impl ButtonStates {
+    pub fn new(gamepad: &GgGamepad) -> Self {
         Self {
-            south: gamepad.button_code(GamepadButton::South.into()),
-            east: gamepad.button_code(GamepadButton::East.into()),
-            north: gamepad.button_code(GamepadButton::North.into()),
-            west: gamepad.button_code(GamepadButton::West.into()),
-            left_trigger: gamepad.button_code(GamepadButton::LeftTrigger.into()),
-            left_trigger_2: gamepad.button_code(GamepadButton::LeftTrigger2.into()),
-            right_trigger: gamepad.button_code(GamepadButton::RightTrigger.into()),
-            right_trigger_2: gamepad.button_code(GamepadButton::RightTrigger2.into()),
-            left_thumb: gamepad.button_code(GamepadButton::LeftThumb.into()),
-            right_thumb: gamepad.button_code(GamepadButton::RightThumb.into()),
-            d_pad_up: gamepad.button_code(GamepadButton::DPadUp.into()),
-            d_pad_down: gamepad.button_code(GamepadButton::DPadDown.into()),
-            d_pad_left: gamepad.button_code(GamepadButton::DPadLeft.into()),
-            d_pad_right: gamepad.button_code(GamepadButton::DPadRight.into()),
+            south: ButtonState::new(gamepad, GamepadButton::South),
+            east: ButtonState::new(gamepad, GamepadButton::East),
+            north: ButtonState::new(gamepad, GamepadButton::North),
+            west: ButtonState::new(gamepad, GamepadButton::West),
+            left_trigger: ButtonState::new(gamepad, GamepadButton::LeftTrigger),
+            left_trigger_2: ButtonState::new(gamepad, GamepadButton::LeftTrigger2),
+            right_trigger: ButtonState::new(gamepad, GamepadButton::RightTrigger),
+            right_trigger_2: ButtonState::new(gamepad, GamepadButton::RightTrigger2),
+            left_thumb: ButtonState::new(gamepad, GamepadButton::LeftThumb),
+            right_thumb: ButtonState::new(gamepad, GamepadButton::RightThumb),
+            d_pad_up: ButtonState::new(gamepad, GamepadButton::DPadUp),
+            d_pad_down: ButtonState::new(gamepad, GamepadButton::DPadDown),
+            d_pad_left: ButtonState::new(gamepad, GamepadButton::DPadLeft),
+            d_pad_right: ButtonState::new(gamepad, GamepadButton::DPadRight),
         }
     }
 
-    fn map(&self, btn: GamepadButton) -> Option<Code> {
+    pub fn get(&self, btn: GamepadButton) -> &ButtonState {
         match btn {
-            GamepadButton::South => self.south,
-            GamepadButton::East => self.east,
-            GamepadButton::North => self.north,
-            GamepadButton::West => self.west,
-            GamepadButton::LeftTrigger => self.left_trigger,
-            GamepadButton::LeftTrigger2 => self.left_trigger_2,
-            GamepadButton::RightTrigger => self.right_trigger,
-            GamepadButton::RightTrigger2 => self.right_trigger_2,
-            GamepadButton::LeftThumb => self.left_thumb,
-            GamepadButton::RightThumb => self.right_thumb,
-            GamepadButton::DPadUp => self.d_pad_up,
-            GamepadButton::DPadDown => self.d_pad_down,
-            GamepadButton::DPadLeft => self.d_pad_left,
-            GamepadButton::DPadRight => self.d_pad_right,
+            GamepadButton::South => &self.south,
+            GamepadButton::East => &self.east,
+            GamepadButton::North => &self.north,
+            GamepadButton::West => &self.west,
+            GamepadButton::LeftTrigger => &self.left_trigger,
+            GamepadButton::LeftTrigger2 => &self.left_trigger_2,
+            GamepadButton::RightTrigger => &self.right_trigger,
+            GamepadButton::RightTrigger2 => &self.right_trigger_2,
+            GamepadButton::LeftThumb => &self.left_thumb,
+            GamepadButton::RightThumb => &self.right_thumb,
+            GamepadButton::DPadUp => &self.d_pad_up,
+            GamepadButton::DPadDown => &self.d_pad_down,
+            GamepadButton::DPadLeft => &self.d_pad_left,
+            GamepadButton::DPadRight => &self.d_pad_right,
         }
+    }
+
+    pub fn get_mut(&mut self, btn: GamepadButton) -> &mut ButtonState {
+        match btn {
+            GamepadButton::South => &mut self.south,
+            GamepadButton::East => &mut self.east,
+            GamepadButton::North => &mut self.north,
+            GamepadButton::West => &mut self.west,
+            GamepadButton::LeftTrigger => &mut self.left_trigger,
+            GamepadButton::LeftTrigger2 => &mut self.left_trigger_2,
+            GamepadButton::RightTrigger => &mut self.right_trigger,
+            GamepadButton::RightTrigger2 => &mut self.right_trigger_2,
+            GamepadButton::LeftThumb => &mut self.left_thumb,
+            GamepadButton::RightThumb => &mut self.right_thumb,
+            GamepadButton::DPadUp => &mut self.d_pad_up,
+            GamepadButton::DPadDown => &mut self.d_pad_down,
+            GamepadButton::DPadLeft => &mut self.d_pad_left,
+            GamepadButton::DPadRight => &mut self.d_pad_right,
+        }
+    }
+
+    pub fn update(&mut self, gamepad: &GgGamepad) {
+        self.south.update(gamepad, GamepadButton::South);
+        self.east.update(gamepad, GamepadButton::East);
+        self.north.update(gamepad, GamepadButton::North);
+        self.west.update(gamepad, GamepadButton::West);
+        self.left_trigger
+            .update(gamepad, GamepadButton::LeftTrigger);
+        self.left_trigger_2
+            .update(gamepad, GamepadButton::LeftTrigger2);
+        self.right_trigger
+            .update(gamepad, GamepadButton::RightTrigger);
+        self.right_trigger_2
+            .update(gamepad, GamepadButton::RightTrigger2);
+        self.left_thumb.update(gamepad, GamepadButton::LeftThumb);
+        self.right_thumb.update(gamepad, GamepadButton::RightThumb);
+        self.d_pad_up.update(gamepad, GamepadButton::DPadUp);
+        self.d_pad_down.update(gamepad, GamepadButton::DPadDown);
+        self.d_pad_left.update(gamepad, GamepadButton::DPadLeft);
+        self.d_pad_right.update(gamepad, GamepadButton::DPadRight);
+    }
+
+    pub fn clear_in_use(&mut self) {
+        self.south.in_use = false;
+        self.east.in_use = false;
+        self.north.in_use = false;
+        self.west.in_use = false;
+        self.left_trigger.in_use = false;
+        self.left_trigger_2.in_use = false;
+        self.right_trigger.in_use = false;
+        self.right_trigger_2.in_use = false;
+        self.left_thumb.in_use = false;
+        self.right_thumb.in_use = false;
+        self.d_pad_up.in_use = false;
+        self.d_pad_down.in_use = false;
+        self.d_pad_left.in_use = false;
+        self.d_pad_right.in_use = false;
+    }
+}
+
+#[derive(Debug)]
+pub struct ButtonState {
+    pub is_pressed: bool,
+    pub in_use: bool,
+}
+
+impl ButtonState {
+    fn new(gamepad: &GgGamepad, btn: GamepadButton) -> Self {
+        Self {
+            is_pressed: gamepad.is_pressed(btn.into()),
+            in_use: false,
+        }
+    }
+
+    fn update(&mut self, gamepad: &GgGamepad, btn: GamepadButton) {
+        self.is_pressed = gamepad.is_pressed(btn.into());
     }
 }
 
@@ -275,36 +346,90 @@ impl<'a> UpdatableRecursively<'a> for GamepadAxis {
 }
 
 #[derive(Debug)]
-pub struct AxisMap {
-    left_stick_x: Option<Code>,
-    left_stick_y: Option<Code>,
-    right_stick_x: Option<Code>,
-    right_stick_y: Option<Code>,
-    d_pad_x: Option<Code>,
-    d_pad_y: Option<Code>,
+pub struct AxisStates {
+    pub left_stick_x: AxisState,
+    pub left_stick_y: AxisState,
+    pub right_stick_x: AxisState,
+    pub right_stick_y: AxisState,
+    pub d_pad_x: AxisState,
+    pub d_pad_y: AxisState,
 }
 
-impl AxisMap {
-    fn new(gamepad: &GgGamepad) -> Self {
+impl AxisStates {
+    pub fn new(gamepad: &GgGamepad) -> Self {
         Self {
-            left_stick_x: gamepad.axis_code(GamepadAxis::LeftStickX.into()),
-            left_stick_y: gamepad.axis_code(GamepadAxis::LeftStickY.into()),
-            right_stick_x: gamepad.axis_code(GamepadAxis::RightStickX.into()),
-            right_stick_y: gamepad.axis_code(GamepadAxis::RightStickY.into()),
-            d_pad_x: gamepad.axis_code(GamepadAxis::DPadX.into()),
-            d_pad_y: gamepad.axis_code(GamepadAxis::DPadY.into()),
+            left_stick_x: AxisState::new(gamepad, GamepadAxis::LeftStickX),
+            left_stick_y: AxisState::new(gamepad, GamepadAxis::LeftStickY),
+            right_stick_x: AxisState::new(gamepad, GamepadAxis::RightStickX),
+            right_stick_y: AxisState::new(gamepad, GamepadAxis::RightStickY),
+            d_pad_x: AxisState::new(gamepad, GamepadAxis::DPadX),
+            d_pad_y: AxisState::new(gamepad, GamepadAxis::DPadY),
         }
     }
 
-    fn map(&self, axis: GamepadAxis) -> Option<Code> {
+    pub fn get(&self, axis: GamepadAxis) -> &AxisState {
         match axis {
-            GamepadAxis::LeftStickX => self.left_stick_x,
-            GamepadAxis::LeftStickY => self.left_stick_y,
-            GamepadAxis::RightStickX => self.right_stick_x,
-            GamepadAxis::RightStickY => self.right_stick_y,
-            GamepadAxis::DPadX => self.d_pad_x,
-            GamepadAxis::DPadY => self.d_pad_y,
+            GamepadAxis::LeftStickX => &self.left_stick_x,
+            GamepadAxis::LeftStickY => &self.left_stick_y,
+            GamepadAxis::RightStickX => &self.right_stick_x,
+            GamepadAxis::RightStickY => &self.right_stick_y,
+            GamepadAxis::DPadX => &self.d_pad_x,
+            GamepadAxis::DPadY => &self.d_pad_y,
         }
+    }
+
+    pub fn get_mut(&mut self, axis: GamepadAxis) -> &mut AxisState {
+        match axis {
+            GamepadAxis::LeftStickX => &mut self.left_stick_x,
+            GamepadAxis::LeftStickY => &mut self.left_stick_y,
+            GamepadAxis::RightStickX => &mut self.right_stick_x,
+            GamepadAxis::RightStickY => &mut self.right_stick_y,
+            GamepadAxis::DPadX => &mut self.d_pad_x,
+            GamepadAxis::DPadY => &mut self.d_pad_y,
+        }
+    }
+
+    fn update(&mut self, gamepad: &GgGamepad) {
+        self.left_stick_x.update(gamepad, GamepadAxis::LeftStickX);
+        self.left_stick_y.update(gamepad, GamepadAxis::LeftStickY);
+        self.right_stick_x.update(gamepad, GamepadAxis::RightStickX);
+        self.right_stick_y.update(gamepad, GamepadAxis::RightStickY);
+        self.d_pad_x.update(gamepad, GamepadAxis::DPadX);
+        self.d_pad_y.update(gamepad, GamepadAxis::DPadY);
+    }
+
+    fn clear_in_use(&mut self) {
+        self.left_stick_x.in_use = false;
+        self.left_stick_y.in_use = false;
+        self.right_stick_x.in_use = false;
+        self.right_stick_y.in_use = false;
+        self.d_pad_x.in_use = false;
+        self.d_pad_y.in_use = false;
+    }
+}
+
+#[derive(Debug)]
+pub struct AxisState {
+    pub value: f32,
+    pub in_use: bool,
+}
+
+impl AxisState {
+    pub fn new(gamepad: &GgGamepad, axis: GamepadAxis) -> Self {
+        Self {
+            value: gamepad
+                .axis_data(axis.into())
+                .map(AxisData::value)
+                .unwrap_or(0.0),
+            in_use: false,
+        }
+    }
+
+    fn update(&mut self, gamepad: &GgGamepad, axis: GamepadAxis) {
+        self.value = gamepad
+            .axis_data(axis.into())
+            .map(AxisData::value)
+            .unwrap_or(0.0);
     }
 }
 

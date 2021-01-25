@@ -295,7 +295,7 @@ impl MyGame {
             None
         };
 
-        let gamepads = Gamepads::new();
+        let mut gamepads = Gamepads::new();
 
         MyGame {
             blank_texture: compute_blank_texture(ctx),
@@ -333,7 +333,7 @@ impl MyGame {
                     coordinate_set: history.history_steps[0].update_coordinate,
                     image_preloader: &*image_preloader,
                     profiler: &mut profiler,
-                    gamepads: &gamepads,
+                    gamepads: &mut gamepads,
                 },
             ),
 
@@ -595,7 +595,7 @@ impl EventHandler for MyGame {
                         history: &self.history,
                         image_preloader: &mut self.image_preloader,
                         profiler: &mut self.profiler,
-                        gamepads: &self.gamepads,
+                        gamepads: &mut self.gamepads,
                     },
                 );
                 self.node_tree.root_frame_renderer.mutate_rng(
@@ -609,7 +609,7 @@ impl EventHandler for MyGame {
                         history: &self.history,
                         image_preloader: &mut self.image_preloader,
                         profiler: &mut self.profiler,
-                        gamepads: &self.gamepads,
+                        gamepads: &mut self.gamepads,
                     },
                 );
                 // // info!("{:#?}", &self.root_node);
@@ -625,6 +625,8 @@ impl EventHandler for MyGame {
             //     history: &self.history,
             // };
 
+            self.gamepads.clear_in_use();
+
             let last_update_arg = UpdArg {
                 coordinate_set: history_step.update_coordinate,
                 history: &self.history,
@@ -633,7 +635,7 @@ impl EventHandler for MyGame {
                 depth: 0,
                 image_preloader: &mut self.image_preloader,
                 profiler: &mut self.profiler,
-                gamepads: &self.gamepads,
+                gamepads: &mut self.gamepads,
                 current_t,
             };
 
@@ -659,7 +661,7 @@ impl EventHandler for MyGame {
                 depth: 0,
                 image_preloader: &mut self.image_preloader,
                 profiler: &mut self.profiler,
-                gamepads: &self.gamepads,
+                gamepads: &mut self.gamepads,
                 current_t,
             };
 
@@ -705,7 +707,7 @@ impl EventHandler for MyGame {
                     data: &mut self.data,
                     image_preloader: &mut self.image_preloader,
                     profiler: &mut self.profiler,
-                    gamepads: &self.gamepads,
+                    gamepads: &mut self.gamepads,
                     depth,
                     current_t,
                 };
@@ -720,7 +722,7 @@ impl EventHandler for MyGame {
                 &mut self.next_history_step,
             );
 
-            self.ui.draw(&self.average_update_stat);
+            self.ui.draw(&self.average_update_stat, &self.gamepads);
             if let Some(profiler) = &self.profiler {
                 profiler
                     .save(MutagenProfiler::default_path())

@@ -7,8 +7,12 @@ use ggez::{
     input::gamepad::{self, gilrs::ev::state::AxisData},
     Context,
 };
+use itertools::Itertools;
 use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
-use rand::Rng;
+use rand::{
+    distributions::{Distribution, WeightedIndex},
+    Rng,
+};
 use serde::{Deserialize, Serialize};
 
 pub use ggez::{
@@ -124,8 +128,7 @@ impl<'a> UpdatableRecursively<'a> for GamepadId {
     fn update_recursively(&mut self, _arg: Self::UpdateArg) {}
 }
 
-#[derive(Clone, Copy, Debug, Generatable, Mutatable, Serialize, Deserialize)]
-#[mutagen(gen_arg = type (), mut_arg = type ())]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum GamepadButton {
     South,
     East,
@@ -141,6 +144,25 @@ pub enum GamepadButton {
     DPadDown,
     DPadLeft,
     DPadRight,
+}
+
+impl GamepadButton {
+    const VALUES: [GamepadButton; 14] = [
+        GamepadButton::South,
+        GamepadButton::East,
+        GamepadButton::North,
+        GamepadButton::West,
+        GamepadButton::LeftTrigger,
+        GamepadButton::LeftTrigger2,
+        GamepadButton::RightTrigger,
+        GamepadButton::RightTrigger2,
+        GamepadButton::LeftThumb,
+        GamepadButton::RightThumb,
+        GamepadButton::DPadUp,
+        GamepadButton::DPadDown,
+        GamepadButton::DPadLeft,
+        GamepadButton::DPadRight,
+    ];
 }
 
 impl From<GamepadButton> for GgButton {
@@ -161,6 +183,39 @@ impl From<GamepadButton> for GgButton {
             GamepadButton::DPadLeft => GgButton::DPadLeft,
             GamepadButton::DPadRight => GgButton::DPadRight,
         }
+    }
+}
+
+impl<'a> Generatable<'a> for GamepadButton {
+    type GenArg = GenArg<'a>;
+
+    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, arg: Self::GenArg) -> Self {
+        let mut weights = [0.0; GamepadButton::VALUES.len()];
+
+        for (w, btn) in weights.iter_mut().zip_eq(GamepadButton::VALUES.iter()) {
+            *w = if arg
+                .gamepads
+                .gamepads
+                .iter()
+                .any(|g| !g.button_states.get(*btn).in_use)
+            {
+                100.0
+            } else {
+                1.0
+            };
+        }
+
+        let idx = WeightedIndex::new(&weights).unwrap().sample(rng);
+
+        GamepadButton::VALUES[idx]
+    }
+}
+
+impl<'a> Mutatable<'a> for GamepadButton {
+    type MutArg = MutArg<'a>;
+
+    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, arg: Self::MutArg) {
+        *self = Self::generate_rng(rng, arg.into());
     }
 }
 
@@ -308,8 +363,7 @@ impl ButtonState {
     }
 }
 
-#[derive(Clone, Copy, Debug, Generatable, Mutatable, Serialize, Deserialize)]
-#[mutagen(gen_arg = type (), mut_arg = type ())]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum GamepadAxis {
     LeftStickX,
     LeftStickY,
@@ -323,6 +377,21 @@ pub enum GamepadAxis {
     //RightZ,
 }
 
+impl GamepadAxis {
+    const VALUES: [GamepadAxis; 6] = [
+        GamepadAxis::LeftStickX,
+        GamepadAxis::LeftStickY,
+        GamepadAxis::RightStickX,
+        GamepadAxis::RightStickY,
+        GamepadAxis::DPadX,
+        GamepadAxis::DPadY,
+        // TODO These are unmapped on Linux with an Xbox controller
+        // Seems to be a ggez bug?
+        //GamepadAxis::LeftZ,
+        //GamepadAxis::RightZ,
+    ];
+}
+
 impl From<GamepadAxis> for GgAxis {
     fn from(axis: GamepadAxis) -> GgAxis {
         match axis {
@@ -333,6 +402,39 @@ impl From<GamepadAxis> for GgAxis {
             GamepadAxis::DPadX => GgAxis::DPadX,
             GamepadAxis::DPadY => GgAxis::DPadY,
         }
+    }
+}
+
+impl<'a> Generatable<'a> for GamepadAxis {
+    type GenArg = GenArg<'a>;
+
+    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, arg: Self::GenArg) -> Self {
+        let mut weights = [0.0; GamepadAxis::VALUES.len()];
+
+        for (w, axis) in weights.iter_mut().zip_eq(GamepadAxis::VALUES.iter()) {
+            *w = if arg
+                .gamepads
+                .gamepads
+                .iter()
+                .any(|g| !g.axis_states.get(*axis).in_use)
+            {
+                100.0
+            } else {
+                1.0
+            };
+        }
+
+        let idx = WeightedIndex::new(&weights).unwrap().sample(rng);
+
+        GamepadAxis::VALUES[idx]
+    }
+}
+
+impl<'a> Mutatable<'a> for GamepadAxis {
+    type MutArg = MutArg<'a>;
+
+    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, arg: Self::MutArg) {
+        *self = Self::generate_rng(rng, arg.into());
     }
 }
 
@@ -433,8 +535,7 @@ impl AxisState {
     }
 }
 
-#[derive(Clone, Copy, Debug, Generatable, Mutatable, Serialize, Deserialize)]
-#[mutagen(gen_arg = type (), mut_arg = type ())]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum GamepadAxes2D {
     LeftStick,
     RightStick,
@@ -448,6 +549,47 @@ impl GamepadAxes2D {
             GamepadAxes2D::RightStick => (GamepadAxis::RightStickX, GamepadAxis::RightStickY),
             GamepadAxes2D::DPad => (GamepadAxis::DPadX, GamepadAxis::DPadY),
         }
+    }
+
+    const VALUES: [GamepadAxes2D; 3] = [
+        GamepadAxes2D::LeftStick,
+        GamepadAxes2D::RightStick,
+        GamepadAxes2D::DPad,
+    ];
+}
+
+impl<'a> Generatable<'a> for GamepadAxes2D {
+    type GenArg = GenArg<'a>;
+
+    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, arg: Self::GenArg) -> Self {
+        let mut weights = [0.0; GamepadAxes2D::VALUES.len()];
+
+        for (w, axes) in weights.iter_mut().zip_eq(GamepadAxes2D::VALUES.iter()) {
+            let (x, y) = axes.axes();
+
+            *w = if arg
+                .gamepads
+                .gamepads
+                .iter()
+                .any(|g| !g.axis_states.get(x).in_use || !g.axis_states.get(y).in_use)
+            {
+                100.0
+            } else {
+                1.0
+            };
+        }
+
+        let idx = WeightedIndex::new(&weights).unwrap().sample(rng);
+
+        GamepadAxes2D::VALUES[idx]
+    }
+}
+
+impl<'a> Mutatable<'a> for GamepadAxes2D {
+    type MutArg = MutArg<'a>;
+
+    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, arg: Self::MutArg) {
+        *self = Self::generate_rng(rng, arg.into());
     }
 }
 

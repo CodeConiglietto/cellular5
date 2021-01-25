@@ -78,7 +78,7 @@ pub mod mutagen_functions {
         if arg.gamepads().gamepads.is_empty() {
             0.0
         } else {
-            leaf_node_weight(arg)
+            CONSTS.gamepad_node_weight_mod * leaf_node_weight(arg)
         }
     }
 

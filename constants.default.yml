@@ -149,6 +149,8 @@ max_pipe_depth: 6
 min_branch_depth: 0
 max_branch_depth: 5
 
+gamepad_node_weight_mod: 1.0
+
 # Don't add this unless you have a Smithsonian API key of your own.
 # smithsonian_api_key: "foobarbaz"
 

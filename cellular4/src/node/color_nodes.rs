@@ -40,6 +40,11 @@ pub enum FloatColorNodes {
         child: NodeBox<FloatColorNodes>,
         child_shift_value: NodeBox<SNFloatNodes>,
     },
+    #[mutagen(gen_weight = branch_node_weight)]
+    SetSaturation {
+        child: NodeBox<FloatColorNodes>,
+        child_saturation_value: NodeBox<UNFloatNodes>,
+    },
 
     #[mutagen(gen_weight = branch_node_weight)]
     RGB {
@@ -364,6 +369,32 @@ impl Node for FloatColorNodes {
                 let rgb_tuple = hsv_tuple_to_rgb_tuple(
                     hsv_tuple.0 + shift_value.into_inner(),
                     hsv_tuple.1,
+                    hsv_tuple.2,
+                );
+
+                FloatColor {
+                    r: UNFloat::new(rgb_tuple.0),
+                    g: UNFloat::new(rgb_tuple.1),
+                    b: UNFloat::new(rgb_tuple.2),
+                    a: color.a,
+                }
+            }
+            SetSaturation {
+                child,
+                child_saturation_value,
+            } => {
+                let color = child.compute(compute_arg.reborrow());
+                let saturation_value = child_saturation_value.compute(compute_arg.reborrow());
+
+                let hsv_tuple = rgb_tuple_to_hsv_tuple(
+                    color.r.into_inner(),
+                    color.g.into_inner(),
+                    color.b.into_inner(),
+                );
+
+                let rgb_tuple = hsv_tuple_to_rgb_tuple(
+                    hsv_tuple.0,
+                    saturation_value.into_inner(),
                     hsv_tuple.2,
                 );
 

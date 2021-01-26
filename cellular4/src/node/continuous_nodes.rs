@@ -119,6 +119,12 @@ pub enum SNFloatNodes {
     #[mutagen(gen_weight = pipe_node_weight)]
     FromUNFloat { child: NodeBox<UNFloatNodes> },
 
+    #[mutagen(gen_weight = pipe_node_weight)]
+    FromBoolean { child: NodeBox<BooleanNodes> },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    FromUNFloatAndBoolean { child_float: NodeBox<UNFloatNodes>, child_bool: NodeBox<BooleanNodes> },
+
     #[mutagen(gen_weight = branch_node_weight)]
     Multiply {
         child_a: NodeBox<SNFloatNodes>,
@@ -236,6 +242,20 @@ impl Node for SNFloatNodes {
             // Random => SNFloat::generate(state),
             FromAngle { child } => child.compute(compute_arg.reborrow()).to_signed(),
             FromUNFloat { child } => child.compute(compute_arg.reborrow()).to_signed(),
+            FromBoolean { child } => SNFloat::new(
+            if child.compute(compute_arg.reborrow()).into_inner() {
+                1.0
+            } else {
+                -1.0
+            }),
+            FromUNFloatAndBoolean { child_float, child_bool } => {
+                SNFloat::new(child_float.compute(compute_arg.reborrow()).into_inner() *
+                if child_bool.compute(compute_arg.reborrow()).into_inner() {
+                    1.0
+                } else {
+                    -1.0
+                })
+            },
             Constant { value } => *value,
             Multiply { child_a, child_b } => SNFloat::new(
                 child_a.compute(compute_arg.reborrow()).into_inner()
@@ -372,6 +392,8 @@ pub enum UNFloatNodes {
     #[mutagen(gen_weight = pipe_node_weight)]
     FromAngle { child: NodeBox<AngleNodes> },
     #[mutagen(gen_weight = pipe_node_weight)]
+    FromBoolean { child: NodeBox<BooleanNodes> },
+    #[mutagen(gen_weight = pipe_node_weight)]
     FromSNFloat { child: NodeBox<SNFloatNodes> },
     #[mutagen(gen_weight = pipe_node_weight)]
     AbsSNFloat { child: NodeBox<SNFloatNodes> },
@@ -495,6 +517,7 @@ impl Node for UNFloatNodes {
             // Random => UNFloat::generate(state),
             Constant { value } => *value,
             FromAngle { child } => child.compute(compute_arg.reborrow()).to_unsigned(),
+            FromBoolean { child } => UNFloat::new(if child.compute(compute_arg.reborrow()).into_inner() { 1.0 } else{ 0.0 }),
             FromSNFloat { child } => child.compute(compute_arg.reborrow()).to_unsigned(),
             AbsSNFloat { child } => {
                 UNFloat::new(child.compute(compute_arg.reborrow()).into_inner().abs())

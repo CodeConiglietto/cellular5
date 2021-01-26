@@ -78,7 +78,7 @@ pub mod mutagen_functions {
         if arg.gamepads().gamepads.is_empty() {
             0.0
         } else {
-            leaf_node_weight(arg)
+            CONSTS.gamepad_node_weight_mod * leaf_node_weight(arg)
         }
     }
 
@@ -87,20 +87,28 @@ pub mod mutagen_functions {
         use super::*;
 
         #[derive(Copy, Clone)]
-        struct TestArg {
+        struct TestArg<'a> {
             depth: usize,
+            gamepads: &'a Gamepads,
         }
 
-        impl MutagenArg for TestArg {
+        impl<'a> MutagenArg for TestArg<'a> {
             fn depth(&self) -> usize {
                 self.depth
+            }
+
+            fn gamepads(&self) -> &Gamepads {
+                &self.gamepads
             }
         }
 
         #[test]
         fn all_depths_have_a_node() {
             for depth in 0..=max_node_depth() {
-                let arg = TestArg { depth };
+                let arg = TestArg {
+                    depth,
+                    gamepads: &Gamepads::new(),
+                };
 
                 assert!(
                     leaf_node_weight(arg) > 0.0
@@ -114,6 +122,7 @@ pub mod mutagen_functions {
         fn max_depth_only_gens_leaf() {
             let arg = TestArg {
                 depth: max_node_depth(),
+                gamepads: &Gamepads::new(),
             };
 
             assert!(leaf_node_weight(arg) > 0.0);

@@ -17,7 +17,7 @@ pub struct GenArg<'a> {
     pub history: &'a History,
     pub image_preloader: &'a Preloader<Image>,
     pub profiler: &'a mut Option<MutagenProfiler>,
-    pub gamepads: &'a Gamepads,
+    pub gamepads: &'a mut Gamepads,
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, GenArg<'a>> for GenArg<'b> {
@@ -31,7 +31,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, GenArg<'a>> for GenArg<'b> {
             history: &self.history,
             image_preloader: &self.image_preloader,
             profiler: &mut self.profiler,
-            gamepads: &self.gamepads,
+            gamepads: &mut self.gamepads,
         }
     }
 }
@@ -64,7 +64,7 @@ pub struct MutArg<'a> {
     pub history: &'a History,
     pub image_preloader: &'a Preloader<Image>,
     pub profiler: &'a mut Option<MutagenProfiler>,
-    pub gamepads: &'a Gamepads,
+    pub gamepads: &'a mut Gamepads,
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, MutArg<'a>> for MutArg<'b> {
@@ -78,7 +78,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, MutArg<'a>> for MutArg<'b> {
             history: &self.history,
             image_preloader: &self.image_preloader,
             profiler: &mut self.profiler,
-            gamepads: &self.gamepads,
+            gamepads: &mut self.gamepads,
         }
     }
 }
@@ -175,7 +175,7 @@ pub struct UpdArg<'a> {
     pub current_t: usize,
     pub image_preloader: &'a Preloader<Image>,
     pub profiler: &'a mut Option<MutagenProfiler>,
-    pub gamepads: &'a Gamepads,
+    pub gamepads: &'a mut Gamepads,
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, UpdArg<'a>> for UpdArg<'b> {
@@ -189,7 +189,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, UpdArg<'a>> for UpdArg<'b> {
             current_t: self.current_t,
             image_preloader: &self.image_preloader,
             profiler: &mut self.profiler,
-            gamepads: &self.gamepads,
+            gamepads: &mut self.gamepads,
         }
     }
 }

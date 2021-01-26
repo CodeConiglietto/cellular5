@@ -371,7 +371,9 @@ impl Node for SNFloatNodes {
                 }
             }
 
-            FromGamepadAxis { axis, id } => SNFloat::new(compute_arg.gamepads[*id].axis(*axis)),
+            FromGamepadAxis { axis, id } => {
+                SNFloat::new(compute_arg.gamepads[*id].axis_states.get(*axis).value)
+            }
         }
     }
 }
@@ -379,7 +381,17 @@ impl Node for SNFloatNodes {
 impl<'a> Updatable<'a> for SNFloatNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _arg: UpdArg<'a>) {}
+    fn update(&mut self, arg: UpdArg<'a>) {
+        use SNFloatNodes::*;
+
+        match self {
+            FromGamepadAxis { axis, id } => {
+                arg.gamepads[*id].axis_states.get_mut(*axis).in_use = true
+            }
+
+            _ => {}
+        }
+    }
 }
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]

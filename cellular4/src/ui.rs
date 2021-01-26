@@ -1,4 +1,4 @@
-use crate::{constants::CONSTS, UpdateStat};
+use crate::{prelude::*, update_stat::UpdateStat};
 
 #[cfg(unix)]
 mod fancy;
@@ -8,7 +8,7 @@ mod simple;
 pub trait UiBase {
     fn new() -> Self;
     fn log_output(&self) -> fern::Output;
-    fn draw(&mut self, update_stat: &UpdateStat);
+    fn draw(&mut self, update_stat: &UpdateStat, gamepads: &Gamepads);
 }
 
 pub struct Ui(UiImpl);
@@ -46,11 +46,11 @@ impl UiBase for Ui {
         }
     }
 
-    fn draw(&mut self, update_stat: &UpdateStat) {
+    fn draw(&mut self, update_stat: &UpdateStat, gamepads: &Gamepads) {
         match &mut self.0 {
             #[cfg(unix)]
-            UiImpl::Fancy(ui) => ui.draw(update_stat),
-            UiImpl::Simple(ui) => ui.draw(update_stat),
+            UiImpl::Fancy(ui) => ui.draw(update_stat, gamepads),
+            UiImpl::Simple(ui) => ui.draw(update_stat, gamepads),
         }
     }
 }

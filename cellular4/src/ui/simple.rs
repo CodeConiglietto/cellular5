@@ -1,4 +1,4 @@
-use crate::{ui::UiBase, update_stat::UpdateStat};
+use crate::{prelude::*, ui::UiBase, update_stat::UpdateStat};
 
 pub struct Ui;
 
@@ -11,7 +11,7 @@ impl UiBase for Ui {
         fern::Output::stdout("\n")
     }
 
-    fn draw(&mut self, update_stat: &UpdateStat) {
+    fn draw(&mut self, update_stat: &UpdateStat, _gamepads: &Gamepads) {
         println!("{:#?}", update_stat);
     }
 }

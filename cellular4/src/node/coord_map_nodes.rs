@@ -118,10 +118,10 @@ impl Node for CoordMapNodes {
                 child_normaliser,
             } => compute_arg.coordinate_set.get_coord_shifted(
                 SNFloat::new(
-                    x.compute(compute_arg.reborrow()).into_inner() / divisor.into_inner() as f32,
+                    x.compute(compute_arg.reborrow()).into_inner() / (divisor.into_inner()+ 1) as f32,
                 ),
                 SNFloat::new(
-                    y.compute(compute_arg.reborrow()).into_inner() / divisor.into_inner() as f32,
+                    y.compute(compute_arg.reborrow()).into_inner() / (divisor.into_inner() + 1) as f32,
                 ),
                 SNFloat::new(0.0),
                 child_normaliser.compute(compute_arg.reborrow()),

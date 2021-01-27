@@ -441,6 +441,10 @@ pub enum UNFloatNodes {
     },
     #[mutagen(gen_weight = pipe_node_weight)]
     ColorComponentH { child: NodeBox<FloatColorNodes> },
+    #[mutagen(gen_weight = pipe_node_weight)]
+    ColorComponentS { child: NodeBox<FloatColorNodes> },
+    #[mutagen(gen_weight = pipe_node_weight)]
+    ColorComponentV { child: NodeBox<FloatColorNodes> },
     #[mutagen(gen_weight = leaf_node_weight)]
     FromGametic,
     #[mutagen(gen_weight = pipe_node_weight)]
@@ -599,6 +603,8 @@ impl Node for UNFloatNodes {
                 }
             }
             ColorComponentH { child } => child.compute(compute_arg.reborrow()).get_hue_unfloat(),
+            ColorComponentS { child } => child.compute(compute_arg.reborrow()).get_saturation_unfloat(),
+            ColorComponentV { child } => child.compute(compute_arg.reborrow()).get_value_unfloat(),
             FromGametic => compute_arg.coordinate_set.get_unfloat_t(),
             FromGameticNormalised {
                 child_normaliser,

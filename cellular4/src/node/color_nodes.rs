@@ -55,6 +55,18 @@ pub enum FloatColorNodes {
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
+    RGBFromNormalisedSNFloats {
+        r: NodeBox<SNFloatNodes>,
+        r_norm: UFloatNormaliser,
+        g: NodeBox<SNFloatNodes>,
+        g_norm: UFloatNormaliser,
+        b: NodeBox<SNFloatNodes>,
+        b_norm: UFloatNormaliser,
+        a: NodeBox<SNFloatNodes>,
+        a_norm: UFloatNormaliser,
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
     HSV {
         h: NodeBox<UNFloatNodes>,
         s: NodeBox<UNFloatNodes>,
@@ -83,7 +95,7 @@ pub enum FloatColorNodes {
 
     #[mutagen(gen_weight = branch_node_weight)]
     LAB {
-        l: NodeBox<UNFloatNodes>,
+        l: NodeBox<SNFloatNodes>,
         a: NodeBox<SNFloatNodes>,
         b: NodeBox<SNFloatNodes>,
         alpha: NodeBox<UNFloatNodes>,
@@ -91,11 +103,12 @@ pub enum FloatColorNodes {
 
     #[mutagen(gen_weight = branch_node_weight)]
     ComplexLAB {
-        l: NodeBox<UNFloatNodes>,
+        l: NodeBox<SNFloatNodes>,
         child_complex: NodeBox<SNComplexNodes>,
         alpha: NodeBox<UNFloatNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
+    #[mutagen(gen_preferred)]
     IterativeResultLAB {
         child_iterative_function: NodeBox<IterativeFunctionNodes>,
         alpha: NodeBox<UNFloatNodes>,
@@ -411,6 +424,12 @@ impl Node for FloatColorNodes {
                 b: b.compute(compute_arg.reborrow()),
                 a: a.compute(compute_arg.reborrow()),
             },
+            RGBFromNormalisedSNFloats { r, r_norm, g, g_norm, b, b_norm, a, a_norm } => FloatColor {
+                r: r_norm.normalise(r.compute(compute_arg.reborrow()).into_inner()),
+                g: g_norm.normalise(g.compute(compute_arg.reborrow()).into_inner()),
+                b: b_norm.normalise(b.compute(compute_arg.reborrow()).into_inner()),
+                a: a_norm.normalise(a.compute(compute_arg.reborrow()).into_inner()),
+            },
             HSV { h, s, v, a, offset } => {
                 let rgb: Rgb = Hsv::<Srgb, _>::from_components((
                     RgbHue::from_degrees(
@@ -493,7 +512,7 @@ impl Node for FloatColorNodes {
                 let result = child_iterative_function.compute(compute_arg.reborrow());
 
                 let lab = Lab::new(
-                    result.iter_final.into_inner() as f32 * 100.0 / 255.0,
+                    (result.iter_final.into_inner() - 128) as f32 / 255.0 * 100.0,
                     result.z_final.re().into_inner() * 127.0,
                     result.z_final.im().into_inner() * 127.0,
                 );

@@ -396,6 +396,14 @@ impl FloatColor {
         }
     }
 
+    pub fn get_saturation_unfloat(&self) -> UNFloat {
+        UNFloat::new(rgb_tuple_to_hsv_tuple(self.r.into_inner(), self.g.into_inner(), self.b.into_inner()).1)
+    }
+
+    pub fn get_value_unfloat(&self) -> UNFloat {
+        UNFloat::new(rgb_tuple_to_hsv_tuple(self.r.into_inner(), self.g.into_inner(), self.b.into_inner()).2)
+    }
+
     pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
         Self {
             r: UNFloat::random(rng),

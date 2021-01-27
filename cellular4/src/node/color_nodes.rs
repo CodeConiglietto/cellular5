@@ -108,7 +108,6 @@ pub enum FloatColorNodes {
         alpha: NodeBox<UNFloatNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
-    #[mutagen(gen_preferred)]
     IterativeResultLAB {
         child_iterative_function: NodeBox<IterativeFunctionNodes>,
         alpha: NodeBox<UNFloatNodes>,

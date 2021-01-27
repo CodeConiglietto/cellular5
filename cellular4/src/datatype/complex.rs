@@ -72,6 +72,10 @@ impl SNComplex {
         SNFloat::new_unchecked(self.value.im as f32)
     }
 
+    pub fn to_snpoint(self) -> SNPoint {
+        SNPoint::from_snfloats(self.re(), self.im())
+    }
+
     pub fn to_angle(self) -> Angle {
         Angle::new(f64::atan2(self.value.re, self.value.im) as f32)
     }

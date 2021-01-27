@@ -144,6 +144,7 @@ fn setup_logging(ui: &Ui) {
 struct NodeTree {
     /// The root node for the tree that computes the next screen state
     root_node: NodeBox<FloatColorNodes>,
+    root_coordinate_node: NodeBox<CoordMapNodes>,
     root_frame_renderer: NodeBox<FrameRendererNodes>,
     compute_offset_node: NodeBox<CoordMapNodes>,
     fade_color_node: NodeBox<FloatColorNodes>,
@@ -458,28 +459,33 @@ impl EventHandler for MyGame {
         //let rule_sets = self.rule_sets;
 
         let root_node = &self.node_tree.root_node;
+        let root_coordinate_node = &self.node_tree.root_coordinate_node;
         let nodes = &self.nodes;
         let data = &self.data;
         let total_cells = CONSTS.cell_array_width * CONSTS.cell_array_height;
 
         let update_step = |y, x, mut new: ArrayViewMut1<u8>| {
+            let coordinate_set = CoordinateSet {
+                x: UNFloat::new(x as f32 / CONSTS.cell_array_width as f32).to_signed(),
+                y: UNFloat::new((y + slice_y as usize) as f32 / CONSTS.cell_array_height as f32)
+                    .to_signed(),
+                t: current_t as f32,
+            };
+
+            let mut compute_arg = ComArg {
+                nodes,
+                data,
+                current_t,
+                coordinate_set,
+                history,
+                depth: 0,
+                gamepads,
+            };
+
+            let transformed_coords = root_coordinate_node.compute(compute_arg.reborrow());
+
             let new_color = ByteColor::from(
-                root_node.compute(ComArg {
-                    nodes,
-                    data,
-                    current_t,
-                    coordinate_set: CoordinateSet {
-                        x: UNFloat::new(x as f32 / CONSTS.cell_array_width as f32).to_signed(),
-                        y: UNFloat::new(
-                            (y + slice_y as usize) as f32 / CONSTS.cell_array_height as f32,
-                        )
-                        .to_signed(),
-                        t: current_t as f32,
-                    },
-                    history,
-                    depth: 0,
-                    gamepads,
-                }),
+                root_node.compute(compute_arg.replace_coordinate_set(&transformed_coords)),
             );
 
             new[0] = new_color.r.into_inner();
@@ -584,34 +590,57 @@ impl EventHandler for MyGame {
                     ))
             {
                 info!("====TIC: {} MUTATING TREE====", self.current_t);
-                self.node_tree.root_node.mutate_rng(
-                    &mut self.rng,
-                    MutArg {
-                        nodes: &mut self.nodes,
-                        data: &mut self.data,
-                        depth: 0,
-                        current_t,
-                        coordinate_set: history_step.update_coordinate,
-                        history: &self.history,
-                        image_preloader: &mut self.image_preloader,
-                        profiler: &mut self.profiler,
-                        gamepads: &mut self.gamepads,
-                    },
-                );
-                self.node_tree.root_frame_renderer.mutate_rng(
-                    &mut self.rng,
-                    MutArg {
-                        nodes: &mut self.nodes,
-                        data: &mut self.data,
-                        depth: 0,
-                        current_t,
-                        coordinate_set: history_step.update_coordinate,
-                        history: &self.history,
-                        image_preloader: &mut self.image_preloader,
-                        profiler: &mut self.profiler,
-                        gamepads: &mut self.gamepads,
-                    },
-                );
+                if thread_rng().gen_bool(0.5) {
+                    info!("MUTATING ROOT NODE");
+                    self.node_tree.root_node.mutate_rng(
+                        &mut self.rng,
+                        MutArg {
+                            nodes: &mut self.nodes,
+                            data: &mut self.data,
+                            depth: 0,
+                            current_t,
+                            coordinate_set: history_step.update_coordinate,
+                            history: &self.history,
+                            image_preloader: &mut self.image_preloader,
+                            profiler: &mut self.profiler,
+                            gamepads: &mut self.gamepads,
+                        },
+                    );
+                } else {
+                if thread_rng().gen_bool(0.5) {
+                        info!("MUTATING COORD NODE");
+                        self.node_tree.root_coordinate_node.mutate_rng(
+                            &mut self.rng,
+                            MutArg {
+                                nodes: &mut self.nodes,
+                                data: &mut self.data,
+                                depth: 0,
+                                current_t,
+                                coordinate_set: history_step.update_coordinate,
+                                history: &self.history,
+                                image_preloader: &mut self.image_preloader,
+                                profiler: &mut self.profiler,
+                                gamepads: &mut self.gamepads,
+                            },
+                        );
+                    } else {
+                        info!("MUTATING RENDERER");
+                        self.node_tree.root_frame_renderer.mutate_rng(
+                            &mut self.rng,
+                            MutArg {
+                                nodes: &mut self.nodes,
+                                data: &mut self.data,
+                                depth: 0,
+                                current_t,
+                                coordinate_set: history_step.update_coordinate,
+                                history: &self.history,
+                                image_preloader: &mut self.image_preloader,
+                                profiler: &mut self.profiler,
+                                gamepads: &mut self.gamepads,
+                            },
+                        );
+                    }
+                }
                 // // info!("{:#?}", &self.root_node);
                 // if self.record_tree {
                 //     self.node_tree.save("latest");

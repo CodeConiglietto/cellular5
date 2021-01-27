@@ -7,13 +7,21 @@ use crate::prelude::*;
 #[derive(Generatable, UpdatableRecursively, Mutatable, Serialize, Deserialize, Debug)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum CoordMapNodes {
+    // #[mutagen(gen_weight = leaf_node_weight)]
+    #[mutagen(gen_weight = 2.0)]
+    Identity,
+
     #[mutagen(gen_weight = pipe_node_weight)]
     Replace { child: NodeBox<SNPointNodes> },
+
+    #[mutagen(gen_weight = pipe_node_weight)]
+    ReplaceComplex { child: NodeBox<SNComplexNodes> },
 
     #[mutagen(gen_weight = branch_node_weight)]
     Shift {
         x: NodeBox<SNFloatNodes>,
         y: NodeBox<SNFloatNodes>,
+        divisor: Nibble,
         child_normaliser: NodeBox<SFloatNormaliserNodes>,
     },
 
@@ -88,8 +96,16 @@ impl Node for CoordMapNodes {
         use CoordMapNodes::*;
 
         match self {
+            Identity => compute_arg.coordinate_set,
             Replace { child } => {
                 let coords = child.compute(compute_arg.reborrow());
+                compute_arg
+                    .reborrow()
+                    .replace_coords(&coords)
+                    .coordinate_set
+            }
+            ReplaceComplex { child } => {
+                let coords = child.compute(compute_arg.reborrow()).to_snpoint();
                 compute_arg
                     .reborrow()
                     .replace_coords(&coords)
@@ -98,10 +114,15 @@ impl Node for CoordMapNodes {
             Shift {
                 x,
                 y,
+                divisor,
                 child_normaliser,
             } => compute_arg.coordinate_set.get_coord_shifted(
-                x.compute(compute_arg.reborrow()),
-                y.compute(compute_arg.reborrow()),
+                SNFloat::new(
+                    x.compute(compute_arg.reborrow()).into_inner() / divisor.into_inner() as f32,
+                ),
+                SNFloat::new(
+                    y.compute(compute_arg.reborrow()).into_inner() / divisor.into_inner() as f32,
+                ),
                 SNFloat::new(0.0),
                 child_normaliser.compute(compute_arg.reborrow()),
             ),

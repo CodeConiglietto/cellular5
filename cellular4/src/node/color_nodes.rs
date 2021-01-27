@@ -404,11 +404,8 @@ impl Node for FloatColorNodes {
                     color.b.into_inner(),
                 );
 
-                let rgb_tuple = hsv_tuple_to_rgb_tuple(
-                    hsv_tuple.0,
-                    saturation_value.into_inner(),
-                    hsv_tuple.2,
-                );
+                let rgb_tuple =
+                    hsv_tuple_to_rgb_tuple(hsv_tuple.0, saturation_value.into_inner(), hsv_tuple.2);
 
                 FloatColor {
                     r: UNFloat::new(rgb_tuple.0),
@@ -423,7 +420,16 @@ impl Node for FloatColorNodes {
                 b: b.compute(compute_arg.reborrow()),
                 a: a.compute(compute_arg.reborrow()),
             },
-            RGBFromNormalisedSNFloats { r, r_norm, g, g_norm, b, b_norm, a, a_norm } => FloatColor {
+            RGBFromNormalisedSNFloats {
+                r,
+                r_norm,
+                g,
+                g_norm,
+                b,
+                b_norm,
+                a,
+                a_norm,
+            } => FloatColor {
                 r: r_norm.normalise(r.compute(compute_arg.reborrow()).into_inner()),
                 g: g_norm.normalise(g.compute(compute_arg.reborrow()).into_inner()),
                 b: b_norm.normalise(b.compute(compute_arg.reborrow()).into_inner()),

@@ -137,6 +137,13 @@ impl<'a> ComArg<'a> {
 
         new
     }
+    pub fn replace_coordinate_set(self, other: &CoordinateSet) -> Self {
+        let mut new = self.clone();
+
+        new.coordinate_set = other.clone();
+
+        new
+    }
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, ComArg<'a>> for ComArg<'b> {

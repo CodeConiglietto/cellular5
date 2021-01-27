@@ -123,7 +123,10 @@ pub enum SNFloatNodes {
     FromBoolean { child: NodeBox<BooleanNodes> },
 
     #[mutagen(gen_weight = branch_node_weight)]
-    FromUNFloatAndBoolean { child_float: NodeBox<UNFloatNodes>, child_bool: NodeBox<BooleanNodes> },
+    FromUNFloatAndBoolean {
+        child_float: NodeBox<UNFloatNodes>,
+        child_bool: NodeBox<BooleanNodes>,
+    },
 
     #[mutagen(gen_weight = branch_node_weight)]
     Multiply {
@@ -242,20 +245,24 @@ impl Node for SNFloatNodes {
             // Random => SNFloat::generate(state),
             FromAngle { child } => child.compute(compute_arg.reborrow()).to_signed(),
             FromUNFloat { child } => child.compute(compute_arg.reborrow()).to_signed(),
-            FromBoolean { child } => SNFloat::new(
-            if child.compute(compute_arg.reborrow()).into_inner() {
-                1.0
-            } else {
-                -1.0
-            }),
-            FromUNFloatAndBoolean { child_float, child_bool } => {
-                SNFloat::new(child_float.compute(compute_arg.reborrow()).into_inner() *
-                if child_bool.compute(compute_arg.reborrow()).into_inner() {
+            FromBoolean { child } => {
+                SNFloat::new(if child.compute(compute_arg.reborrow()).into_inner() {
                     1.0
                 } else {
                     -1.0
                 })
-            },
+            }
+            FromUNFloatAndBoolean {
+                child_float,
+                child_bool,
+            } => SNFloat::new(
+                child_float.compute(compute_arg.reborrow()).into_inner()
+                    * if child_bool.compute(compute_arg.reborrow()).into_inner() {
+                        1.0
+                    } else {
+                        -1.0
+                    },
+            ),
             Constant { value } => *value,
             Multiply { child_a, child_b } => SNFloat::new(
                 child_a.compute(compute_arg.reborrow()).into_inner()
@@ -533,7 +540,13 @@ impl Node for UNFloatNodes {
             // Random => UNFloat::generate(state),
             Constant { value } => *value,
             FromAngle { child } => child.compute(compute_arg.reborrow()).to_unsigned(),
-            FromBoolean { child } => UNFloat::new(if child.compute(compute_arg.reborrow()).into_inner() { 1.0 } else{ 0.0 }),
+            FromBoolean { child } => {
+                UNFloat::new(if child.compute(compute_arg.reborrow()).into_inner() {
+                    1.0
+                } else {
+                    0.0
+                })
+            }
             FromSNFloat { child } => child.compute(compute_arg.reborrow()).to_unsigned(),
             AbsSNFloat { child } => {
                 UNFloat::new(child.compute(compute_arg.reborrow()).into_inner().abs())
@@ -603,7 +616,9 @@ impl Node for UNFloatNodes {
                 }
             }
             ColorComponentH { child } => child.compute(compute_arg.reborrow()).get_hue_unfloat(),
-            ColorComponentS { child } => child.compute(compute_arg.reborrow()).get_saturation_unfloat(),
+            ColorComponentS { child } => child
+                .compute(compute_arg.reborrow())
+                .get_saturation_unfloat(),
             ColorComponentV { child } => child.compute(compute_arg.reborrow()).get_value_unfloat(),
             FromGametic => compute_arg.coordinate_set.get_unfloat_t(),
             FromGameticNormalised {

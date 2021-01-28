@@ -253,10 +253,7 @@ impl Node for CoordMapNodes {
                     child_b.compute(compute_arg.reborrow())
                 }
             }
-            Average {
-                child_a,
-                child_b,
-            } => {
+            Average { child_a, child_b } => {
                 let a = child_a.compute(compute_arg.reborrow());
                 let b = child_b.compute(compute_arg.reborrow());
 

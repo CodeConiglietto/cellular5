@@ -607,7 +607,7 @@ impl EventHandler for MyGame {
                         },
                     );
                 } else {
-                if thread_rng().gen_bool(0.5) {
+                    if thread_rng().gen_bool(0.5) {
                         info!("MUTATING COORD NODE");
                         self.node_tree.root_coordinate_node.mutate_rng(
                             &mut self.rng,

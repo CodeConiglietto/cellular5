@@ -65,6 +65,17 @@ pub enum CoordMapNodes {
         child_b: NodeBox<CoordMapNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
+    Average {
+        child_a: NodeBox<CoordMapNodes>,
+        child_b: NodeBox<CoordMapNodes>,
+    },
+    #[mutagen(gen_weight = branch_node_weight)]
+    Lerp {
+        child_lerp_val: NodeBox<UNFloatNodes>,
+        child_a: NodeBox<CoordMapNodes>,
+        child_b: NodeBox<CoordMapNodes>,
+    },
+    #[mutagen(gen_weight = branch_node_weight)]
     ApplyMatrix {
         child_matrix: NodeBox<SNFloatMatrix3Nodes>,
         child_normaliser: NodeBox<SFloatNormaliserNodes>,
@@ -235,6 +246,35 @@ impl Node for CoordMapNodes {
                     child_a.compute(compute_arg.reborrow())
                 } else {
                     child_b.compute(compute_arg.reborrow())
+                }
+            }
+            Average {
+                child_a,
+                child_b,
+            } => {
+                let a = child_a.compute(compute_arg.reborrow());
+                let b = child_b.compute(compute_arg.reborrow());
+
+                CoordinateSet {
+                    x: SNFloat::new(a.x.into_inner() * 0.5 + b.x.into_inner() * 0.5),
+                    y: SNFloat::new(a.y.into_inner() * 0.5 + b.y.into_inner() * 0.5),
+                    t: compute_arg.coordinate_set.t,
+                }
+            }
+            Lerp {
+                child_lerp_val,
+                child_a,
+                child_b,
+            } => {
+                let lerp_val = child_lerp_val.compute(compute_arg.reborrow()).into_inner();
+                let inv_lerp_val = 1.0 - lerp_val;
+                let a = child_a.compute(compute_arg.reborrow());
+                let b = child_b.compute(compute_arg.reborrow());
+
+                CoordinateSet {
+                    x: SNFloat::new(a.x.into_inner() * lerp_val + b.x.into_inner() * inv_lerp_val),
+                    y: SNFloat::new(a.y.into_inner() * lerp_val + b.y.into_inner() * inv_lerp_val),
+                    t: compute_arg.coordinate_set.t,
                 }
             }
             ApplyMatrix {

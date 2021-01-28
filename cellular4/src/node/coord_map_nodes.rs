@@ -94,8 +94,11 @@ pub enum CoordMapNodes {
         child_a: NodeBox<SNPointNodes>,
         child_b: NodeBox<SNPointNodes>,
     },
-    #[mutagen(gen_weight = pipe_node_weight)]
-    TesellatePolarTwoClosestPointSet { child: NodeBox<PointSetNodes> },
+    #[mutagen(gen_weight = branch_node_weight)]
+    TesellatePolarTwoClosestPointSet {
+        child_points: NodeBox<PointSetNodes>,
+        child_theta: NodeBox<AngleNodes>,
+    },
     #[mutagen(gen_weight = pipe_node_weight)]
     TesellateClosestPointSet { child: NodeBox<PointSetNodes> },
 }
@@ -129,10 +132,12 @@ impl Node for CoordMapNodes {
                 child_normaliser,
             } => compute_arg.coordinate_set.get_coord_shifted(
                 SNFloat::new(
-                    x.compute(compute_arg.reborrow()).into_inner() / (divisor.into_inner()+ 1) as f32,
+                    x.compute(compute_arg.reborrow()).into_inner()
+                        / (divisor.into_inner() + 1) as f32,
                 ),
                 SNFloat::new(
-                    y.compute(compute_arg.reborrow()).into_inner() / (divisor.into_inner() + 1) as f32,
+                    y.compute(compute_arg.reborrow()).into_inner()
+                        / (divisor.into_inner() + 1) as f32,
                 ),
                 SNFloat::new(0.0),
                 child_normaliser.compute(compute_arg.reborrow()),
@@ -401,9 +406,13 @@ impl Node for CoordMapNodes {
                 }
             }
 
-            TesellatePolarTwoClosestPointSet { child } => {
+            TesellatePolarTwoClosestPointSet {
+                child_points,
+                child_theta,
+            } => {
                 let p = compute_arg.coordinate_set.get_coord_point();
-                let mut point_set = child.compute(compute_arg.reborrow());
+                let theta = child_theta.compute(compute_arg.reborrow());
+                let mut point_set = child_points.compute(compute_arg.reborrow());
                 let closest = point_set.get_n_closest_points(p, 2);
 
                 let polar_1 = SNPoint::new(
@@ -423,9 +432,11 @@ impl Node for CoordMapNodes {
                     y_result = 1.0;
                 }
 
-                let offset =
-                    SNPoint::from_snfloats(polar_1.x(), UNFloat::new(y_result).to_signed())
-                        .from_polar();
+                let offset = SNPoint::from_snfloats(
+                    (polar_1.x().to_angle() + theta).to_signed(),
+                    UNFloat::new(y_result).to_signed(),
+                )
+                .from_polar();
 
                 CoordinateSet {
                     x: offset.x(),

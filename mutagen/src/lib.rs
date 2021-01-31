@@ -113,9 +113,12 @@ pub use rand;
 #[doc(hidden)]
 pub use mutagen_derive::*;
 
-use std::{ops::DerefMut, rc::Rc, sync::Arc};
+use std::{borrow::Cow, ops::DerefMut, rc::Rc, sync::Arc};
 
 use rand::Rng;
+
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 /// A trait denoting that the type may be used as an argument to the other various mutagen traits
 /// You should also implement [crate::Reborrow]
@@ -130,6 +133,9 @@ pub trait State: Sized {
         self.deepen();
         self
     }
+
+    /// Hook for profiling events
+    fn handle_event(&mut self, _event: Event) {}
 }
 
 impl State for () {}
@@ -138,7 +144,7 @@ impl State for () {}
 ///
 /// For more information, consult the [crate docs](crate).
 pub trait Generatable<'a>: Sized {
-    type GenArg: 'a;
+    type GenArg: State + 'a;
 
     /// Convenience shorthand for `Self::generate_rng(&mut rand::thread_rng())`
     fn generate(arg: Self::GenArg) -> Self {
@@ -185,7 +191,7 @@ impl<'a, T: Generatable<'a>> Generatable<'a> for Arc<T> {
 /// ## Attributes
 ///
 pub trait Mutatable<'a> {
-    type MutArg: 'a;
+    type MutArg: State + 'a;
 
     fn mutate(&mut self, arg: Self::MutArg) {
         self.mutate_rng(&mut rand::thread_rng(), arg)
@@ -209,7 +215,7 @@ impl<'a, T: Mutatable<'a>> Mutatable<'a> for Box<T> {
 ///
 /// When derived on an enum, it will call the current variant's [`update()`](crate::Updatable::update)
 pub trait Updatable<'a> {
-    type UpdateArg: 'a;
+    type UpdateArg: State + 'a;
 
     fn update(&mut self, arg: Self::UpdateArg);
 }
@@ -283,6 +289,21 @@ where
     fn reborrow(&'a mut self) -> T {
         *self
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum EventKind {
+    Generate,
+    Mutate,
+    Update,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub struct Event {
+    pub kind: EventKind,
+    pub key: Cow<'static, str>,
 }
 
 /*

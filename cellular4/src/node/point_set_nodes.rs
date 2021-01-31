@@ -71,6 +71,18 @@ pub enum PointSetNodes {
         child_rho: NodeBox<UNFloatNodes>,
         child_normaliser: NodeBox<SFloatNormaliserNodes>,
     },
+    #[mutagen(gen_weight = branch_node_weight)]
+    RecomputedQueue {
+        value: PointSet,
+        child_n: NodeBox<ByteNodes>,
+        child_point: NodeBox<SNPointNodes>,
+    },
+    #[mutagen(gen_weight = branch_node_weight)]
+    IterativeQueue {
+        value: PointSet,
+        child_n: NodeBox<ByteNodes>,
+        child_point: NodeBox<SNPointNodes>,
+    },
 }
 
 impl Node for PointSetNodes {
@@ -90,6 +102,8 @@ impl Node for PointSetNodes {
             Line { value, .. } => value.clone(),
             IterativeRecomputation { value, .. } => value.clone(),
             IterativePolarLine { value, .. } => value.clone(),
+            RecomputedQueue { value, .. } => value.clone(),
+            IterativeQueue { value, .. } => value.clone(),
         }
     }
 }
@@ -320,9 +334,7 @@ impl<'a> Updatable<'a> for PointSetNodes {
                         .points()
                         .iter()
                         .map(|point| {
-                            let compute_arg: ComArg<'_> = arg.reborrow().into();
-
-                            child_point.compute(compute_arg.replace_coords(&point))
+                            child_point.compute(ComArg::from(arg.reborrow()).replace_coords(&point))
                         })
                         .collect(),
                 ));
@@ -363,6 +375,50 @@ impl<'a> Updatable<'a> for PointSetNodes {
                         )
                         .collect(),
                 ));
+            }
+
+            PointSetNodes::RecomputedQueue {
+                ref mut value,
+                child_n,
+                child_point,
+            } => {
+                let n = child_n.compute(arg.reborrow().into()).into_inner().max(1);
+                let mut points = value.points();
+
+                if points.len() + 1 > usize::from(n) {
+                    points = &points[(points.len() + 1 - usize::from(n))..];
+                }
+
+                let mut new_points = Vec::with_capacity(points.len() + 1);
+                new_points.extend(points);
+                new_points.push(child_point.compute(arg.reborrow().into()));
+
+                value.replace(Arc::new(new_points));
+            }
+
+            PointSetNodes::IterativeQueue {
+                ref mut value,
+                child_n,
+                child_point,
+            } => {
+                let n = child_n.compute(arg.reborrow().into()).into_inner().max(1);
+                let mut points = value.points();
+
+                if points.len() + 1 > usize::from(n) {
+                    points = &points[(points.len() + 1 - usize::from(n))..];
+                }
+
+                let mut new_points = Vec::with_capacity(points.len() + 1);
+                new_points.extend(points);
+
+                let mut compute_arg = ComArg::from(arg.reborrow());
+                if let Some(last) = points.last() {
+                    compute_arg = compute_arg.replace_coords(last);
+                }
+
+                new_points.push(child_point.compute(compute_arg));
+
+                value.replace(Arc::new(new_points));
             }
 
             _ => {}

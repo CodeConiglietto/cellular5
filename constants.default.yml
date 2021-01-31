@@ -84,6 +84,8 @@ tics_per_update: 2
 
 fullscreen: false
 # fullscreen: true
+console_width: 100
+fancy_terminal: false
 
 # auto_mutate: false
 auto_mutate: true
@@ -146,3 +148,23 @@ max_pipe_depth: 6
 
 min_branch_depth: 0
 max_branch_depth: 5
+
+gamepad_node_weight_mod: 1.0
+
+# Don't add this unless you have a Smithsonian API key of your own.
+# smithsonian_api_key: "foobarbaz"
+
+# Don't add this unless you have a Gfycat API key of your own.
+# gfycat:
+#   client_id: "foobarbaz"
+#   client_secret: "foobarbaz"
+#   trending: true
+#   trending_weight: 0.5
+#   exclude_nsfw: true
+#   # You can omit this to just search trending
+#   # search_terms:
+#   #   - bepis
+#   #   - bunny
+
+mutagen_profiler: false
+mutagen_profiler_graphs: false

@@ -2,7 +2,6 @@ use ggez::{graphics::Image as GgImage, Context};
 use ndarray::{s, Array3, ArrayView1};
 
 use crate::prelude::*;
-use rand::thread_rng;
 
 #[derive(Debug)]
 pub struct HistoryStep {
@@ -17,11 +16,20 @@ pub struct HistoryStep {
 }
 
 impl HistoryStep {
-    pub fn new(ctx: &mut Context, array_width: usize, array_height: usize) -> Self {
+    pub fn new(
+        ctx: &mut Context,
+        array_width: usize,
+        array_height: usize,
+        use_nearest_neighbour_scaling: bool,
+    ) -> Self {
         let cell_array = init_cell_array(array_width, array_height);
 
         Self {
-            computed_texture: compute_texture(ctx, cell_array.view()),
+            computed_texture: compute_texture(
+                ctx,
+                cell_array.view(),
+                use_nearest_neighbour_scaling,
+            ),
             cell_array,
             update_coordinate: CoordinateSet {
                 x: SNFloat::ZERO,
@@ -45,7 +53,7 @@ impl History {
     pub fn new(ctx: &mut Context, array_width: usize, array_height: usize, size: usize) -> Self {
         Self {
             history_steps: (0..size)
-                .map(|_| HistoryStep::new(ctx, array_width, array_height))
+                .map(|_| HistoryStep::new(ctx, array_width, array_height, false))
                 .collect(),
         }
     }
@@ -57,14 +65,11 @@ impl History {
 
     pub fn get_normalised(&self, pos: SNPoint, t: usize) -> FloatColor {
         self.get(
-            ((pos.x().into_inner() + 1.0)
-                        * 0.5
-                        * CONSTS.cell_array_width as f32) as usize,
-                    ((pos.y().into_inner() + 1.0)
-                        * 0.5
-                        * CONSTS.cell_array_height as f32) as usize,
-                    t as usize,
-        ).into()
+            ((pos.x().into_inner() + 1.0) * 0.5 * CONSTS.cell_array_width as f32) as usize,
+            ((pos.y().into_inner() + 1.0) * 0.5 * CONSTS.cell_array_height as f32) as usize,
+            t as usize,
+        )
+        .into()
     }
 
     pub fn get(&self, x: usize, y: usize, t: usize) -> ByteColor {

@@ -5,10 +5,11 @@ pub use crate::{
     coordinate_set::*,
     data_set::*,
     datatype::{
-        buffers::*, colors::*, complex::*, constraint_resolvers::*, continuous::*, discrete::*,
-        distance_functions::*, frame_renderers::*, image::*, iterative_results::*, matrices::*,
-        noisefunctions::*, point_sets::*, points::*,
+        buffers::*, color_blend_functions::*, colors::*, complex::*, constraint_resolvers::*,
+        continuous::*, discrete::*, distance_functions::*, frame_renderers::*, image::*,
+        iterative_results::*, matrices::*, noisefunctions::*, point_sets::*, points::*,
     },
+    gamepad::*,
     history::*,
     mutagen_args::*,
     node::{
@@ -19,5 +20,6 @@ pub use crate::{
     },
     node_set::*,
     preloader::*,
+    profiler::*,
     util::*,
 };

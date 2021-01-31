@@ -119,6 +119,15 @@ pub enum SNFloatNodes {
     #[mutagen(gen_weight = pipe_node_weight)]
     FromUNFloat { child: NodeBox<UNFloatNodes> },
 
+    #[mutagen(gen_weight = pipe_node_weight)]
+    FromBoolean { child: NodeBox<BooleanNodes> },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    FromUNFloatAndBoolean {
+        child_float: NodeBox<UNFloatNodes>,
+        child_bool: NodeBox<BooleanNodes>,
+    },
+
     #[mutagen(gen_weight = branch_node_weight)]
     Multiply {
         child_a: NodeBox<SNFloatNodes>,
@@ -165,9 +174,9 @@ pub enum SNFloatNodes {
     #[mutagen(gen_weight = branch_node_weight)]
     NoiseFunction {
         noise_function: NoiseFunctions,
-        scale_x_child: NodeBox<ByteNodes>,
-        scale_y_child: NodeBox<ByteNodes>,
-        scale_t_child: NodeBox<ByteNodes>,
+        scale_x: Nibble,
+        scale_y: Nibble,
+        scale_t: UNFloat,
     },
 
     // IterativeMatrixNoiseFunction {//TODO: finish
@@ -215,6 +224,9 @@ pub enum SNFloatNodes {
         child_a: NodeBox<SNFloatNodes>,
         child_b: NodeBox<SNFloatNodes>,
     },
+
+    #[mutagen(gen_weight = gamepad_node_weight)]
+    FromGamepadAxis { axis: GamepadAxis, id: GamepadId },
 }
 
 impl Node for SNFloatNodes {
@@ -233,6 +245,24 @@ impl Node for SNFloatNodes {
             // Random => SNFloat::generate(state),
             FromAngle { child } => child.compute(compute_arg.reborrow()).to_signed(),
             FromUNFloat { child } => child.compute(compute_arg.reborrow()).to_signed(),
+            FromBoolean { child } => {
+                SNFloat::new(if child.compute(compute_arg.reborrow()).into_inner() {
+                    1.0
+                } else {
+                    -1.0
+                })
+            }
+            FromUNFloatAndBoolean {
+                child_float,
+                child_bool,
+            } => SNFloat::new(
+                child_float.compute(compute_arg.reborrow()).into_inner()
+                    * if child_bool.compute(compute_arg.reborrow()).into_inner() {
+                        1.0
+                    } else {
+                        -1.0
+                    },
+            ),
             Constant { value } => *value,
             Multiply { child_a, child_b } => SNFloat::new(
                 child_a.compute(compute_arg.reborrow()).into_inner()
@@ -284,16 +314,13 @@ impl Node for SNFloatNodes {
 
             NoiseFunction {
                 noise_function,
-                scale_x_child,
-                scale_y_child,
-                scale_t_child,
+                scale_x,
+                scale_y,
+                scale_t,
             } => SNFloat::new_clamped(noise_function.compute(
-                compute_arg.coordinate_set.x.into_inner() as f64
-                    * scale_x_child.compute(compute_arg.reborrow()).into_inner() as f64,
-                compute_arg.coordinate_set.y.into_inner() as f64
-                    * scale_y_child.compute(compute_arg.reborrow()).into_inner() as f64,
-                compute_arg.coordinate_set.t as f64
-                    * (scale_t_child.compute(compute_arg.reborrow()).into_inner() / 4) as f64,
+                compute_arg.coordinate_set.x.into_inner() as f64 * scale_x.into_inner() as f64,
+                compute_arg.coordinate_set.y.into_inner() as f64 * scale_y.into_inner() as f64,
+                compute_arg.coordinate_set.t as f64 * (scale_t.into_inner() / 4.0) as f64,
             ) as f32),
             // IterativeMatrixNoiseFunction {
             //     noise_function,
@@ -350,6 +377,10 @@ impl Node for SNFloatNodes {
                     child_b.compute(compute_arg.reborrow())
                 }
             }
+
+            FromGamepadAxis { axis, id } => {
+                SNFloat::new(compute_arg.gamepads[*id].axis_states.get(*axis).value)
+            }
         }
     }
 }
@@ -357,7 +388,17 @@ impl Node for SNFloatNodes {
 impl<'a> Updatable<'a> for SNFloatNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _arg: UpdArg<'a>) {}
+    fn update(&mut self, arg: UpdArg<'a>) {
+        use SNFloatNodes::*;
+
+        match self {
+            FromGamepadAxis { axis, id } => {
+                arg.gamepads[*id].axis_states.get_mut(*axis).in_use = true
+            }
+
+            _ => {}
+        }
+    }
 }
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]
@@ -370,6 +411,8 @@ pub enum UNFloatNodes {
     #[mutagen(gen_weight = pipe_node_weight)]
     FromAngle { child: NodeBox<AngleNodes> },
     #[mutagen(gen_weight = pipe_node_weight)]
+    FromBoolean { child: NodeBox<BooleanNodes> },
+    #[mutagen(gen_weight = pipe_node_weight)]
     FromSNFloat { child: NodeBox<SNFloatNodes> },
     #[mutagen(gen_weight = pipe_node_weight)]
     AbsSNFloat { child: NodeBox<SNFloatNodes> },
@@ -379,6 +422,14 @@ pub enum UNFloatNodes {
     Multiply {
         child_a: NodeBox<UNFloatNodes>,
         child_b: NodeBox<UNFloatNodes>,
+    },
+    #[mutagen(gen_weight = branch_node_weight)]
+    NoiseFunction {
+        //Putting one here and converting to brute force more interesting behaviour- This will more readily convert to a colour than the SNFloat version
+        noise_function: NoiseFunctions,
+        scale_x: Nibble,
+        scale_y: Nibble,
+        scale_t: UNFloat,
     },
     #[mutagen(gen_weight = branch_node_weight)]
     CircularAdd {
@@ -397,6 +448,10 @@ pub enum UNFloatNodes {
     },
     #[mutagen(gen_weight = pipe_node_weight)]
     ColorComponentH { child: NodeBox<FloatColorNodes> },
+    #[mutagen(gen_weight = pipe_node_weight)]
+    ColorComponentS { child: NodeBox<FloatColorNodes> },
+    #[mutagen(gen_weight = pipe_node_weight)]
+    ColorComponentV { child: NodeBox<FloatColorNodes> },
     #[mutagen(gen_weight = leaf_node_weight)]
     FromGametic,
     #[mutagen(gen_weight = pipe_node_weight)]
@@ -485,6 +540,13 @@ impl Node for UNFloatNodes {
             // Random => UNFloat::generate(state),
             Constant { value } => *value,
             FromAngle { child } => child.compute(compute_arg.reborrow()).to_unsigned(),
+            FromBoolean { child } => {
+                UNFloat::new(if child.compute(compute_arg.reborrow()).into_inner() {
+                    1.0
+                } else {
+                    0.0
+                })
+            }
             FromSNFloat { child } => child.compute(compute_arg.reborrow()).to_unsigned(),
             AbsSNFloat { child } => {
                 UNFloat::new(child.compute(compute_arg.reborrow()).into_inner().abs())
@@ -501,6 +563,17 @@ impl Node for UNFloatNodes {
                     + child_b.compute(compute_arg.reborrow()).into_inner();
                 UNFloat::new(value - (value.floor()))
             }
+            NoiseFunction {
+                noise_function,
+                scale_x,
+                scale_y,
+                scale_t,
+            } => SNFloat::new_clamped(noise_function.compute(
+                compute_arg.coordinate_set.x.into_inner() as f64 * scale_x.into_inner() as f64,
+                compute_arg.coordinate_set.y.into_inner() as f64 * scale_y.into_inner() as f64,
+                compute_arg.coordinate_set.t as f64 * (scale_t.into_inner() / 4.0) as f64,
+            ) as f32)
+            .to_unsigned(),
             InvertNormalised { child } => {
                 UNFloat::new(1.0 - child.compute(compute_arg.reborrow()).into_inner())
             }
@@ -543,6 +616,10 @@ impl Node for UNFloatNodes {
                 }
             }
             ColorComponentH { child } => child.compute(compute_arg.reborrow()).get_hue_unfloat(),
+            ColorComponentS { child } => child
+                .compute(compute_arg.reborrow())
+                .get_saturation_unfloat(),
+            ColorComponentV { child } => child.compute(compute_arg.reborrow()).get_value_unfloat(),
             FromGametic => compute_arg.coordinate_set.get_unfloat_t(),
             FromGameticNormalised {
                 child_normaliser,

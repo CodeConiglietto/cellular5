@@ -159,13 +159,25 @@ pub enum PointSetGenerator {
 
     Moore,
     VonNeumann,
-    Uniform { count: Byte },
-    Poisson { count: Byte, radius: UNFloat },
+    Uniform {
+        count: Byte,
+    },
+    Poisson {
+        count: Byte,
+        radius: UNFloat,
+    },
+    Spiral {
+        count: Byte,
+        scalar: UNFloat,
+        maximum: Angle,
+        linear: Boolean,
+        nonlinearity_factor_halved: UNFloat, //This is the easiest way to introduce a variable nonlinearity which includes both squaring and square rooting
+    },
 }
 
 impl PointSetGenerator {
     pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
-        match rng.gen_range(0, 4) {
+        match rng.gen_range(0, 5) {
             // Skip Origin
             0 => PointSetGenerator::Moore,
             1 => PointSetGenerator::VonNeumann,
@@ -175,6 +187,13 @@ impl PointSetGenerator {
             3 => PointSetGenerator::Poisson {
                 count: Byte::random(rng),
                 radius: UNFloat::random(rng),
+            },
+            4 => PointSetGenerator::Spiral {
+                count: Byte::random(rng),
+                scalar: UNFloat::random(rng),
+                maximum: Angle::random(rng),
+                linear: Boolean::random(rng),
+                nonlinearity_factor_halved: UNFloat::random(rng),
             },
             _ => unreachable!(),
         }
@@ -198,6 +217,38 @@ impl PointSetGenerator {
                         .max(0.01),
                     normaliser,
                 )
+            }
+            PointSetGenerator::Spiral {
+                count,
+                scalar,
+                maximum,
+                linear,
+                nonlinearity_factor_halved,
+            } => {
+                let count = count.into_inner().max(1);
+                let scalar = scalar.into_inner();
+                let maximum = maximum.into_inner();
+                let linear = linear.into_inner();
+                let nonlinearity_factor = nonlinearity_factor_halved.into_inner() * 2.0;
+
+                (0..count)
+                    .map(|i| {
+                        let rho = i as f32 / count as f32;
+
+                        let theta = count as f32
+                            * maximum
+                            * scalar
+                            * if linear {
+                                rho
+                            } else {
+                                rho.powf(nonlinearity_factor)
+                            };
+                        SNPoint::from_snfloats(
+                            SNFloat::new(rho * f32::sin(theta)),
+                            SNFloat::new(rho * f32::cos(theta)),
+                        )
+                    })
+                    .collect()
             }
         };
 

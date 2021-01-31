@@ -7,13 +7,21 @@ use crate::prelude::*;
 #[derive(Generatable, UpdatableRecursively, Mutatable, Serialize, Deserialize, Debug)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum CoordMapNodes {
+    // #[mutagen(gen_weight = leaf_node_weight)]
+    #[mutagen(gen_weight = 2.0)]
+    Identity,
+
     #[mutagen(gen_weight = pipe_node_weight)]
     Replace { child: NodeBox<SNPointNodes> },
+
+    #[mutagen(gen_weight = pipe_node_weight)]
+    ReplaceComplex { child: NodeBox<SNComplexNodes> },
 
     #[mutagen(gen_weight = branch_node_weight)]
     Shift {
         x: NodeBox<SNFloatNodes>,
         y: NodeBox<SNFloatNodes>,
+        divisor: Nibble,
         child_normaliser: NodeBox<SFloatNormaliserNodes>,
     },
 
@@ -57,6 +65,17 @@ pub enum CoordMapNodes {
         child_b: NodeBox<CoordMapNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
+    Average {
+        child_a: NodeBox<CoordMapNodes>,
+        child_b: NodeBox<CoordMapNodes>,
+    },
+    #[mutagen(gen_weight = branch_node_weight)]
+    Lerp {
+        child_lerp_val: NodeBox<UNFloatNodes>,
+        child_a: NodeBox<CoordMapNodes>,
+        child_b: NodeBox<CoordMapNodes>,
+    },
+    #[mutagen(gen_weight = branch_node_weight)]
     ApplyMatrix {
         child_matrix: NodeBox<SNFloatMatrix3Nodes>,
         child_normaliser: NodeBox<SFloatNormaliserNodes>,
@@ -75,8 +94,11 @@ pub enum CoordMapNodes {
         child_a: NodeBox<SNPointNodes>,
         child_b: NodeBox<SNPointNodes>,
     },
-    #[mutagen(gen_weight = pipe_node_weight)]
-    TesellatePolarTwoClosestPointSet { child: NodeBox<PointSetNodes> },
+    #[mutagen(gen_weight = branch_node_weight)]
+    TesellatePolarTwoClosestPointSet {
+        child_points: NodeBox<PointSetNodes>,
+        child_theta: NodeBox<AngleNodes>,
+    },
     #[mutagen(gen_weight = pipe_node_weight)]
     TesellateClosestPointSet { child: NodeBox<PointSetNodes> },
 }
@@ -88,8 +110,16 @@ impl Node for CoordMapNodes {
         use CoordMapNodes::*;
 
         match self {
+            Identity => compute_arg.coordinate_set,
             Replace { child } => {
                 let coords = child.compute(compute_arg.reborrow());
+                compute_arg
+                    .reborrow()
+                    .replace_coords(&coords)
+                    .coordinate_set
+            }
+            ReplaceComplex { child } => {
+                let coords = child.compute(compute_arg.reborrow()).to_snpoint();
                 compute_arg
                     .reborrow()
                     .replace_coords(&coords)
@@ -98,10 +128,17 @@ impl Node for CoordMapNodes {
             Shift {
                 x,
                 y,
+                divisor,
                 child_normaliser,
             } => compute_arg.coordinate_set.get_coord_shifted(
-                x.compute(compute_arg.reborrow()),
-                y.compute(compute_arg.reborrow()),
+                SNFloat::new(
+                    x.compute(compute_arg.reborrow()).into_inner()
+                        / (divisor.into_inner() + 1) as f32,
+                ),
+                SNFloat::new(
+                    y.compute(compute_arg.reborrow()).into_inner()
+                        / (divisor.into_inner() + 1) as f32,
+                ),
                 SNFloat::new(0.0),
                 child_normaliser.compute(compute_arg.reborrow()),
             ),
@@ -214,6 +251,32 @@ impl Node for CoordMapNodes {
                     child_a.compute(compute_arg.reborrow())
                 } else {
                     child_b.compute(compute_arg.reborrow())
+                }
+            }
+            Average { child_a, child_b } => {
+                let a = child_a.compute(compute_arg.reborrow());
+                let b = child_b.compute(compute_arg.reborrow());
+
+                CoordinateSet {
+                    x: SNFloat::new(a.x.into_inner() * 0.5 + b.x.into_inner() * 0.5),
+                    y: SNFloat::new(a.y.into_inner() * 0.5 + b.y.into_inner() * 0.5),
+                    t: compute_arg.coordinate_set.t,
+                }
+            }
+            Lerp {
+                child_lerp_val,
+                child_a,
+                child_b,
+            } => {
+                let lerp_val = child_lerp_val.compute(compute_arg.reborrow()).into_inner();
+                let inv_lerp_val = 1.0 - lerp_val;
+                let a = child_a.compute(compute_arg.reborrow());
+                let b = child_b.compute(compute_arg.reborrow());
+
+                CoordinateSet {
+                    x: SNFloat::new(a.x.into_inner() * lerp_val + b.x.into_inner() * inv_lerp_val),
+                    y: SNFloat::new(a.y.into_inner() * lerp_val + b.y.into_inner() * inv_lerp_val),
+                    t: compute_arg.coordinate_set.t,
                 }
             }
             ApplyMatrix {
@@ -340,9 +403,13 @@ impl Node for CoordMapNodes {
                 }
             }
 
-            TesellatePolarTwoClosestPointSet { child } => {
+            TesellatePolarTwoClosestPointSet {
+                child_points,
+                child_theta,
+            } => {
                 let p = compute_arg.coordinate_set.get_coord_point();
-                let mut point_set = child.compute(compute_arg.reborrow());
+                let theta = child_theta.compute(compute_arg.reborrow());
+                let mut point_set = child_points.compute(compute_arg.reborrow());
                 let closest = point_set.get_n_closest_points(p, 2);
 
                 let polar_1 = SNPoint::new(
@@ -362,9 +429,11 @@ impl Node for CoordMapNodes {
                     y_result = 1.0;
                 }
 
-                let offset =
-                    SNPoint::from_snfloats(polar_1.x(), UNFloat::new(y_result).to_signed())
-                        .from_polar();
+                let offset = SNPoint::from_snfloats(
+                    (polar_1.x().to_angle() + theta).to_signed(),
+                    UNFloat::new(y_result).to_signed(),
+                )
+                .from_polar();
 
                 CoordinateSet {
                     x: offset.x(),

@@ -1,10 +1,4 @@
-use std::{
-    convert::TryInto,
-    env, f32,
-    ops::Deref,
-    path,
-    time::{Duration, Instant},
-};
+use std::{convert::TryInto, env, f32, ops::Deref, time::Instant};
 
 use gfx::{self, texture, traits::FactoryExt};
 use ggez::{graphics, Context};
@@ -52,10 +46,6 @@ pub struct GfxRenderer {
 }
 
 impl GfxRenderer {
-    pub fn new_shadertoy(ctx: &mut Context, shadertoy_shader: &str) -> Self {
-        Self::new_glsl(ctx, &shadertoy_wrap(shadertoy_shader).into_bytes())
-    }
-
     pub fn new_glsl(ctx: &mut Context, fragment_shader: &[u8]) -> Self {
         let (w, h) = ggez::graphics::drawable_size(ctx);
         let (factory, _device, _encoder, depth_view, color_view) = graphics::gfx_objects(ctx);
@@ -74,7 +64,7 @@ impl GfxRenderer {
             Vertex::new([1, 1, 0]),
         ];
 
-        #[cfg_attr(rustfmt, rustfmt_skip)]
+        #[rustfmt::skip]
         let index_data: &[u16] = &[
             0, 1, 3,
             0, 2, 3,
@@ -160,29 +150,6 @@ impl GfxRenderer {
         encoder.draw(&self.slice, &self.pso, &self.data);
         encoder.flush(device);
     }
-}
-
-fn shadertoy_wrap(shader: &str) -> String {
-    format!(
-        r#"#version 450 core
-uniform vec3 iResolution;
-uniform float iTime;
-uniform sampler2D iTexture;
-
-void mainImage(out vec4 fragColor, in vec2 fragCoord);
-
-{}
-
-out vec4 outColor;
-
-void main(){{
-    vec4 color = vec4(0.0, 0.0, 0.0, 1.0);
-    mainImage(color, gl_FragCoord.xy);
-    color.w = 1.0;
-    outColor = color;
-}}"#,
-        shader
-    )
 }
 
 fn gfx_load_texture<F, R>(

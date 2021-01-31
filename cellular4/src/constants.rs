@@ -3,16 +3,21 @@ use std::fs;
 use lazy_static::lazy_static;
 use serde::Deserialize;
 
+use crate::util;
+
 lazy_static! {
-    pub static ref CONSTS: Constants = serde_yaml::from_str(
-        &fs::read_to_string("constants.yml")
-            .or_else(|_| fs::read_to_string("../constants.yml"))
-            .unwrap_or_else(|_| panic!(
-                "Couldn't find constants.yml in {}",
-                std::env::current_dir().unwrap().to_string_lossy()
-            ))
-    )
-    .unwrap_or_else(|e| panic!("Failed to parse constants.yml: {}", e));
+    pub static ref CONSTS: Constants = {
+        let path = util::local_path("constants.yml");
+
+        serde_yaml::from_str(&fs::read_to_string(&path).unwrap_or_else(|e| {
+            panic!(
+                "Couldn't read constants.yml in {}: {}",
+                path.to_string_lossy(),
+                e
+            )
+        }))
+        .unwrap_or_else(|e| panic!("Failed to parse constants.yml: {}", e))
+    };
 }
 
 #[derive(Deserialize)]
@@ -23,6 +28,8 @@ pub struct Constants {
     pub initial_window_height: f32,
     pub vsync: bool,
     pub fullscreen: bool,
+    pub console_width: usize,
+    pub fancy_terminal: bool,
 
     pub cell_array_width: usize,
     pub cell_array_height: usize,
@@ -83,4 +90,37 @@ pub struct Constants {
 
     pub min_branch_depth: usize,
     pub max_branch_depth: usize,
+
+    pub gamepad_node_weight_mod: f64,
+
+    pub smithsonian_api_key: Option<String>,
+    pub gfycat: Option<GfycatConfig>,
+
+    pub mutagen_profiler: bool,
+    pub mutagen_profiler_graphs: bool,
+}
+
+#[derive(Clone, Deserialize)]
+pub struct GfycatConfig {
+    pub client_id: String,
+    pub client_secret: String,
+    pub trending: bool,
+    pub trending_weight: f64,
+    pub exclude_nsfw: bool,
+    #[serde(default)]
+    pub search_terms: Vec<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn deserialize_default_constants() {
+        let _: Constants = serde_yaml::from_str(include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../constants.default.yml"
+        )))
+        .unwrap();
+    }
 }

@@ -1,7 +1,10 @@
+#![allow(clippy::many_single_char_names)]
+
 use std::{collections::VecDeque, f32::consts::PI};
 
 use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
 use palette::{encoding::srgb::Srgb, rgb::Rgb, Hsv, Lab, Limited, RgbHue};
+use rand::thread_rng;
 use serde::{Deserialize, Serialize};
 
 use crate::prelude::*;
@@ -25,6 +28,23 @@ pub enum FloatColorNodes {
     //Brute force attempt to get more visually satisfying behaviour
     #[mutagen(gen_weight = pipe_node_weight)]
     AbsChildCoords { child: NodeBox<FloatColorNodes> },
+    #[mutagen(gen_weight = pipe_node_weight)]
+    InvertXBlendChild { child: NodeBox<FloatColorNodes> },
+    #[mutagen(gen_weight = pipe_node_weight)]
+    HueTShifting {
+        child: NodeBox<FloatColorNodes>,
+        scaling_factor: SNFloat,
+    },
+    #[mutagen(gen_weight = branch_node_weight)]
+    HueShifting {
+        child: NodeBox<FloatColorNodes>,
+        child_shift_value: NodeBox<SNFloatNodes>,
+    },
+    #[mutagen(gen_weight = branch_node_weight)]
+    SetSaturation {
+        child: NodeBox<FloatColorNodes>,
+        child_saturation_value: NodeBox<UNFloatNodes>,
+    },
 
     #[mutagen(gen_weight = branch_node_weight)]
     RGB {
@@ -32,6 +52,18 @@ pub enum FloatColorNodes {
         g: NodeBox<UNFloatNodes>,
         b: NodeBox<UNFloatNodes>,
         a: NodeBox<UNFloatNodes>,
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    RGBFromNormalisedSNFloats {
+        r: NodeBox<SNFloatNodes>,
+        r_norm: UFloatNormaliser,
+        g: NodeBox<SNFloatNodes>,
+        g_norm: UFloatNormaliser,
+        b: NodeBox<SNFloatNodes>,
+        b_norm: UFloatNormaliser,
+        a: NodeBox<SNFloatNodes>,
+        a_norm: UFloatNormaliser,
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
@@ -63,28 +95,30 @@ pub enum FloatColorNodes {
 
     #[mutagen(gen_weight = branch_node_weight)]
     LAB {
-        l: NodeBox<UNFloatNodes>,
+        l: NodeBox<SNFloatNodes>,
         a: NodeBox<SNFloatNodes>,
         b: NodeBox<SNFloatNodes>,
         alpha: NodeBox<UNFloatNodes>,
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
-    // #[mutagen(gen_preferred)]
     ComplexLAB {
-        l: NodeBox<UNFloatNodes>,
+        l: NodeBox<SNFloatNodes>,
         child_complex: NodeBox<SNComplexNodes>,
         alpha: NodeBox<UNFloatNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
-    // #[mutagen(gen_preferred)]
     IterativeResultLAB {
         child_iterative_function: NodeBox<IterativeFunctionNodes>,
         alpha: NodeBox<UNFloatNodes>,
     },
 
-    #[mutagen(gen_weight = pipe_node_weight)]
-    FromBlend { child: NodeBox<ColorBlendNodes> },
+    #[mutagen(gen_weight = branch_node_weight)]
+    ColorBlend {
+        child_a: NodeBox<ColorBlendNodes>,
+        child_b: NodeBox<ColorBlendNodes>,
+        blend_function: ColorBlendFunctions,
+    },
 
     #[mutagen(gen_weight = pipe_node_weight)]
     FromBitColor { child: NodeBox<BitColorNodes> },
@@ -107,7 +141,6 @@ pub enum FloatColorNodes {
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
-    // #[mutagen(gen_preferred)]
     TriangleAberration {
         child: NodeBox<FloatColorNodes>,
         child_rho: NodeBox<UNFloatNodes>,
@@ -116,11 +149,48 @@ pub enum FloatColorNodes {
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
-    // #[mutagen(gen_preferred)]
-    TriangleBlendAutomata{
+    FlowAutomata {
+        rho_divisor: Nibble,
         child_rho: NodeBox<UNFloatNodes>,
         child_theta: NodeBox<AngleNodes>,
         child_normaliser: NodeBox<SFloatNormaliserNodes>,
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    TriangleBlendAutomata {
+        reseed_stable: Boolean,
+        rho_divisor: Nibble,
+        child_rho: NodeBox<UNFloatNodes>,
+        child_theta: NodeBox<AngleNodes>,
+        child_normaliser: NodeBox<SFloatNormaliserNodes>,
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    PolygonBlendAutomata {
+        reseed_stable: Boolean,
+        child_point_count: NodeBox<NibbleNodes>,
+        rho_divisor: Nibble,
+        child_rho: NodeBox<UNFloatNodes>,
+        child_theta: NodeBox<AngleNodes>,
+        child_normaliser: NodeBox<SFloatNormaliserNodes>,
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    PolygonAddSubtractAutomata {
+        reseed_stable: Boolean,
+        child_point_count: NodeBox<NibbleNodes>,
+        rho_divisor: Nibble,
+        enforce_same_rho: Boolean,
+        child_rho_a: NodeBox<UNFloatNodes>,
+        child_rho_b: NodeBox<UNFloatNodes>,
+        enforce_offset_theta: Boolean,
+        child_theta_a: NodeBox<AngleNodes>,
+        child_theta_b: NodeBox<AngleNodes>,
+        child_normaliser: NodeBox<SFloatNormaliserNodes>,
+        child_r_normaliser: UFloatNormaliser,
+        child_g_normaliser: UFloatNormaliser,
+        child_b_normaliser: UFloatNormaliser,
+        child_a_normaliser: UFloatNormaliser,
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
@@ -155,7 +225,6 @@ pub enum FloatColorNodes {
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
-    // #[mutagen(gen_preferred)]
     PointSetLineBuffer {
         buffer: Buffer<FloatColor>,
         child_point_set: NodeBox<PointSetNodes>,
@@ -167,6 +236,16 @@ pub enum FloatColorNodes {
     PointSetDotBuffer {
         buffer: Buffer<FloatColor>,
         child_point_set: NodeBox<PointSetNodes>,
+        child_color: NodeBox<FloatColorNodes>,
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    IterativeCenteredPolarLineBuffer {
+        buffer: Buffer<FloatColor>,
+        // TODO Replace child_theta and child_rho with a polar coordinate node when they're implemented
+        theta: Angle,
+        theta_delta: Angle,
+        rho: UNFloat,
         child_color: NodeBox<FloatColorNodes>,
     },
 
@@ -198,8 +277,8 @@ pub enum FloatColorNodes {
         child_color: NodeBox<FloatColorNodes>,
     },
 
-    #[mutagen(gen_weight = branch_node_weight)]
-    // #[mutagen(gen_preferred)]
+    #[mutagen(gen_weight = 0.0)]
+    //branch_node_weight)]//TODO FIX, yes I know it says it down there but this is important. Go learn some fractal stuff buttface
     DucksFractal {
         child_offset: NodeBox<SNPointNodes>,
         child_scale: NodeBox<SNPointNodes>,
@@ -232,7 +311,7 @@ impl Node for FloatColorNodes {
                     ((compute_arg.coordinate_set.y.into_inner() + 1.0)
                         * 0.5
                         * CONSTS.cell_array_height as f32) as usize,
-                    compute_arg.coordinate_set.t as usize,
+                    (compute_arg.reborrow().current_t - 1).max(0),
                 )
                 .into(),
             Grayscale { child } => {
@@ -244,70 +323,117 @@ impl Node for FloatColorNodes {
                     a: value,
                 }
             }
-            TriangleBlendAutomata {
-                child_rho,
-                child_theta,
-                child_normaliser,
-            } => {
-                let rho = UNFloat::new(0.1);//child_rho.compute(compute_arg.reborrow());
-                let theta = Angle::new(0.0);//child_theta.compute(compute_arg.reborrow());
-                let normaliser = child_normaliser.compute(compute_arg.reborrow());
-
-                let theta_a = theta;
-                let theta_b = theta + Angle::new(2.0 / 3.0 * PI);
-                let theta_c = theta - Angle::new(2.0 / 3.0 * PI);
-
-                // TODO rewrite this once we have a polar type node
-                let middle = compute_arg.coordinate_set.get_coord_point();
-
-                let t = compute_arg.reborrow().current_t;
-
-                let color_a = compute_arg.reborrow().history.get_normalised(middle.normalised_add(
-                                SNPoint::from_snfloats(
-                                    SNFloat::new(rho.into_inner() * f32::sin(theta_a.into_inner())),
-                                    SNFloat::new(rho.into_inner() * f32::cos(theta_a.into_inner())),
-                                ),
-                                normaliser,
-                            ), t);
-
-                let color_b = compute_arg.reborrow().history.get_normalised(middle.normalised_add(
-                    SNPoint::from_snfloats(
-                                    SNFloat::new(rho.into_inner() * f32::sin(theta_b.into_inner())),
-                                    SNFloat::new(rho.into_inner() * f32::cos(theta_b.into_inner())),
-                                ),
-                                normaliser,
-                            ), t);
-
-                let color_c = compute_arg.reborrow().history.get_normalised(middle.normalised_add(
-                    SNPoint::from_snfloats(
-                                    SNFloat::new(rho.into_inner() * f32::sin(theta_c.into_inner())),
-                                    SNFloat::new(rho.into_inner() * f32::cos(theta_c.into_inner())),
-                                ),
-                                normaliser,
-                            ), t);
-                
-                let r = UNFloat::new((color_a.r.into_inner() + color_b.r.into_inner() + color_c.r.into_inner()) / 3.0);
-                let g = UNFloat::new((color_a.g.into_inner() + color_b.g.into_inner() + color_c.g.into_inner()) / 3.0);
-                let b = UNFloat::new((color_a.b.into_inner() + color_b.b.into_inner() + color_c.b.into_inner()) / 3.0);
-                let a = UNFloat::new((color_a.a.into_inner() + color_b.a.into_inner() + color_c.a.into_inner()) / 3.0);
-
-                let average = FloatColor { r, g, b, a };
-
-                if average.get_average() > 0.5 {
-                    FloatColor::WHITE
-                } else {
-                    FloatColor::BLACK
-                }
-            }
             AbsChildCoords { child } => {
                 let new_point = compute_arg.coordinate_set.get_coord_point().abs();
                 child.compute(compute_arg.reborrow().replace_coords(&new_point))
+            }
+            InvertXBlendChild { child } => {
+                let new_point = compute_arg.coordinate_set.get_coord_point().invert_x();
+                let color_a = child.compute(compute_arg.reborrow());
+                let color_b = child.compute(compute_arg.reborrow().replace_coords(&new_point));
+
+                color_a.lerp(color_b, UNFloat::new(0.5))
+            }
+            HueTShifting {
+                child,
+                scaling_factor,
+            } => {
+                let color = child.compute(compute_arg.reborrow());
+
+                let hsv_tuple = rgb_tuple_to_hsv_tuple(
+                    color.r.into_inner(),
+                    color.g.into_inner(),
+                    color.b.into_inner(),
+                );
+
+                let rgb_tuple = hsv_tuple_to_rgb_tuple(
+                    hsv_tuple.0
+                        + compute_arg
+                            .reborrow()
+                            .coordinate_set
+                            .get_unfloat_t()
+                            .into_inner()
+                            * scaling_factor.into_inner(),
+                    hsv_tuple.1,
+                    hsv_tuple.2,
+                );
+
+                FloatColor {
+                    r: UNFloat::new(rgb_tuple.0),
+                    g: UNFloat::new(rgb_tuple.1),
+                    b: UNFloat::new(rgb_tuple.2),
+                    a: color.a,
+                }
+            }
+            HueShifting {
+                child,
+                child_shift_value,
+            } => {
+                let color = child.compute(compute_arg.reborrow());
+                let shift_value = child_shift_value.compute(compute_arg.reborrow());
+
+                let hsv_tuple = rgb_tuple_to_hsv_tuple(
+                    color.r.into_inner(),
+                    color.g.into_inner(),
+                    color.b.into_inner(),
+                );
+
+                let rgb_tuple = hsv_tuple_to_rgb_tuple(
+                    hsv_tuple.0 + shift_value.into_inner(),
+                    hsv_tuple.1,
+                    hsv_tuple.2,
+                );
+
+                FloatColor {
+                    r: UNFloat::new(rgb_tuple.0),
+                    g: UNFloat::new(rgb_tuple.1),
+                    b: UNFloat::new(rgb_tuple.2),
+                    a: color.a,
+                }
+            }
+            SetSaturation {
+                child,
+                child_saturation_value,
+            } => {
+                let color = child.compute(compute_arg.reborrow());
+                let saturation_value = child_saturation_value.compute(compute_arg.reborrow());
+
+                let hsv_tuple = rgb_tuple_to_hsv_tuple(
+                    color.r.into_inner(),
+                    color.g.into_inner(),
+                    color.b.into_inner(),
+                );
+
+                let rgb_tuple =
+                    hsv_tuple_to_rgb_tuple(hsv_tuple.0, saturation_value.into_inner(), hsv_tuple.2);
+
+                FloatColor {
+                    r: UNFloat::new(rgb_tuple.0),
+                    g: UNFloat::new(rgb_tuple.1),
+                    b: UNFloat::new(rgb_tuple.2),
+                    a: color.a,
+                }
             }
             RGB { r, g, b, a } => FloatColor {
                 r: r.compute(compute_arg.reborrow()),
                 g: g.compute(compute_arg.reborrow()),
                 b: b.compute(compute_arg.reborrow()),
                 a: a.compute(compute_arg.reborrow()),
+            },
+            RGBFromNormalisedSNFloats {
+                r,
+                r_norm,
+                g,
+                g_norm,
+                b,
+                b_norm,
+                a,
+                a_norm,
+            } => FloatColor {
+                r: r_norm.normalise(r.compute(compute_arg.reborrow()).into_inner()),
+                g: g_norm.normalise(g.compute(compute_arg.reborrow()).into_inner()),
+                b: b_norm.normalise(b.compute(compute_arg.reborrow()).into_inner()),
+                a: a_norm.normalise(a.compute(compute_arg.reborrow()).into_inner()),
             },
             HSV { h, s, v, a, offset } => {
                 let rgb: Rgb = Hsv::<Srgb, _>::from_components((
@@ -391,7 +517,7 @@ impl Node for FloatColorNodes {
                 let result = child_iterative_function.compute(compute_arg.reborrow());
 
                 let lab = Lab::new(
-                    result.iter_final.into_inner() as f32 * 100.0 / 255.0,
+                    (result.iter_final.into_inner() - 128) as f32 / 255.0 * 100.0,
                     result.z_final.re().into_inner() * 127.0,
                     result.z_final.im().into_inner() * 127.0,
                 );
@@ -403,7 +529,14 @@ impl Node for FloatColorNodes {
                     alpha.compute(compute_arg.reborrow()).into_inner(),
                 )
             }
-            FromBlend { child } => child.compute(compute_arg.reborrow()),
+            ColorBlend {
+                child_a,
+                child_b,
+                blend_function,
+            } => blend_function.blend(
+                child_a.compute(compute_arg.reborrow()),
+                child_b.compute(compute_arg.reborrow()),
+            ),
             FromBitColor { child } => FloatColor::from(child.compute(compute_arg.reborrow())),
             ModifyState { child, child_state } => child.compute(ComArg {
                 coordinate_set: child_state.compute(compute_arg.reborrow()),
@@ -513,7 +646,406 @@ impl Node for FloatColorNodes {
 
                 FloatColor { r, g, b, a }
             }
+            FlowAutomata {
+                rho_divisor,
+                child_rho,
+                child_theta,
+                child_normaliser,
+                ..
+            } => {
+                let rho = UNFloat::new(
+                    child_rho.compute(compute_arg.reborrow()).into_inner()
+                        / (rho_divisor.into_inner() + 1) as f32,
+                );
+                let theta = child_theta.compute(compute_arg.reborrow());
+                let normaliser = child_normaliser.compute(compute_arg.reborrow());
 
+                // TODO rewrite this once we have a polar type node
+                let middle = compute_arg.coordinate_set.get_coord_point();
+
+                let hist_t = (compute_arg.reborrow().current_t - 1).max(0);
+
+                compute_arg.reborrow().history.get_normalised(
+                    middle.normalised_add(
+                        SNPoint::from_snfloats(
+                            SNFloat::new(rho.into_inner() * f32::sin(theta.into_inner())),
+                            SNFloat::new(rho.into_inner() * f32::cos(theta.into_inner())),
+                        ),
+                        normaliser,
+                    ),
+                    hist_t,
+                )
+            }
+            TriangleBlendAutomata {
+                reseed_stable,
+                rho_divisor,
+                child_rho,
+                child_theta,
+                child_normaliser,
+                ..
+            } => {
+                let rho = UNFloat::new(
+                    child_rho.compute(compute_arg.reborrow()).into_inner()
+                        / (rho_divisor.into_inner() + 1) as f32,
+                );
+                let theta = child_theta.compute(compute_arg.reborrow());
+                let normaliser = child_normaliser.compute(compute_arg.reborrow());
+
+                let theta_a = theta;
+                let theta_b = theta + Angle::new(2.0 / 3.0 * PI);
+                let theta_c = theta - Angle::new(2.0 / 3.0 * PI);
+
+                // TODO rewrite this once we have a polar type node
+                let middle = compute_arg.coordinate_set.get_coord_point();
+
+                let hist_t = (compute_arg.reborrow().current_t - 1).max(0);
+
+                let color_a = compute_arg.reborrow().history.get_normalised(
+                    middle.normalised_add(
+                        SNPoint::from_snfloats(
+                            SNFloat::new(rho.into_inner() * f32::sin(theta_a.into_inner())),
+                            SNFloat::new(rho.into_inner() * f32::cos(theta_a.into_inner())),
+                        ),
+                        normaliser,
+                    ),
+                    hist_t,
+                );
+
+                let color_b = compute_arg.reborrow().history.get_normalised(
+                    middle.normalised_add(
+                        SNPoint::from_snfloats(
+                            SNFloat::new(rho.into_inner() * f32::sin(theta_b.into_inner())),
+                            SNFloat::new(rho.into_inner() * f32::cos(theta_b.into_inner())),
+                        ),
+                        normaliser,
+                    ),
+                    hist_t,
+                );
+
+                let color_c = compute_arg.reborrow().history.get_normalised(
+                    middle.normalised_add(
+                        SNPoint::from_snfloats(
+                            SNFloat::new(rho.into_inner() * f32::sin(theta_c.into_inner())),
+                            SNFloat::new(rho.into_inner() * f32::cos(theta_c.into_inner())),
+                        ),
+                        normaliser,
+                    ),
+                    hist_t,
+                );
+
+                let r_majority =
+                    color_a.r.into_inner() + color_b.r.into_inner() + color_c.r.into_inner() > 1.5;
+                let r = UNFloat::new(if r_majority {
+                    color_a
+                        .r
+                        .into_inner()
+                        .max(color_b.r.into_inner().max(color_c.r.into_inner()))
+                } else {
+                    color_a
+                        .r
+                        .into_inner()
+                        .min(color_b.r.into_inner().min(color_c.r.into_inner()))
+                });
+
+                let g_majority =
+                    color_a.g.into_inner() + color_b.g.into_inner() + color_c.g.into_inner() > 1.5;
+                let g = UNFloat::new(if g_majority {
+                    color_a
+                        .g
+                        .into_inner()
+                        .max(color_b.g.into_inner().max(color_c.g.into_inner()))
+                } else {
+                    color_a
+                        .g
+                        .into_inner()
+                        .min(color_b.g.into_inner().min(color_c.g.into_inner()))
+                });
+
+                let b_majority =
+                    color_a.b.into_inner() + color_b.b.into_inner() + color_c.b.into_inner() > 1.5;
+                let b = UNFloat::new(if b_majority {
+                    color_a
+                        .b
+                        .into_inner()
+                        .max(color_b.b.into_inner().max(color_c.b.into_inner()))
+                } else {
+                    color_a
+                        .b
+                        .into_inner()
+                        .min(color_b.b.into_inner().min(color_c.b.into_inner()))
+                });
+
+                let a_majority =
+                    color_a.a.into_inner() + color_b.a.into_inner() + color_c.a.into_inner() > 1.5;
+                let a = UNFloat::new(if a_majority {
+                    color_a
+                        .a
+                        .into_inner()
+                        .max(color_b.a.into_inner().max(color_c.a.into_inner()))
+                } else {
+                    color_a
+                        .a
+                        .into_inner()
+                        .min(color_b.a.into_inner().min(color_c.a.into_inner()))
+                });
+
+                let result = FloatColor { r, g, b, a };
+
+                if (reseed_stable.into_inner() || true)
+                    && (result.get_average() == 1.0 || result.get_average() == 0.0)
+                {
+                    FloatColor::random(&mut thread_rng())
+                } else {
+                    result
+                }
+            }
+            PolygonAddSubtractAutomata {
+                reseed_stable,
+                rho_divisor,
+                child_point_count,
+                enforce_same_rho,
+                child_rho_a,
+                child_rho_b,
+                enforce_offset_theta,
+                child_theta_a,
+                child_theta_b,
+                child_normaliser,
+                child_r_normaliser,
+                child_g_normaliser,
+                child_b_normaliser,
+                child_a_normaliser,
+                ..
+            } => {
+                let point_count = (child_point_count
+                    .compute(compute_arg.reborrow())
+                    .into_inner()
+                    / 3)
+                    + 1;
+                let rho_a = UNFloat::new(
+                    child_rho_a.compute(compute_arg.reborrow()).into_inner()
+                        / (rho_divisor.into_inner() + 1) as f32,
+                );
+                let rho_b = if enforce_same_rho.into_inner() {
+                    rho_a
+                } else {
+                    UNFloat::new(
+                        child_rho_b.compute(compute_arg.reborrow()).into_inner()
+                            / (rho_divisor.into_inner() + 1) as f32,
+                    )
+                };
+                let theta_a = child_theta_a.compute(compute_arg.reborrow());
+                let theta_b = if enforce_offset_theta.into_inner() {
+                    Angle::new(theta_a.into_inner() + PI / point_count as f32)
+                } else {
+                    child_theta_b.compute(compute_arg.reborrow())
+                };
+                let normaliser = child_normaliser.compute(compute_arg.reborrow());
+
+                // TODO rewrite this once we have a polar type node
+                let middle = compute_arg.coordinate_set.get_coord_point();
+
+                let hist_t = (compute_arg.reborrow().current_t - 1).max(0);
+
+                let coordinate_set = compute_arg.reborrow().coordinate_set;
+
+                let current_color = compute_arg
+                    .reborrow()
+                    .history
+                    .get_normalised(coordinate_set.get_coord_point(), hist_t);
+
+                let mut ra_average = 0.0;
+                let mut ga_average = 0.0;
+                let mut ba_average = 0.0;
+                let mut aa_average = 0.0;
+
+                let mut rb_average = 0.0;
+                let mut gb_average = 0.0;
+                let mut bb_average = 0.0;
+                let mut ab_average = 0.0;
+
+                for i in 0..point_count {
+                    let theta_a_offset =
+                        theta_a + Angle::new((i as f32 / point_count as f32) * 2.0 * PI);
+                    let theta_b_offset =
+                        theta_b + Angle::new((i as f32 / point_count as f32) * 2.0 * PI);
+
+                    let color_a = compute_arg.reborrow().history.get_normalised(
+                        middle.normalised_add(
+                            SNPoint::from_snfloats(
+                                SNFloat::new(
+                                    rho_a.into_inner() * f32::sin(theta_a_offset.into_inner()),
+                                ),
+                                SNFloat::new(
+                                    rho_a.into_inner() * f32::cos(theta_a_offset.into_inner()),
+                                ),
+                            ),
+                            normaliser,
+                        ),
+                        hist_t,
+                    );
+
+                    let color_b = compute_arg.reborrow().history.get_normalised(
+                        middle.normalised_add(
+                            SNPoint::from_snfloats(
+                                SNFloat::new(
+                                    rho_b.into_inner() * f32::sin(theta_b_offset.into_inner()),
+                                ),
+                                SNFloat::new(
+                                    rho_b.into_inner() * f32::cos(theta_b_offset.into_inner()),
+                                ),
+                            ),
+                            normaliser,
+                        ),
+                        hist_t,
+                    );
+
+                    ra_average += color_a.r.into_inner();
+                    ga_average += color_a.g.into_inner();
+                    ba_average += color_a.b.into_inner();
+                    aa_average += color_a.a.into_inner();
+
+                    rb_average += color_b.r.into_inner();
+                    gb_average += color_b.g.into_inner();
+                    bb_average += color_b.b.into_inner();
+                    ab_average += color_b.a.into_inner();
+                }
+
+                ra_average = ra_average / point_count as f32;
+                ga_average = ga_average / point_count as f32;
+                ba_average = ba_average / point_count as f32;
+                aa_average = aa_average / point_count as f32;
+
+                rb_average = rb_average / point_count as f32;
+                gb_average = gb_average / point_count as f32;
+                bb_average = bb_average / point_count as f32;
+                ab_average = ab_average / point_count as f32;
+
+                let r = child_r_normaliser
+                    .normalise(current_color.r.into_inner() + ra_average - rb_average);
+
+                let g = child_g_normaliser
+                    .normalise(current_color.g.into_inner() + ga_average - gb_average);
+
+                let b = child_b_normaliser
+                    .normalise(current_color.b.into_inner() + ba_average - bb_average);
+
+                let a = child_a_normaliser
+                    .normalise(current_color.a.into_inner() + aa_average - ab_average);
+
+                let result = FloatColor { r, g, b, a };
+
+                if (reseed_stable.into_inner() || true)
+                    && (result.get_average() == 1.0 || result.get_average() == 0.0)
+                {
+                    FloatColor::random(&mut thread_rng())
+                } else {
+                    result
+                }
+            }
+            PolygonBlendAutomata {
+                reseed_stable,
+                rho_divisor,
+                child_point_count,
+                child_rho,
+                child_theta,
+                child_normaliser,
+                ..
+            } => {
+                let point_count = (child_point_count
+                    .compute(compute_arg.reborrow())
+                    .into_inner()
+                    + 1)
+                    / 2;
+                let rho = UNFloat::new(
+                    child_rho.compute(compute_arg.reborrow()).into_inner()
+                        / (8 - point_count + 1) as f32
+                        / (rho_divisor.into_inner() + 1) as f32,
+                );
+                let theta = child_theta.compute(compute_arg.reborrow());
+                let normaliser = child_normaliser.compute(compute_arg.reborrow());
+
+                // TODO rewrite this once we have a polar type node
+                let middle = compute_arg.coordinate_set.get_coord_point();
+
+                let hist_t = (compute_arg.reborrow().current_t - 1).max(0);
+
+                let mut r_total = 0.0;
+                let mut g_total = 0.0;
+                let mut b_total = 0.0;
+                let mut a_total = 0.0;
+
+                let mut r_max = 0.0;
+                let mut g_max = 0.0;
+                let mut b_max = 0.0;
+                let mut a_max = 0.0;
+
+                let mut r_min = 1.0;
+                let mut g_min = 1.0;
+                let mut b_min = 1.0;
+                let mut a_min = 1.0;
+
+                for i in 0..point_count {
+                    let theta_offset =
+                        theta + Angle::new((i as f32 / point_count as f32) * 2.0 * PI);
+
+                    let color = compute_arg.reborrow().history.get_normalised(
+                        middle.normalised_add(
+                            SNPoint::from_snfloats(
+                                SNFloat::new(
+                                    rho.into_inner() * f32::sin(theta_offset.into_inner()),
+                                ),
+                                SNFloat::new(
+                                    rho.into_inner() * f32::cos(theta_offset.into_inner()),
+                                ),
+                            ),
+                            normaliser,
+                        ),
+                        hist_t,
+                    );
+
+                    let r = color.r.into_inner();
+                    let g = color.g.into_inner();
+                    let b = color.b.into_inner();
+                    let a = color.a.into_inner();
+
+                    r_total += r;
+                    g_total += g;
+                    b_total += b;
+                    a_total += a;
+
+                    r_max = r_max.max(r);
+                    g_max = g_max.max(g);
+                    b_max = b_max.max(b);
+                    a_max = a_max.max(a);
+
+                    r_min = r_min.min(r);
+                    g_min = g_min.min(g);
+                    b_min = b_min.min(b);
+                    a_min = a_min.min(a);
+                }
+
+                let r_majority = r_total > point_count as f32 * 0.5;
+                let r = UNFloat::new(if r_majority { r_max } else { r_min });
+
+                let g_majority = g_total > point_count as f32 * 0.5;
+                let g = UNFloat::new(if g_majority { g_max } else { g_min });
+
+                let b_majority = b_total > point_count as f32 * 0.5;
+                let b = UNFloat::new(if b_majority { b_max } else { b_min });
+
+                let a_majority = a_total > point_count as f32 * 0.5;
+                let a = UNFloat::new(if a_majority { a_max } else { a_min });
+
+                let result = FloatColor { r, g, b, a };
+
+                if (reseed_stable.into_inner() || true)
+                    && (result.get_average() == 1.0 || result.get_average() == 0.0)
+                {
+                    FloatColor::random(&mut thread_rng())
+                } else {
+                    result
+                }
+            }
             FromByteColor { child } => FloatColor::from(child.compute(compute_arg.reborrow())),
             IfElse {
                 predicate,
@@ -529,7 +1061,9 @@ impl Node for FloatColorNodes {
             RemoveAlpha { child_a, child_b } => {
                 let mut color = child_a.compute(compute_arg.reborrow());
 
-                if child_b.compute(compute_arg.reborrow()).into_inner() {color.a = UNFloat::ZERO;}
+                if child_b.compute(compute_arg.reborrow()).into_inner() {
+                    color.a = UNFloat::ZERO;
+                }
 
                 color
             }
@@ -546,6 +1080,9 @@ impl Node for FloatColorNodes {
             PointSetLineBuffer { buffer, .. } => {
                 buffer[compute_arg.coordinate_set.get_coord_point()]
             }
+            IterativeCenteredPolarLineBuffer { buffer, .. } => {
+                buffer[compute_arg.coordinate_set.get_coord_point()]
+            }
             IterativePolarLineBuffer { buffer, .. } => {
                 buffer[compute_arg.coordinate_set.get_coord_point()]
             }
@@ -559,14 +1096,14 @@ impl Node for FloatColorNodes {
                 buffer[compute_arg.coordinate_set.get_coord_point()]
             }
 
-            DucksFractal {//TODO make gooderer
+            DucksFractal {
+                //TODO make gooderer
                 child_offset,
                 child_scale,
-                child_iterations,
-                child_magnitude_normaliser,
+                ..
             } => {
-                let offset = child_offset.compute(compute_arg.reborrow()).into_inner();
-                let scale = child_scale.compute(compute_arg.reborrow()).into_inner();
+                let _offset = child_offset.compute(compute_arg.reborrow()).into_inner();
+                let _scale = child_scale.compute(compute_arg.reborrow()).into_inner();
                 let iterations = //50;
                 128 - (128 - compute_arg.coordinate_set.get_byte_t().into_inner() as i32).abs();
                 // 1 + child_iterations
@@ -576,41 +1113,43 @@ impl Node for FloatColorNodes {
 
                 // x and y are swapped intentionally
                 let c = Complex::new(
-                    f64::from(//0.001 *
-                        (1.0 - compute_arg.coordinate_set.get_unfloat_t().into_inner()) * 
+                    f64::from(
+                        //0.001 *
+                        (1.0 - compute_arg.coordinate_set.get_unfloat_t().into_inner()) *
                     // scale.y * 
-                    compute_arg.coordinate_set.y.into_inner()// - 0.5
-                ),
-                    f64::from(//0.001 *
-                        (1.0 - compute_arg.coordinate_set.get_unfloat_t().into_inner()) * 
+                    compute_arg.coordinate_set.y.into_inner(), // - 0.5
+                    ),
+                    f64::from(
+                        //0.001 *
+                        (1.0 - compute_arg.coordinate_set.get_unfloat_t().into_inner()) *
                     // scale.x * 
-                    compute_arg.coordinate_set.x.into_inner()// - 0.5
-                ),
+                    compute_arg.coordinate_set.x.into_inner(), // - 0.5
+                    ),
                 );
 
-                let c_offset =
-                        Complex::new(
-                            // compute_arg.coordinate_set.get_unfloat_t().into_inner() as f64
-                            // f64::from(scale.y) *
-                            // f64::from(offset.y)
-                            0.0
-                            ,
-                            // f64::from(scale.x) *
-                            // f64::from(offset.x)
-                            // compute_arg.coordinate_set.get_unfloat_t().into_inner() as f64
-                            0.0
-                            ,
-                        );
+                let _c_offset = Complex::new(
+                    // compute_arg.coordinate_set.get_unfloat_t().into_inner() as f64
+                    // f64::from(scale.y) *
+                    // f64::from(offset.y)
+                    0.0,
+                    // f64::from(scale.x) *
+                    // f64::from(offset.x)
+                    // compute_arg.coordinate_set.get_unfloat_t().into_inner() as f64
+                    0.0,
+                );
 
                 let mut magnitude = 0.0;
 
-                let (z_final, _escape) = escape_time_system(
-                    c// + c_offset
-                    ,
+                let (_z_final, _escape) = escape_time_system(
+                    c, // + c_offset
                     iterations as usize,
-                    |z, _i| (
-                        // if z.im > 0.0 { z } else { z.conj() } 
-                        z.abs() + c).ln(),
+                    |z, _i| {
+                        (
+                            // if z.im > 0.0 { z } else { z.conj() }
+                            z.abs() + c
+                        )
+                            .ln()
+                    },
                     |z, _i| {
                         magnitude += z.norm();
                         false
@@ -626,14 +1165,17 @@ impl Node for FloatColorNodes {
                 //     ),
                 //     Byte::new(iterations),
                 // )
-                
+
                 let rgb: Rgb = Hsv::<Srgb, _>::from_components((
                     RgbHue::from_degrees(
                         // magnitude as f32,
-                            // child_magnitude_normaliser.compute(compute_arg.reborrow()).normalise(magnitude as f32).into_inner()
-                    UFloatNormaliser::Sawtooth.normalise(//compute_arg.coordinate_set.get_unfloat_t().into_inner() + 
-                    magnitude as f32).into_inner()
-                            
+                        // child_magnitude_normaliser.compute(compute_arg.reborrow()).normalise(magnitude as f32).into_inner()
+                        UFloatNormaliser::Sawtooth
+                            .normalise(
+                                //compute_arg.coordinate_set.get_unfloat_t().into_inner() +
+                                magnitude as f32,
+                            )
+                            .into_inner()
                             * 360.0,
                     ),
                     1.0 as f32,
@@ -728,6 +1270,32 @@ impl<'a> Updatable<'a> for FloatColorNodes {
 
                     buffer.draw_dot(*dest, color);
                 }
+            }
+
+            IterativeCenteredPolarLineBuffer {
+                buffer,
+                ref mut theta,
+                theta_delta,
+                rho,
+                child_color,
+            } => {
+                let new_theta = *theta + *theta_delta;
+                let color = child_color.compute(arg.reborrow().into());
+
+                let point = SNPoint::from_snfloats(
+                    SNFloat::new(rho.into_inner() * f32::sin(theta.into_inner())),
+                    SNFloat::new(rho.into_inner() * f32::cos(theta.into_inner())),
+                );
+
+                // TODO rewrite this once we have a polar type node
+                let new_point = SNPoint::from_snfloats(
+                    SNFloat::new(rho.into_inner() * f32::sin(new_theta.into_inner())),
+                    SNFloat::new(rho.into_inner() * f32::cos(new_theta.into_inner())),
+                );
+
+                buffer.draw_line(point, new_point, color);
+
+                *theta = new_theta;
             }
 
             IterativePolarLineBuffer {
@@ -917,7 +1485,7 @@ impl Node for BitColorNodes {
                     ((compute_arg.coordinate_set.y.into_inner() + 1.0)
                         * 0.5
                         * CONSTS.cell_array_height as f32) as usize,
-                    compute_arg.coordinate_set.t as usize,
+                    (compute_arg.reborrow().current_t - 1).max(0),
                 )
                 .into(),
             FromUNFloat { child } => BitColor::from_index(
@@ -1028,7 +1596,7 @@ impl Node for ByteColorNodes {
                 ((compute_arg.coordinate_set.y.into_inner() + 1.0)
                     * 0.5
                     * CONSTS.cell_array_height as f32) as usize,
-                compute_arg.coordinate_set.t as usize,
+                (compute_arg.reborrow().current_t - 1).max(0),
             ),
             Decompose { r, g, b, a } => ByteColor {
                 r: r.compute(compute_arg.reborrow()),
@@ -1039,7 +1607,9 @@ impl Node for ByteColorNodes {
             RemoveAlpha { child_a, child_b } => {
                 let mut color = child_a.compute(compute_arg.reborrow());
 
-                if child_b.compute(compute_arg.reborrow()).into_inner() {color.a = Byte::new(0);}
+                if child_b.compute(compute_arg.reborrow()).into_inner() {
+                    color.a = Byte::new(0);
+                }
 
                 color
             }

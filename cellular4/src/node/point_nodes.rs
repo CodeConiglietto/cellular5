@@ -41,6 +41,8 @@ pub enum SNPointNodes {
     GetClosestPointInSet { child: NodeBox<PointSetNodes> },
     #[mutagen(gen_weight = pipe_node_weight)]
     GetFurthestPointInSet { child: NodeBox<PointSetNodes> },
+    #[mutagen(gen_weight = gamepad_node_weight)]
+    FromGamepadAxes { axes: GamepadAxes2D, id: GamepadId },
 }
 
 impl Node for SNPointNodes {
@@ -79,6 +81,15 @@ impl Node for SNPointNodes {
             GetFurthestPointInSet { child } => child
                 .compute(compute_arg.reborrow())
                 .get_furthest_point(compute_arg.coordinate_set.get_coord_point()),
+
+            FromGamepadAxes { axes, id } => {
+                let (x, y) = axes.axes();
+
+                SNPoint::new(Point2::new(
+                    compute_arg.gamepads[*id].axis_states.get(x).value,
+                    compute_arg.gamepads[*id].axis_states.get(y).value,
+                ))
+            }
         }
     }
 }
@@ -101,6 +112,13 @@ impl<'a> Updatable<'a> for SNPointNodes {
                     child_point.compute(arg.reborrow().into()),
                     child_normaliser.compute(arg.reborrow().into()),
                 );
+            }
+
+            FromGamepadAxes { axes, id } => {
+                let (x, y) = axes.axes();
+
+                arg.gamepads[*id].axis_states.get_mut(x).in_use = true;
+                arg.gamepads[*id].axis_states.get_mut(y).in_use = true;
             }
 
             _ => {}

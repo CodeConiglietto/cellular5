@@ -102,6 +102,14 @@ impl UNFloat {
         UNFloat::new(self.into_inner() * other.into_inner())
     }
 
+    pub fn lerp(self, other: UNFloat, scalar: UNFloat) -> Self {
+        UNFloat::new(lerp(
+            self.into_inner(),
+            other.into_inner(),
+            scalar.into_inner(),
+        ))
+    }
+
     pub const ZERO: Self = Self { value: 0.0 };
     pub const ONE: Self = Self { value: 1.0 };
 
@@ -305,14 +313,15 @@ impl Angle {
 
     #[track_caller]
     pub fn new(value: f32) -> Self {
+        //TODO: make some normalisers for angles
         let normalised = match value.partial_cmp(&0.0).unwrap() {
             Ordering::Greater => (value / (2.0 * PI)).fract() * (2.0 * PI),
             Ordering::Less => (value / (2.0 * PI)).fract() * (2.0 * PI) + (2.0 * PI),
             Ordering::Equal => value,
-        };
+        } - PI;
 
         assert!(
-            normalised >= 0.0 && normalised <= 2.0 * PI,
+            normalised >= -PI && normalised <= PI,
             "Failed to normalize angle: {} -> {}",
             value,
             normalised,
@@ -326,7 +335,7 @@ impl Angle {
     }
 
     pub fn new_from_range(value: f32, min: f32, max: f32) -> Self {
-        Self::new_unchecked(map_range(value, (min, max), (0.0, 2.0 * PI)))
+        Self::new_unchecked(map_range(value, (min, max), (-PI, PI)))
     }
 
     pub fn into_inner(self) -> f32 {
@@ -334,15 +343,15 @@ impl Angle {
     }
 
     pub fn to_signed(self) -> SNFloat {
-        SNFloat::new_from_range(self.value, 0.0, 2.0 * PI)
+        SNFloat::new_from_range(self.value, -PI, PI)
     }
 
     pub fn to_unsigned(self) -> UNFloat {
-        UNFloat::new_from_range(self.value, 0.0, 2.0 * PI)
+        UNFloat::new_from_range(self.value, -PI, PI)
     }
 
     pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
-        Self::new_unchecked(rng.gen_range(0.0, 2.0 * PI))
+        Self::new_unchecked(rng.gen_range(-PI, PI))
     }
 
     pub const ZERO: Self = Self { value: 0.0 };

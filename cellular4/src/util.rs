@@ -1,16 +1,21 @@
-use ggez::{graphics::Drawable, graphics::Image as GgImage, Context};
-
 use std::{
+    env,
     path::{Path, PathBuf},
     sync::Mutex,
     time::SystemTime,
+};
+
+use ggez::{
+    graphics::{Drawable, Image as GgImage},
+    Context,
 };
 
 use lazy_static::lazy_static;
 use log::debug;
 use nalgebra::*;
 use ndarray::{Array3, ArrayView3};
-use rand::{thread_rng, Rng, RngCore, SeedableRng};
+use rand::prelude::*;
+use rand::{RngCore, SeedableRng};
 use walkdir::WalkDir;
 
 pub fn collect_filenames<P: AsRef<Path>>(path: P) -> Vec<PathBuf> {
@@ -157,16 +162,18 @@ pub fn init_cell_array(width: usize, height: usize) -> Array3<u8> {
         if c == 3 {
             255
         } else {
-            0
-            // thread_rng().gen::<u8>()
+            // 0
+            thread_rng().gen::<u8>()
         }
     })
 }
 
-pub fn compute_texture(ctx: &mut Context, cell_array: ArrayView3<u8>) -> GgImage {
-    let (height, width, depth) = cell_array.dim();
-    assert_eq!(depth, 4);
-
+pub fn compute_texture(
+    ctx: &mut Context,
+    cell_array: ArrayView3<u8>,
+    use_nearest_neighbour: bool,
+) -> GgImage {
+    let (height, width, _) = cell_array.dim();
     let mut image = GgImage::from_rgba8(
         ctx,
         width as u16,
@@ -175,30 +182,62 @@ pub fn compute_texture(ctx: &mut Context, cell_array: ArrayView3<u8>) -> GgImage
     )
     .unwrap();
 
-    // match (thread_rng().gen::<u8>() % 8)
-    // {
-    //     0 => {image.set_blend_mode(Some(ggez::graphics::BlendMode::Add));},
-    //     1 => {image.set_blend_mode(Some(ggez::graphics::BlendMode::Alpha));},
-    //     2 => {image.set_blend_mode(Some(ggez::graphics::BlendMode::Darken));},
-    //     3 => {image.set_blend_mode(Some(ggez::graphics::BlendMode::Invert));},
-    //     4 => {image.set_blend_mode(Some(ggez::graphics::BlendMode::Lighten));},
-    //     5 => {image.set_blend_mode(Some(ggez::graphics::BlendMode::Multiply));},
-    //     6 => {image.set_blend_mode(Some(ggez::graphics::BlendMode::Replace));},
-    //     7 => {image.set_blend_mode(Some(ggez::graphics::BlendMode::Subtract));},
-    //     _ => panic!(),
-    // }
+    //TODO: figure out if there's some way we can abuse blend modes for novel behaviour
+    //Perhaps we make this a node type that interleaves different blend types so it doesn't white/black out the screen
+    if false {
+        match thread_rng().gen::<u8>() % 8 {
+            0 => {
+                image.set_blend_mode(Some(ggez::graphics::BlendMode::Add));
+            }
+            1 => {
+                image.set_blend_mode(Some(ggez::graphics::BlendMode::Alpha));
+            }
+            2 => {
+                image.set_blend_mode(Some(ggez::graphics::BlendMode::Darken));
+            }
+            3 => {
+                image.set_blend_mode(Some(ggez::graphics::BlendMode::Invert));
+            }
+            4 => {
+                image.set_blend_mode(Some(ggez::graphics::BlendMode::Lighten));
+            }
+            5 => {
+                image.set_blend_mode(Some(ggez::graphics::BlendMode::Multiply));
+            }
+            6 => {
+                image.set_blend_mode(Some(ggez::graphics::BlendMode::Replace));
+            }
+            7 => {
+                image.set_blend_mode(Some(ggez::graphics::BlendMode::Subtract));
+            }
+            _ => panic!(),
+        }
+    }
 
-    // image.set_filter(ggez::graphics::FilterMode::Nearest);
+    if use_nearest_neighbour {
+        image.set_filter(ggez::graphics::FilterMode::Nearest);
+    }
+
     image
 }
 
 pub fn compute_blank_texture(ctx: &mut Context) -> GgImage {
-    let image = GgImage::from_rgba8(ctx, 1, 1, &[255, 255, 255, 255]).unwrap();
+    let mut image = GgImage::from_rgba8(ctx, 1, 1, &[255, 255, 255, 255]).unwrap();
 
-    // image.set_filter(ggez::graphics::FilterMode::Nearest);
+    image.set_filter(ggez::graphics::FilterMode::Linear);
+    //image.set_filter(ggez::graphics::FilterMode::Nearest);
+
     image
 }
 
 pub fn lerp(a: f32, b: f32, value: f32) -> f32 {
     a + (b - a) * value
+}
+
+pub fn local_path<P: AsRef<Path>>(filename: P) -> PathBuf {
+    if let Ok(manifest_dir) = env::var("CARGO_MANIFEST_DIR") {
+        PathBuf::from(manifest_dir).join("..").join(filename)
+    } else {
+        PathBuf::from(env::current_dir().expect("Unable to get current dir")).join(filename)
+    }
 }

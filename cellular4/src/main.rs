@@ -1,35 +1,64 @@
-use std::{env, fs};
+#![allow(clippy::large_enum_variant)]
 
 // We need to do this rather than importing the macros individually
 #[macro_use]
 extern crate gfx;
+
+use std::{fs, rc::Rc};
 
 use cpu_monitor::CpuInstant;
 use ggez::{
     conf::{FullscreenType, WindowMode, WindowSetup},
     event::{self, EventHandler, KeyCode, KeyMods},
     graphics,
-    graphics::{Color as GgColor, DrawParam, Image as GgImage},
+    graphics::Image as GgImage,
     input::keyboard,
     timer, Context, ContextBuilder, GameResult,
 };
-use log::{error, info};
+use log::{info, warn};
 use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
-use ndarray::{s, ArrayViewMut1, Axis};
+use ndarray::{s, ArrayViewMut1, Axis as NdAxis};
 use rand::prelude::*;
 use rayon::prelude::*;
 use structopt::StructOpt;
 
 use crate::{
-    arena_wrappers::*, data_set::*, gfx_renderer::GfxRenderer, history::*, node_set::*, opts::Opts,
-    prelude::*, update_stat::UpdateStat,
+    arena_wrappers::*, data_set::*, history::*, node_set::*, opts::Opts, prelude::*, ui::*,
+    update_stat::UpdateStat,
 };
+
+// Shamelessly copied from the std implementation of dbg!
+// Macro declaration order matters! Keep this BEFORE any code and any module declarations
+macro_rules! ldbg {
+    () => {
+        ::log::trace!("[{}:{}]", ::std::file!(), ::std::line!())
+    };
+
+    ($val:expr) => {
+        match $val {
+            tmp => {
+                ::log::trace!("[{}:{}] {} = {:#?}",
+                              ::std::file!(), ::std::line!(), ::std::stringify!($val), &tmp);
+                tmp
+            }
+        }
+    };
+
+    ($val:expr,) => {
+        $crate::ldbg!($val)
+    };
+
+    ($($val:expr),+ $(,)?) => {
+        ($($crate::ldbg!($val)),+,)
+    };
+}
 
 pub mod arena_wrappers;
 pub mod constants;
 pub mod coordinate_set;
 pub mod data_set;
 pub mod datatype;
+pub mod gamepad;
 pub mod gfx_renderer;
 pub mod history;
 pub mod mutagen_args;
@@ -38,15 +67,20 @@ pub mod node_set;
 pub mod opts;
 pub mod preloader;
 pub mod prelude;
+pub mod profiler;
+pub mod ui;
 pub mod update_stat;
 pub mod util;
 
 fn main() {
     std::env::set_var("RUST_BACKTRACE", "full");
 
-    setup_logging();
-
     let opts = Opts::from_args();
+
+    // We initialize the preloader before the ggez context so it is destroyed after the context.
+    // The preloader can take a while to destroy since it may be waiting on IO/network,and we want the window to close responsively
+    let image_preloader = Rc::new(Preloader::new(32, RandomImageLoader::new));
+
     let (mut ctx, mut event_loop) = ContextBuilder::new("cellular4", "CodeBunny")
         .window_mode(
             WindowMode::default()
@@ -65,19 +99,32 @@ fn main() {
         .build()
         .expect("Could not create ggez context!");
 
-    let mut my_game = MyGame::new(&mut ctx, opts);
+    let mut my_game = MyGame::new(&mut ctx, opts, Rc::clone(&image_preloader));
 
     match event::run(&mut ctx, &mut event_loop, &mut my_game) {
-        Ok(_) => info!("Exited cleanly."),
-        Err(e) => error!("Error occurred: {}", e),
+        Ok(_) => println!("Exited cleanly."),
+        Err(e) => println!("Error occurred: {}", e),
+    }
+
+    if CONSTS.mutagen_profiler_graphs {
+        println!("Generating graphs...");
+
+        match MutagenProfiler::load(MutagenProfiler::default_path()) {
+            Ok(profiler) => profiler
+                .save_graphs(MutagenProfiler::default_graphs_path())
+                .unwrap_or_else(|e| warn!("Failed to save profiler graphs: {}", e)),
+            Err(e) => warn!("Failed to load profiler for graphing: {}", e),
+        }
+
+        println!("Done!");
     }
 }
 
-fn setup_logging() {
+fn setup_logging(ui: &Ui) {
     let image_error_dispatch = fern::Dispatch::new()
         .level(log::LevelFilter::Off)
         .level_for(datatype::image::MODULE_PATH, log::LevelFilter::Error)
-        .chain(fern::log_file("image_errors.log").unwrap());
+        .chain(fern::log_file(util::local_path("image_errors.log")).unwrap());
 
     fern::Dispatch::new()
         .format(|out, message, record| {
@@ -92,7 +139,7 @@ fn setup_logging() {
         .level(log::LevelFilter::Info)
         .level_for(module_path!(), log::LevelFilter::Trace)
         .chain(image_error_dispatch)
-        .chain(std::io::stdout())
+        .chain(ui.log_output())
         .apply()
         .unwrap();
 }
@@ -102,10 +149,12 @@ fn setup_logging() {
 struct NodeTree {
     /// The root node for the tree that computes the next screen state
     root_node: NodeBox<FloatColorNodes>,
+    root_coordinate_node: NodeBox<CoordMapNodes>,
     root_frame_renderer: NodeBox<FrameRendererNodes>,
     compute_offset_node: NodeBox<CoordMapNodes>,
     fade_color_node: NodeBox<FloatColorNodes>,
     fade_color_alpha_multiplier: NodeBox<UNFloatNodes>,
+    scaling_mode_node: NodeBox<BooleanNodes>,
 }
 
 // impl NodeTree {
@@ -186,6 +235,7 @@ struct MyGame {
     next_history_step: HistoryStep,
 
     blank_texture: GgImage,
+    gamepads: Gamepads,
 
     //The rolling total used to calculate the average per update instead of per slice
     rolling_update_stat_total: UpdateStat,
@@ -200,22 +250,28 @@ struct MyGame {
     //record_tree: bool,
     tree_dirty: bool,
     current_t: usize,
+    last_mutation_t: usize,
     last_render_t: usize,
     cpu_t: CpuInstant,
     rng: DeterministicRng,
+    ui: Ui,
 
-    gfx_renderer: GfxRenderer,
-    image_preloader: Preloader<Image>,
+    image_preloader: Rc<Preloader<Image>>,
+    profiler: Option<MutagenProfiler>,
 }
 
 impl MyGame {
-    pub fn new(ctx: &mut Context, opts: Opts) -> MyGame {
+    pub fn new(ctx: &mut Context, opts: Opts, image_preloader: Rc<Preloader<Image>>) -> MyGame {
         if let Some(seed) = opts.seed {
             info!("Manually setting RNG seed");
             *RNG_SEED.lock().unwrap() = seed;
         }
 
-        fs::write("last_seed.txt", &RNG_SEED.lock().unwrap().to_string()).unwrap();
+        fs::write(
+            util::local_path("last_seed.txt"),
+            &RNG_SEED.lock().unwrap().to_string(),
+        )
+        .unwrap();
 
         let mut rng = DeterministicRng::new();
 
@@ -226,25 +282,26 @@ impl MyGame {
             CONSTS.cell_array_history_length,
         );
 
-        let mut image_preloader = Preloader::new(32, RandomImageLoader::new());
-
         let mut nodes: Vec<_> = (0..=node::max_node_depth())
             .map(|_| NodeSet::new())
             .collect();
         let mut data = DataSet::new();
 
-        let gfx_renderer = GfxRenderer::new_shadertoy(
-            ctx,
-            &fs::read_to_string(
-                env::current_dir()
-                    .unwrap()
-                    .join("cellular4")
-                    .join("shaders")
-                    .join("shadertoy")
-                    .join("basic.glsl"),
+        let ui = Ui::new();
+        setup_logging(&ui);
+
+        let mut profiler = if CONSTS.mutagen_profiler {
+            Some(
+                MutagenProfiler::load(MutagenProfiler::default_path()).unwrap_or_else(|e| {
+                    warn!("Failed to load profiler data: {}", e);
+                    MutagenProfiler::new()
+                }),
             )
-            .unwrap(),
-        );
+        } else {
+            None
+        };
+
+        let mut gamepads = Gamepads::new();
 
         MyGame {
             blank_texture: compute_blank_texture(ctx),
@@ -252,12 +309,14 @@ impl MyGame {
                 ctx,
                 CONSTS.cell_array_width,
                 CONSTS.cell_array_height,
+                false,
             ),
             rolling_update_stat_total: UpdateStat {
                 activity_value: 0.0,
                 alpha_value: 0.0,
                 local_similarity_value: 0.0,
                 global_similarity_value: 0.0,
+                graph_stability: 0.0,
                 cpu_usage: 0.0,
             },
             average_update_stat: UpdateStat {
@@ -265,6 +324,7 @@ impl MyGame {
                 alpha_value: 0.0,
                 local_similarity_value: 0.0,
                 global_similarity_value: 0.0,
+                graph_stability: 0.0,
                 cpu_usage: 0.0,
             },
 
@@ -277,7 +337,9 @@ impl MyGame {
                     current_t: 0,
                     history: &history,
                     coordinate_set: history.history_steps[0].update_coordinate,
-                    image_preloader: &mut image_preloader,
+                    image_preloader: &*image_preloader,
+                    profiler: &mut profiler,
+                    gamepads: &mut gamepads,
                 },
             ),
 
@@ -287,13 +349,15 @@ impl MyGame {
             //record_tree: false,
             tree_dirty: false,
             current_t: 0,
+            last_mutation_t: 0,
             last_render_t: 0,
             cpu_t: CpuInstant::now().unwrap(),
+            ui,
             rng,
             history,
-
-            gfx_renderer,
             image_preloader,
+            profiler,
+            gamepads,
         }
     }
 }
@@ -357,10 +421,30 @@ impl EventHandler for MyGame {
         // }
     }
 
+    fn gamepad_button_down_event(&mut self, ctx: &mut Context, _btn: GgButton, id: GgGamepadId) {
+        self.gamepads.register_gamepad(ctx, id);
+    }
+
+    fn gamepad_button_up_event(&mut self, ctx: &mut Context, _btn: GgButton, id: GgGamepadId) {
+        self.gamepads.register_gamepad(ctx, id);
+    }
+
+    fn gamepad_axis_event(
+        &mut self,
+        ctx: &mut Context,
+        _axis: GgAxis,
+        _value: f32,
+        id: GgGamepadId,
+    ) {
+        self.gamepads.register_gamepad(ctx, id);
+    }
+
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
         if keyboard::is_key_pressed(ctx, KeyCode::Space) {
             self.tree_dirty = true;
         }
+
+        self.gamepads.update(ctx);
 
         let current_t = self.current_t;
 
@@ -372,34 +456,41 @@ impl EventHandler for MyGame {
             self.next_history_step
                 .cell_array
                 .slice_mut(s![slice_y_range, .., ..]);
-        let new_update_iter = new_update_slice.lanes_mut(Axis(2));
+        let new_update_iter = new_update_slice.lanes_mut(NdAxis(2));
 
         let history = &self.history;
+        let gamepads = &self.gamepads;
 
         //let rule_sets = self.rule_sets;
 
         let root_node = &self.node_tree.root_node;
+        let root_coordinate_node = &self.node_tree.root_coordinate_node;
         let nodes = &self.nodes;
         let data = &self.data;
         let total_cells = CONSTS.cell_array_width * CONSTS.cell_array_height;
 
         let update_step = |y, x, mut new: ArrayViewMut1<u8>| {
+            let coordinate_set = CoordinateSet {
+                x: UNFloat::new(x as f32 / CONSTS.cell_array_width as f32).to_signed(),
+                y: UNFloat::new((y + slice_y as usize) as f32 / CONSTS.cell_array_height as f32)
+                    .to_signed(),
+                t: current_t as f32,
+            };
+
+            let mut compute_arg = ComArg {
+                nodes,
+                data,
+                current_t,
+                coordinate_set,
+                history,
+                depth: 0,
+                gamepads,
+            };
+
+            let transformed_coords = root_coordinate_node.compute(compute_arg.reborrow());
+
             let new_color = ByteColor::from(
-                root_node.compute(ComArg {
-                    nodes,
-                    data,
-                    current_t,
-                    coordinate_set: CoordinateSet {
-                        x: UNFloat::new(x as f32 / CONSTS.cell_array_width as f32).to_signed(),
-                        y: UNFloat::new(
-                            (y + slice_y as usize) as f32 / CONSTS.cell_array_height as f32,
-                        )
-                        .to_signed(),
-                        t: current_t as f32,
-                    },
-                    history,
-                    depth: 0,
-                }),
+                root_node.compute(compute_arg.replace_coordinate_set(&transformed_coords)),
             );
 
             new[0] = new_color.r.into_inner();
@@ -439,7 +530,8 @@ impl EventHandler for MyGame {
                 global_similarity_value: f64::from(
                     1.0 - (global_color.get_average() - current_color.get_average()).abs(),
                 ), // / total_cells as f64
-                cpu_usage: 0.0, //we don't accumulate this here because we set it below
+                graph_stability: 0.0, //we don't accumulate this here because we set it below
+                cpu_usage: 0.0,       //we don't accumulate this here because we set it below
             }
         };
 
@@ -460,18 +552,20 @@ impl EventHandler for MyGame {
         if timer::ticks(ctx) % CONSTS.tics_per_update == 0 {
             let next_cpu_t = CpuInstant::now().unwrap();
             let cpu_usage = (next_cpu_t - self.cpu_t).non_idle();
+            let graph_stability = 1.0 - 0.95_f64.powf((current_t - self.last_mutation_t) as f64);
 
             self.average_update_stat =
                 ((self.average_update_stat + self.rolling_update_stat_total) / 2.0).clamp_values();
 
-            dbg!(timer::fps(ctx));
+            //dbg!(timer::fps(ctx));
 
             self.rolling_update_stat_total = UpdateStat {
                 activity_value: 0.0,
                 alpha_value: 0.0,
                 local_similarity_value: 0.0,
                 global_similarity_value: 0.0,
-                cpu_usage: cpu_usage,
+                graph_stability,
+                cpu_usage,
             };
 
             let _update_state = UpdateState {
@@ -485,8 +579,8 @@ impl EventHandler for MyGame {
 
             let mutation_likelihood = &self.average_update_stat.mutation_likelihood();
 
-            dbg!(&self.average_update_stat);
-            dbg!(mutation_likelihood);
+            //dbg!(&self.average_update_stat);
+            //dbg!(mutation_likelihood);
 
             let history_len = self.history.history_steps.len();
             let history_index = self.current_t.saturating_sub(1) % history_len;
@@ -495,40 +589,68 @@ impl EventHandler for MyGame {
             if self.tree_dirty
                 || (CONSTS.auto_mutate
                     && (
-                        dbg!(cpu_usage >= CONSTS.auto_mutate_above_cpu_usage)
-                            || dbg!(self.average_update_stat.should_mutate())
+                        cpu_usage >= CONSTS.auto_mutate_above_cpu_usage
+                            || self.average_update_stat.should_mutate()
                         // || dbg!(thread_rng().gen::<usize>() % CONSTS.graph_mutation_divisor) == 0
                     ))
             {
                 info!("====TIC: {} MUTATING TREE====", self.current_t);
-                self.node_tree.root_node.mutate_rng(
-                    &mut self.rng,
-                    MutArg {
-                        nodes: &mut self.nodes,
-                        data: &mut self.data,
-                        depth: 0,
-                        current_t,
-                        coordinate_set: history_step.update_coordinate,
-                        history: &self.history,
-                        image_preloader: &mut self.image_preloader,
-                    },
-                );
-                self.node_tree.root_frame_renderer.mutate_rng(
-                    &mut self.rng,
-                    MutArg {
-                        nodes: &mut self.nodes,
-                        data: &mut self.data,
-                        depth: 0,
-                        current_t,
-                        coordinate_set: history_step.update_coordinate,
-                        history: &self.history,
-                        image_preloader: &mut self.image_preloader,
-                    },
-                );
+                if thread_rng().gen_bool(0.5) {
+                    info!("MUTATING ROOT NODE");
+                    self.node_tree.root_node.mutate_rng(
+                        &mut self.rng,
+                        MutArg {
+                            nodes: &mut self.nodes,
+                            data: &mut self.data,
+                            depth: 0,
+                            current_t,
+                            coordinate_set: history_step.update_coordinate,
+                            history: &self.history,
+                            image_preloader: &mut self.image_preloader,
+                            profiler: &mut self.profiler,
+                            gamepads: &mut self.gamepads,
+                        },
+                    );
+                } else {
+                    if thread_rng().gen_bool(0.5) {
+                        info!("MUTATING COORD NODE");
+                        self.node_tree.root_coordinate_node.mutate_rng(
+                            &mut self.rng,
+                            MutArg {
+                                nodes: &mut self.nodes,
+                                data: &mut self.data,
+                                depth: 0,
+                                current_t,
+                                coordinate_set: history_step.update_coordinate,
+                                history: &self.history,
+                                image_preloader: &mut self.image_preloader,
+                                profiler: &mut self.profiler,
+                                gamepads: &mut self.gamepads,
+                            },
+                        );
+                    } else {
+                        info!("MUTATING RENDERER");
+                        self.node_tree.root_frame_renderer.mutate_rng(
+                            &mut self.rng,
+                            MutArg {
+                                nodes: &mut self.nodes,
+                                data: &mut self.data,
+                                depth: 0,
+                                current_t,
+                                coordinate_set: history_step.update_coordinate,
+                                history: &self.history,
+                                image_preloader: &mut self.image_preloader,
+                                profiler: &mut self.profiler,
+                                gamepads: &mut self.gamepads,
+                            },
+                        );
+                    }
+                }
                 // // info!("{:#?}", &self.root_node);
                 // if self.record_tree {
                 //     self.node_tree.save("latest");
                 // }
+                self.last_mutation_t = self.current_t;
                 self.tree_dirty = false;
             }
 
@@ -537,6 +659,8 @@ impl EventHandler for MyGame {
             //     history: &self.history,
             // };
 
+            self.gamepads.clear_in_use();
+
             let last_update_arg = UpdArg {
                 coordinate_set: history_step.update_coordinate,
                 history: &self.history,
@@ -544,6 +668,8 @@ impl EventHandler for MyGame {
                 data: &mut self.data,
                 depth: 0,
                 image_preloader: &mut self.image_preloader,
+                profiler: &mut self.profiler,
+                gamepads: &mut self.gamepads,
                 current_t,
             };
 
@@ -568,6 +694,8 @@ impl EventHandler for MyGame {
                 data: &mut self.data,
                 depth: 0,
                 image_preloader: &mut self.image_preloader,
+                profiler: &mut self.profiler,
+                gamepads: &mut self.gamepads,
                 current_t,
             };
 
@@ -582,41 +710,24 @@ impl EventHandler for MyGame {
                 .fade_color_alpha_multiplier
                 .compute(step_com_arg.reborrow());
 
-            // self.next_history_step.root_scalar = self
-            //     .node_tree
-            //     .render_nodes
-            //     .root_scalar_node
-            //     .compute(step_com_arg.reborrow())
-            // .multiply(UNFloat::new_clamped(
-            //     1.0 - self.average_update_stat.activity_value as f32,
-            // ))
-            // .multiply(UNFloat::new_clamped(
-            //     1.0 - self.average_update_stat.alpha_value as f32,
-            // ))
-            // .multiply(UNFloat::new_clamped(
-            //     self.average_update_stat.global_similarity_value as f32,
-            // ))
-            // .multiply(UNFloat::new_clamped(
-            //     1.0 - self.average_update_stat.local_similarity_value as f32,
-            // ))
-            // .average(history_step.root_scalar);
-
-            self.next_history_step.root_scalar = dbg!(UNFloat::new(
-                // (self
-                // .node_tree
-                // .render_nodes
-                // .root_scalar_node
-                // .compute(step_com_arg.reborrow()).average(history_step.root_scalar).into_inner() *
-                mutation_likelihood.powf(2.0) as f32 // )
-            ));
+            self.next_history_step.root_scalar = UNFloat::new(mutation_likelihood.powf(2.0) as f32);
 
             self.next_history_step.frame_renderer = self
                 .node_tree
                 .root_frame_renderer
                 .compute(step_com_arg.reborrow());
 
-            self.next_history_step.computed_texture =
-                compute_texture(ctx, self.next_history_step.cell_array.view());
+            let use_nearest_neighbour_scaling = self
+                .node_tree
+                .scaling_mode_node
+                .compute(step_com_arg.reborrow())
+                .into_inner();
+
+            self.next_history_step.computed_texture = compute_texture(
+                ctx,
+                self.next_history_step.cell_array.view(),
+                use_nearest_neighbour_scaling,
+            );
 
             self.node_tree.update_recursively(step_upd_arg.reborrow());
 
@@ -629,6 +740,8 @@ impl EventHandler for MyGame {
                     nodes: children,
                     data: &mut self.data,
                     image_preloader: &mut self.image_preloader,
+                    profiler: &mut self.profiler,
+                    gamepads: &mut self.gamepads,
                     depth,
                     current_t,
                 };
@@ -636,15 +749,19 @@ impl EventHandler for MyGame {
                 current.update_recursively(step_upd_arg.reborrow());
             }
 
-            self.gfx_renderer
-                .set_image_from_cell_array(ctx, self.next_history_step.cell_array.view());
-
             // Rotate the buffers by swapping
             let h_len = self.history.history_steps.len();
             std::mem::swap(
                 &mut self.history.history_steps[current_t % h_len],
                 &mut self.next_history_step,
             );
+
+            self.ui.draw(&self.average_update_stat, &self.gamepads);
+            if let Some(profiler) = &self.profiler {
+                profiler
+                    .save(MutagenProfiler::default_path())
+                    .unwrap_or_else(|e| warn!("Failed to save profiler data: {}", e));
+            }
 
             self.current_t += 1;
             self.cpu_t = next_cpu_t;
@@ -662,7 +779,7 @@ impl EventHandler for MyGame {
             let lerp_sub =
                 (timer::ticks(ctx) % CONSTS.tics_per_update) as f32 / CONSTS.tics_per_update as f32;
 
-            self.gfx_renderer.draw(ctx);
+            let fresh_frame = timer::ticks(ctx) % CONSTS.tics_per_update == 0;
 
             for lerp_i in 0..CONSTS.cell_array_lerp_length {
                 let args = RenderArgs {
@@ -672,6 +789,7 @@ impl EventHandler for MyGame {
                     lerp_sub,
                     lerp_i,
                     blank_texture: &self.blank_texture,
+                    fresh_frame,
                 };
 
                 args.history_step().frame_renderer.draw(args)?;

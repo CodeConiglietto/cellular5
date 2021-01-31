@@ -1,7 +1,9 @@
+use std::f32::consts::PI;
+
 use approx::abs_diff_eq;
-use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
-use palette::rgb::Rgb;
 use ggez::graphics::Color as GgColor;
+use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
+use palette::{encoding::srgb::Srgb, rgb::Rgb, Hsv, RgbHue};
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -85,6 +87,22 @@ pub fn float_color_from_pallette_rgb(rgb: Rgb, alpha: f32) -> FloatColor {
         b: UNFloat::new(rgb.blue as f32),
         a: UNFloat::new(alpha),
     }
+}
+
+/// Expects all inputs and outputs to be between 0.0 and 1.0
+pub fn rgb_tuple_to_hsv_tuple(r: f32, g: f32, b: f32) -> (f32, f32, f32) {
+    let (h, s, v) = Hsv::<Srgb, _>::from(Rgb::<Srgb, _>::new(r, g, b)).into_components();
+    (h.to_positive_radians() / (2.0 * PI), s, v)
+}
+
+/// Expects all inputs and outputs to be between 0.0 and 1.0
+pub fn hsv_tuple_to_rgb_tuple(h: f32, s: f32, v: f32) -> (f32, f32, f32) {
+    Rgb::<Srgb, _>::from(Hsv::<Srgb, _>::new(
+        RgbHue::from_radians(h * 2.0 * PI),
+        s,
+        v,
+    ))
+    .into_components()
 }
 
 #[derive(Serialize, Deserialize, Copy, Clone, Debug, PartialEq, Eq)]
@@ -193,7 +211,7 @@ impl BitColor {
             6 => BitColor::Yellow,
             7 => BitColor::White,
             _ => {
-                dbg!(index);
+                ldbg!(index);
                 panic!()
             }
         }
@@ -378,6 +396,28 @@ impl FloatColor {
         }
     }
 
+    pub fn get_saturation_unfloat(&self) -> UNFloat {
+        UNFloat::new(
+            rgb_tuple_to_hsv_tuple(
+                self.r.into_inner(),
+                self.g.into_inner(),
+                self.b.into_inner(),
+            )
+            .1,
+        )
+    }
+
+    pub fn get_value_unfloat(&self) -> UNFloat {
+        UNFloat::new(
+            rgb_tuple_to_hsv_tuple(
+                self.r.into_inner(),
+                self.g.into_inner(),
+                self.b.into_inner(),
+            )
+            .2,
+        )
+    }
+
     pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
         Self {
             r: UNFloat::random(rng),
@@ -387,14 +427,43 @@ impl FloatColor {
         }
     }
 
-    pub const ALL_ZERO: Self = Self { r: UNFloat::ZERO, g: UNFloat::ZERO, b: UNFloat::ZERO, a: UNFloat::ZERO };
-    pub const WHITE: Self = Self { r: UNFloat::ONE, g: UNFloat::ONE, b: UNFloat::ONE, a: UNFloat::ONE };
-    pub const BLACK: Self = Self { r: UNFloat::ZERO, g: UNFloat::ZERO, b: UNFloat::ZERO, a: UNFloat::ONE };
+    pub fn lerp(self, other: Self, scalar: UNFloat) -> Self {
+        Self {
+            r: self.r.lerp(other.r, scalar),
+            g: self.g.lerp(other.g, scalar),
+            b: self.b.lerp(other.b, scalar),
+            a: self.a.lerp(other.a, scalar),
+        }
+    }
+
+    pub const ALL_ZERO: Self = Self {
+        r: UNFloat::ZERO,
+        g: UNFloat::ZERO,
+        b: UNFloat::ZERO,
+        a: UNFloat::ZERO,
+    };
+    pub const WHITE: Self = Self {
+        r: UNFloat::ONE,
+        g: UNFloat::ONE,
+        b: UNFloat::ONE,
+        a: UNFloat::ONE,
+    };
+    pub const BLACK: Self = Self {
+        r: UNFloat::ZERO,
+        g: UNFloat::ZERO,
+        b: UNFloat::ZERO,
+        a: UNFloat::ONE,
+    };
 }
 
 impl Into<GgColor> for FloatColor {
     fn into(self) -> GgColor {
-        GgColor{r: self.r.into_inner(), g: self.g.into_inner(), b: self.b.into_inner(), a: self.a.into_inner()}
+        GgColor {
+            r: self.r.into_inner(),
+            g: self.g.into_inner(),
+            b: self.b.into_inner(),
+            a: self.a.into_inner(),
+        }
     }
 }
 

@@ -83,6 +83,11 @@ pub enum BooleanNodes {
     //     child:NodeBox<BooleanNodes>,
     //     point_set: PointSet,
     // },
+    #[mutagen(gen_weight = gamepad_node_weight)]
+    FromGamepadButton {
+        button: GamepadButton,
+        id: GamepadId,
+    },
 }
 
 impl Node for BooleanNodes {
@@ -209,6 +214,12 @@ impl Node for BooleanNodes {
             //         value: true_count > offsets.len() / 2,
             //     }
             // }
+            FromGamepadButton { button, id } => Boolean {
+                value: compute_arg.gamepads[*id]
+                    .button_states
+                    .get(*button)
+                    .is_pressed,
+            },
         }
     }
 }
@@ -216,7 +227,17 @@ impl Node for BooleanNodes {
 impl<'a> Updatable<'a> for BooleanNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _arg: UpdArg<'a>) {}
+    fn update(&mut self, arg: UpdArg<'a>) {
+        use BooleanNodes::*;
+
+        match self {
+            FromGamepadButton { button, id } => {
+                arg.gamepads[*id].button_states.get_mut(*button).in_use = true
+            }
+
+            _ => {}
+        }
+    }
 }
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]
@@ -266,6 +287,8 @@ pub enum NibbleNodes {
         child_b: NodeBox<NibbleNodes>,
     },
     // InvertNormalised { child:NodeBox<NibbleNodes> },
+    #[mutagen(gen_weight = gamepad_node_weight)]
+    FromGamepadFaceButtons { id: GamepadId },
 }
 
 impl Node for NibbleNodes {
@@ -333,6 +356,15 @@ impl Node for NibbleNodes {
                     child_b.compute(compute_arg.reborrow())
                 }
             }
+            FromGamepadFaceButtons { id } => {
+                let gamepad = &compute_arg.gamepads[*id];
+                Nibble::new(
+                    u8::from(gamepad.button_states.get(GamepadButton::North).is_pressed)
+                        | u8::from(gamepad.button_states.get(GamepadButton::West).is_pressed) << 1
+                        | u8::from(gamepad.button_states.get(GamepadButton::East).is_pressed) << 2
+                        | u8::from(gamepad.button_states.get(GamepadButton::South).is_pressed) << 3,
+                )
+            }
         }
     }
 }
@@ -340,7 +372,22 @@ impl Node for NibbleNodes {
 impl<'a> Updatable<'a> for NibbleNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _arg: UpdArg<'a>) {}
+    fn update(&mut self, arg: UpdArg<'a>) {
+        use NibbleNodes::*;
+
+        match self {
+            FromGamepadFaceButtons { id } => {
+                let gamepad = &mut arg.gamepads[*id];
+
+                gamepad.button_states.get_mut(GamepadButton::North).in_use = true;
+                gamepad.button_states.get_mut(GamepadButton::West).in_use = true;
+                gamepad.button_states.get_mut(GamepadButton::East).in_use = true;
+                gamepad.button_states.get_mut(GamepadButton::South).in_use = true;
+            }
+
+            _ => {}
+        }
+    }
 }
 
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]

@@ -68,6 +68,7 @@ fn generatable_type(input: syn::DeriveInput) -> Result<TokenStream2> {
                 rng: &mut R,
                 mut arg: Self::GenArg,
             ) -> Self {
+                ::mutagen::State::handle_event(&mut arg, ::mutagen::Event { kind: ::mutagen::EventKind::Generate, key: ::std::borrow::Cow::Borrowed(stringify!(#ident)) });
                 #body
             }
         }
@@ -118,7 +119,7 @@ fn generatable_enum(
 
                 let c: TokenStream2 = quote! {
                     |mut arg: Self::GenArg| {
-                        (#w) * 10000.0
+                        (#w) * 100.0
                     }
                 };
 
@@ -131,7 +132,10 @@ fn generatable_enum(
             let ident = &variant.ident;
             let fields = generatable_fields(&variant.fields)?;
             Ok(quote! {
+                {
+                    ::mutagen::State::handle_event(&mut arg, ::mutagen::Event { kind: ::mutagen::EventKind::Generate, key: ::std::borrow::Cow::Borrowed(stringify!(#enum_ident::#ident)) });
                     #enum_ident::#ident #fields
+                }
             })
         },
         &format!("Generation for {}", enum_ident),
@@ -218,6 +222,7 @@ fn mutatable_type(input: syn::DeriveInput) -> Result<TokenStream2> {
                 rng: &mut R,
                 mut arg: Self::MutArg
             ) {
+                ::mutagen::State::handle_event(&mut arg, ::mutagen::Event { kind: ::mutagen::EventKind::Mutate, key: ::std::borrow::Cow::Borrowed(stringify!(#ident)) });
                 #body
             }
         }
@@ -291,7 +296,10 @@ fn mutatable_enum(
                 }
             } else {
                 quote! {
-                    #enum_ident::#ident #bindings => { #fields_body }
+                    #enum_ident::#ident #bindings => {
+                        ::mutagen::State::handle_event(&mut arg, ::mutagen::Event { kind: ::mutagen::EventKind::Mutate, key: ::std::borrow::Cow::Borrowed(stringify!(#enum_ident::#ident)) });
+                        #fields_body
+                    }
                 }
             };
 
@@ -401,6 +409,7 @@ fn updatable_type(input: syn::DeriveInput) -> Result<TokenStream2> {
         #[automatically_derived]
         impl<'a> ::mutagen::UpdatableRecursively<'a> for #ident {
             fn update_recursively(&mut self, mut arg: Self::UpdateArg) {
+                ::mutagen::State::handle_event(&mut arg, ::mutagen::Event { kind: ::mutagen::EventKind::Update, key: ::std::borrow::Cow::Borrowed(stringify!(#ident)) });
                 #body
                 ::mutagen::Updatable::update(self, ::std::convert::From::from(::mutagen::Reborrow::reborrow(&mut arg)));
             }
@@ -450,7 +459,10 @@ fn updatable_enum(
             )?;
 
             let out: TokenStream2 = quote! {
-                #enum_ident::#ident #bindings => { #fields_body }
+                #enum_ident::#ident #bindings => {
+                    ::mutagen::State::handle_event(&mut arg, ::mutagen::Event { kind: ::mutagen::EventKind::Update, key: ::std::borrow::Cow::Borrowed(stringify!(#enum_ident::#ident)) });
+                    #fields_body
+                }
             };
 
             Ok(out)

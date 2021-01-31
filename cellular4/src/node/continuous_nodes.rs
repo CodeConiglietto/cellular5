@@ -2,6 +2,7 @@ use std::f64::consts::PI;
 
 use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
 use nalgebra::*;
+use num::signum;
 use serde::{Deserialize, Serialize};
 
 use crate::prelude::*;
@@ -37,6 +38,24 @@ pub enum AngleNodes {
     #[mutagen(gen_weight = pipe_node_weight)]
     FromUNFloat { child: NodeBox<UNFloatNodes> },
 
+    //TODO: figure out if this actually works
+    #[mutagen(gen_weight = pipe_node_weight)]
+    MirrorOverYAxis { child: NodeBox<AngleNodes> },
+    #[mutagen(gen_weight = branch_node_weight)]
+    Add {
+        child_a: NodeBox<AngleNodes>,
+        child_b: NodeBox<AngleNodes>,
+    },
+    #[mutagen(gen_weight = branch_node_weight)]
+    MultiplyUNFloat {
+        child_a: NodeBox<AngleNodes>,
+        child_b: NodeBox<UNFloatNodes>,
+    },
+    #[mutagen(gen_weight = branch_node_weight)]
+    MultiplySNFloat {
+        child_a: NodeBox<AngleNodes>,
+        child_b: NodeBox<SNFloatNodes>,
+    },
     #[mutagen(gen_weight = branch_node_weight)]
     ModifyState {
         child: NodeBox<AngleNodes>,
@@ -74,6 +93,22 @@ impl Node for AngleNodes {
             FromSNComplex { child } => child.compute(compute_arg.reborrow()).to_angle(),
             FromSNFloat { child } => child.compute(compute_arg.reborrow()).to_angle(),
             FromUNFloat { child } => child.compute(compute_arg.reborrow()).to_angle(),
+            MirrorOverYAxis { child } => Angle::new(
+                child.compute(compute_arg.reborrow()).into_inner()
+                    * signum(compute_arg.coordinate_set.x.into_inner()),
+            ),
+            Add { child_a, child_b } => Angle::new(
+                child_a.compute(compute_arg.reborrow()).into_inner()
+                    + child_b.compute(compute_arg.reborrow()).into_inner(),
+            ),
+            MultiplyUNFloat { child_a, child_b } => Angle::new(
+                child_a.compute(compute_arg.reborrow()).into_inner()
+                * child_b.compute(compute_arg.reborrow()).into_inner(),
+            ),
+            MultiplySNFloat { child_a, child_b } => Angle::new(
+                child_a.compute(compute_arg.reborrow()).into_inner()
+                * child_b.compute(compute_arg.reborrow()).into_inner(),
+            ),
             ModifyState { child, child_state } => child.compute(ComArg {
                 coordinate_set: child_state.compute(compute_arg.reborrow()),
                 ..compute_arg.reborrow()
@@ -760,7 +795,7 @@ impl Node for UNFloatNodes {
             } => value.calculate_normalised(
                 child_a.compute(compute_arg.reborrow()),
                 child_b.compute(compute_arg.reborrow()),
-                child_normaliser.compute(compute_arg.reborrow()),
+                &child_normaliser.compute(compute_arg.reborrow()),
             ),
 
             Average { child_a, child_b } => UNFloat::new(

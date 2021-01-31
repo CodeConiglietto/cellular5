@@ -8,7 +8,7 @@ use crate::prelude::*;
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum CoordMapNodes {
     // #[mutagen(gen_weight = leaf_node_weight)]
-    #[mutagen(gen_weight = 2.0)]
+    #[mutagen(gen_weight = 4.0)]
     Identity,
 
     #[mutagen(gen_weight = pipe_node_weight)]
@@ -56,6 +56,20 @@ pub enum CoordMapNodes {
     ForceSign {
         child_sign_x: NodeBox<BooleanNodes>,
         child_sign_y: NodeBox<BooleanNodes>,
+    },
+    #[mutagen(gen_weight = branch_node_weight)]
+    RotateThenForceSign {
+        child_sign_x: NodeBox<BooleanNodes>,
+        child_sign_y: NodeBox<BooleanNodes>,
+        distance_function: DistanceFunction,
+        normaliser: UFloatNormaliser,
+    },
+    #[mutagen(gen_weight = branch_node_weight)]
+    ForceSignThenRotate {
+        child_sign_x: NodeBox<BooleanNodes>,
+        child_sign_y: NodeBox<BooleanNodes>,
+        distance_function: DistanceFunction,
+        normaliser: UFloatNormaliser,
     },
 
     #[mutagen(gen_weight = branch_node_weight)]
@@ -239,6 +253,73 @@ impl Node for CoordMapNodes {
                     } else {
                         p.y().abs().invert()
                     },
+                    t: compute_arg.coordinate_set.t,
+                }
+            }
+            RotateThenForceSign {
+                child_sign_x,
+                child_sign_y,
+                distance_function,
+                normaliser,
+            } => {
+                let p = compute_arg.coordinate_set.get_coord_point();
+                let angle = p.to_angle().into_inner() + compute_arg.reborrow().coordinate_set.get_unfloat_t().into_inner() * 3.14;
+                let sign_x = child_sign_x.compute(compute_arg.reborrow());
+                let sign_y = child_sign_y.compute(compute_arg.reborrow());
+
+                let rho = distance_function.calculate_normalised(SNPoint::zero(), p, normaliser).into_inner();
+
+                let x = rho * f32::sin(angle);
+                let y = rho * f32::cos(angle);
+
+                CoordinateSet {
+                    x: if sign_x.into_inner() {
+                        SNFloat::new(x.abs())
+                    } else {
+                        SNFloat::new(x.abs()).invert()
+                    },
+                    y: if sign_y.into_inner() {
+                        SNFloat::new(y.abs())
+                    } else {
+                        SNFloat::new(y.abs()).invert()
+                    },
+                    t: compute_arg.coordinate_set.t,
+                }
+            }
+            ForceSignThenRotate {
+                child_sign_x,
+                child_sign_y,
+                distance_function,
+                normaliser,
+            } => {
+                let mut p = compute_arg.coordinate_set.get_coord_point();
+                let sign_x = child_sign_x.compute(compute_arg.reborrow());
+                let sign_y = child_sign_y.compute(compute_arg.reborrow());
+
+                let mut x = p.x().into_inner();
+                let mut y = p.y().into_inner();
+
+                x = if sign_x.into_inner() {
+                    x.abs()
+                } else {
+                    x.abs() * -1.0
+                };
+                y = if sign_y.into_inner() {
+                    y.abs()
+                } else {
+                    y.abs() * -1.0
+                };
+
+                p = SNPoint::new(Point2::new(x, y));
+
+                let angle = p.to_angle().into_inner() + compute_arg.reborrow().coordinate_set.get_unfloat_t().into_inner() * 3.14;
+
+                let rho = distance_function.calculate_normalised(SNPoint::zero(), p, normaliser).into_inner();
+
+                CoordinateSet {
+                    x: SNFloat::new(rho * f32::sin(angle)),
+                    y: SNFloat::new(rho * f32::cos(angle)),
+
                     t: compute_arg.coordinate_set.t,
                 }
             }

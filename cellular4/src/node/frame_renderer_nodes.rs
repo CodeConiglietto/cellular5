@@ -7,7 +7,7 @@ use crate::prelude::*;
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum FrameRendererNodes {
     // #[mutagen(gen_weight = leaf_node_weight)]
-    #[mutagen(gen_weight = 20.0)]
+    #[mutagen(gen_weight = 10.0)]
     BasicFade,
     #[mutagen(gen_weight = leaf_node_weight)]
     InterleavedRotate,

@@ -34,6 +34,8 @@ pub enum PointSetNodes {
     #[mutagen(gen_weight = branch_node_weight)]
     ShearGrid {
         value: PointSet,
+        x_count: Nibble,
+        y_count: Nibble,
         child_x_scalar: NodeBox<SNFloatNodes>,
         child_y_scalar: NodeBox<SNFloatNodes>,
         child_normaliser: NodeBox<SFloatNormaliserNodes>,
@@ -156,7 +158,7 @@ impl<'a> Updatable<'a> for PointSetNodes {
                                     .scale_unfloat(
                                         child
                                             .compute(compute_arg.clone().replace_coords(p))
-                                            .multiply(UNFloat::new(0.25)),
+                                            .multiply(UNFloat::new(0.05)),
                                     ),
                                 normaliser,
                             )
@@ -188,6 +190,8 @@ impl<'a> Updatable<'a> for PointSetNodes {
             //TODO: Maybe swap this out for a matrix point grid
             PointSetNodes::ShearGrid {
                 ref mut value,
+                x_count,
+                y_count,
                 child_x_scalar,
                 child_y_scalar,
                 child_normaliser,
@@ -197,35 +201,39 @@ impl<'a> Updatable<'a> for PointSetNodes {
                 let normaliser = child_normaliser.compute(arg.reborrow().into());
                 let mut edge_vec = Vec::new();
 
-                for x in 0..=8 {
-                    for y in 0..=8 {
-                        let ratio = 0.5 / 8.0;
+                let x_count = (x_count.into_inner() / 2).max(1);
+                let y_count = (y_count.into_inner() / 2).max(1);
+
+                for x in 0..x_count {
+                    for y in 0..y_count {
+                        let x_ratio = 1.0 / x_count as f32;
+                        let y_ratio = 1.0 / y_count as f32;
 
                         edge_vec.push(SNPoint::new_normalised(
                             Point2::new(
-                                ratio * x as f32 + (x_scalar * y as f32),
-                                ratio * y as f32 + (y_scalar * x as f32),
+                                x_ratio * x as f32 + (x_scalar * y as f32),
+                                y_ratio * y as f32 + (y_scalar * x as f32),
                             ),
                             normaliser,
                         ));
                         edge_vec.push(SNPoint::new_normalised(
                             Point2::new(
-                                -ratio * x as f32 + (x_scalar * y as f32),
-                                ratio * y as f32 + (y_scalar * x as f32),
+                                -x_ratio * x as f32 + (x_scalar * y as f32),
+                                y_ratio * y as f32 + (y_scalar * x as f32),
                             ),
                             normaliser,
                         ));
                         edge_vec.push(SNPoint::new_normalised(
                             Point2::new(
-                                ratio * x as f32 + (x_scalar * y as f32),
-                                -ratio * y as f32 + (y_scalar * x as f32),
+                                x_ratio * x as f32 + (x_scalar * y as f32),
+                                -y_ratio * y as f32 + (y_scalar * x as f32),
                             ),
                             normaliser,
                         ));
                         edge_vec.push(SNPoint::new_normalised(
                             Point2::new(
-                                -ratio * x as f32 + (x_scalar * y as f32),
-                                -ratio * y as f32 + (y_scalar * x as f32),
+                                -x_ratio * x as f32 + (x_scalar * y as f32),
+                                -y_ratio * y as f32 + (y_scalar * x as f32),
                             ),
                             normaliser,
                         ));

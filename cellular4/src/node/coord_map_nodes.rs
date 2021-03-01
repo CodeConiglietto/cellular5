@@ -8,7 +8,7 @@ use crate::prelude::*;
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum CoordMapNodes {
     // #[mutagen(gen_weight = leaf_node_weight)]
-    #[mutagen(gen_weight = 4.0)]
+    #[mutagen(gen_weight = 10.0)]
     Identity,
 
     #[mutagen(gen_weight = pipe_node_weight)]
@@ -72,6 +72,12 @@ pub enum CoordMapNodes {
         normaliser: UFloatNormaliser,
     },
 
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    ModifyState {
+        child: NodeBox<CoordMapNodes>,
+        child_state: NodeBox<CoordMapNodes>,
+    },
     #[mutagen(gen_weight = branch_node_weight)]
     IfElse {
         predicate: NodeBox<BooleanNodes>,
@@ -263,7 +269,7 @@ impl Node for CoordMapNodes {
                 normaliser,
             } => {
                 let p = compute_arg.coordinate_set.get_coord_point();
-                let angle = p.to_angle().into_inner() + compute_arg.reborrow().coordinate_set.get_unfloat_t().into_inner() * 3.14;
+                let angle = p.to_angle().into_inner() + compute_arg.reborrow().coordinate_set.get_angle_t().into_inner();
                 let sign_x = child_sign_x.compute(compute_arg.reborrow());
                 let sign_y = child_sign_y.compute(compute_arg.reborrow());
 
@@ -312,7 +318,7 @@ impl Node for CoordMapNodes {
 
                 p = SNPoint::new(Point2::new(x, y));
 
-                let angle = p.to_angle().into_inner() + compute_arg.reborrow().coordinate_set.get_unfloat_t().into_inner() * 3.14;
+                let angle = p.to_angle().into_inner() + compute_arg.reborrow().coordinate_set.get_angle_t().into_inner();
 
                 let rho = distance_function.calculate_normalised(SNPoint::zero(), p, normaliser).into_inner();
 
@@ -323,6 +329,10 @@ impl Node for CoordMapNodes {
                     t: compute_arg.coordinate_set.t,
                 }
             }
+            ModifyState { child, child_state } => child.compute(ComArg {
+                coordinate_set: child_state.compute(compute_arg.reborrow()),
+                ..compute_arg.reborrow()
+            }),
             IfElse {
                 predicate,
                 child_a,

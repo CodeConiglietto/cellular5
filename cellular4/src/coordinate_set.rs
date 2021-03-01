@@ -3,6 +3,8 @@ use crate::{
     datatype::{constraint_resolvers::*, continuous::*, discrete::*, points::*},
 };
 
+use std::f32::consts::PI;
+
 #[derive(Clone, Copy, Debug)]
 pub struct CoordinateSet {
     //coordinates of update position
@@ -58,5 +60,9 @@ impl CoordinateSet {
     //todo refactor divisor into constant
     pub fn get_unfloat_t(&self) -> UNFloat {
         UNFloat::new_triangle(self.t / 10.0 / CONSTS.time_scale_divisor)
+    }
+
+    pub fn get_angle_t(&self) -> Angle {
+        Angle::new((((self.t as usize % 360) as f32 / 360.0) * 2.0 * PI) - PI)
     }
 }

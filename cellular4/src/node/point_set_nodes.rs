@@ -41,8 +41,11 @@ pub enum PointSetNodes {
         child_normaliser: NodeBox<SFloatNormaliserNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
+    #[mutagen(gen_preferred)]
     RecomputedGrid {
         value: PointSet,
+        x_count: Nibble,
+        y_count: Nibble,
         child_point: NodeBox<SNPointNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
@@ -244,18 +247,24 @@ impl<'a> Updatable<'a> for PointSetNodes {
             }
             PointSetNodes::RecomputedGrid {
                 ref mut value,
+                x_count,
+                y_count,
                 child_point,
             } => {
-                let ratio = 0.5 / 8.0;
+                let x_count = (x_count.into_inner() / 2).max(1);
+                let y_count = (y_count.into_inner() / 2).max(1);
+
+                let x_ratio = 1.0 / x_count as f32;
+                let y_ratio = 1.0 / y_count as f32;
 
                 let mut edge_vec = Vec::new();
 
-                for x in 0..8 {
-                    for y in 0..8 {
+                for x in 0..x_count {
+                    for y in 0..y_count {
                         for sx in &[1.0, -1.0] {
                             for sy in &[1.0, -1.0] {
                                 let grid_point =
-                                    Point2::new(sx * ratio * x as f32, sy * ratio * y as f32);
+                                    Point2::new(sx * x_ratio * x as f32, sy * y_ratio * y as f32);
 
                                 let compute_arg: ComArg<'_> = arg.reborrow().into();
 

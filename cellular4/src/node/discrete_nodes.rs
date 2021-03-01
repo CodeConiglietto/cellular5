@@ -78,6 +78,22 @@ pub enum BooleanNodes {
         child_a: NodeBox<ByteNodes>,
         child_b: NodeBox<ByteNodes>,
     },
+    #[mutagen(gen_weight = branch_node_weight)]
+    ByteLess {
+        child_a: NodeBox<ByteNodes>,
+        child_b: NodeBox<ByteNodes>,
+    },
+    #[mutagen(gen_weight = branch_node_weight)]
+    ByteMore {
+        child_a: NodeBox<ByteNodes>,
+        child_b: NodeBox<ByteNodes>,
+    },
+    #[mutagen(gen_weight = branch_node_weight)]
+    ByteBetween {
+        child_value: NodeBox<ByteNodes>,
+        child_range_a: NodeBox<ByteNodes>,
+        child_range_b: NodeBox<ByteNodes>,
+    },
     // #[mutagen(gen_weight = branch_node_weight)]
     // Majority {
     //     child:NodeBox<BooleanNodes>,
@@ -186,6 +202,31 @@ impl Node for BooleanNodes {
             ByteEquals { child_a, child_b } => Boolean {
                 value: child_a.compute(compute_arg.reborrow()).into_inner()
                     == child_b.compute(compute_arg.reborrow()).into_inner(),
+            },
+            ByteLess { child_a, child_b } => Boolean {
+                value: child_a.compute(compute_arg.reborrow()).into_inner()
+                    < child_b.compute(compute_arg.reborrow()).into_inner(),
+            },
+            ByteMore { child_a, child_b } => Boolean {
+                value: child_a.compute(compute_arg.reborrow()).into_inner()
+                    > child_b.compute(compute_arg.reborrow()).into_inner(),
+            },
+            ByteBetween {
+                child_value,
+                child_range_a,
+                child_range_b,
+            } => {
+                let range_a = child_range_a.compute(compute_arg.reborrow()).into_inner();
+                let range_b = child_range_b.compute(compute_arg.reborrow()).into_inner();
+
+                let max = range_a.max(range_b);
+                let min = range_a.min(range_b);
+
+                let value = child_value.compute(compute_arg.reborrow()).into_inner();
+
+                Boolean {
+                    value: value > min && value < max,
+                }
             },
             // Majority {
             //     child,

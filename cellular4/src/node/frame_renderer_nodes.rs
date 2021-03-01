@@ -7,7 +7,7 @@ use crate::prelude::*;
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum FrameRendererNodes {
     // #[mutagen(gen_weight = leaf_node_weight)]
-    #[mutagen(gen_weight = 10.0)]
+    #[mutagen(gen_weight = 20.0)]
     BasicFade,
     #[mutagen(gen_weight = leaf_node_weight)]
     InterleavedRotate,
@@ -22,7 +22,7 @@ pub enum FrameRendererNodes {
     #[mutagen(gen_weight = leaf_node_weight)]
     Dripping { invert: Boolean },
     #[mutagen(gen_weight = leaf_node_weight)]
-    SpaceOdyssey { axis: Boolean },
+    SpaceOdyssey { axis: Boolean, scale_secondary_axis: Boolean },
     #[mutagen(gen_weight = leaf_node_weight)]
     InfiniZoom { invert_direction: Boolean },
     #[mutagen(gen_weight = pipe_node_weight)]
@@ -79,8 +79,8 @@ impl Node for FrameRendererNodes {
                 invert_t_offset: *invert_t_offset,
             },
             FrameRendererNodes::Dripping { invert } => FrameRenderers::Dripping { invert: *invert },
-            FrameRendererNodes::SpaceOdyssey { axis } => {
-                FrameRenderers::SpaceOdyssey { axis: *axis }
+            FrameRendererNodes::SpaceOdyssey { axis, scale_secondary_axis } => {
+                FrameRenderers::SpaceOdyssey { axis: *axis, scale_secondary_axis: *scale_secondary_axis }
             }
             FrameRendererNodes::InfiniZoom { invert_direction } => FrameRenderers::InfiniZoom {
                 invert_direction: *invert_direction,

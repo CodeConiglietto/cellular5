@@ -159,6 +159,7 @@ pub enum PointSetGenerator {
 
     Moore,
     VonNeumann,
+    HexGrid,
     Uniform {
         count: Byte,
     },
@@ -173,22 +174,24 @@ pub enum PointSetGenerator {
         linear: Boolean,
         nonlinearity_factor_halved: UNFloat, //This is the easiest way to introduce a variable nonlinearity which includes both squaring and square rooting
     },
+    //TODO add fibonacci spiral
 }
 
 impl PointSetGenerator {
     pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
-        match rng.gen_range(0, 5) {
+        match rng.gen_range(0, 6) {
             // Skip Origin
             0 => PointSetGenerator::Moore,
             1 => PointSetGenerator::VonNeumann,
-            2 => PointSetGenerator::Uniform {
+            2 => PointSetGenerator::HexGrid,
+            3 => PointSetGenerator::Uniform {
                 count: Byte::random(rng),
             },
-            3 => PointSetGenerator::Poisson {
+            4 => PointSetGenerator::Poisson {
                 count: Byte::random(rng),
                 radius: UNFloat::random(rng),
             },
-            4 => PointSetGenerator::Spiral {
+            5 => PointSetGenerator::Spiral {
                 count: Byte::random(rng),
                 scalar: UNFloat::random(rng),
                 maximum: Angle::random(rng),
@@ -204,6 +207,19 @@ impl PointSetGenerator {
             PointSetGenerator::Origin => origin(),
             PointSetGenerator::Moore => moore(),
             PointSetGenerator::VonNeumann => von_neumann(),
+            PointSetGenerator::HexGrid => {
+                let x_ratio = 1.0 / 16.0;
+                let y_ratio = 1.0 / 16.0;
+                (0..16).flat_map(|x| {
+                    (0..16).map(move |y| {
+                        SNPoint::new(
+                            Point2::new(
+                                2.0 * (x_ratio * x as f32 + if y % 2 == 0 {0.25 * x_ratio} else {0.75 * x_ratio}) - 1.0, 
+                                2.0 * (y_ratio * y as f32 + y_ratio * 0.5) - 1.0)
+                            )
+                    })
+                }).collect()
+            },
             PointSetGenerator::Uniform { count } => {
                 uniform(rng, count.into_inner().max(2) as usize)
             }

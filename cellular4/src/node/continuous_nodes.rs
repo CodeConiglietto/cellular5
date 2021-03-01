@@ -76,7 +76,7 @@ impl Node for AngleNodes {
         use AngleNodes::*;
 
         match self {
-            FromGametic => Angle::new(compute_arg.coordinate_set.t * 0.1),
+            FromGametic => compute_arg.coordinate_set.get_angle_t(),
             ArcSin { theta } => Angle::new(f32::asin(
                 theta.compute(compute_arg.reborrow()).into_inner(),
             )),

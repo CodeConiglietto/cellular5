@@ -1,5 +1,9 @@
 #![allow(clippy::large_enum_variant)]
 
+// We need to do this rather than importing the macros individually
+#[macro_use]
+extern crate gfx;
+
 use std::{fs, rc::Rc};
 
 use cpu_monitor::CpuInstant;
@@ -55,6 +59,7 @@ pub mod coordinate_set;
 pub mod data_set;
 pub mod datatype;
 pub mod gamepad;
+pub mod gfx_renderer;
 pub mod history;
 pub mod mutagen_args;
 pub mod node;

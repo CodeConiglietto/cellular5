@@ -264,6 +264,14 @@ impl SNFloat {
         Self::new_unchecked(rng.gen_range(-1.0, 1.0))
     }
 
+    pub fn lerp(self, other: SNFloat, scalar: UNFloat) -> Self {
+        SNFloat::new(lerp(
+            self.into_inner(),
+            other.into_inner(),
+            scalar.into_inner(),
+        ))
+    }
+
     pub const ZERO: Self = Self { value: 0.0 };
     pub const ONE: Self = Self { value: 1.0 };
     pub const NEG_ONE: Self = Self { value: -1.0 };
@@ -300,8 +308,7 @@ impl<'a> UpdatableRecursively<'a> for SNFloat {
     fn update_recursively(&mut self, _arg: UpdArg<'a>) {}
 }
 
-//TODO: Normalise between -PI and PI
-#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq)]
 pub struct Angle {
     value: f32,
 }
@@ -355,6 +362,22 @@ impl Angle {
     }
 
     pub const ZERO: Self = Self { value: 0.0 };
+
+    pub fn lerp(self, other: Angle, scalar: UNFloat) -> Self {
+        let a = self.into_inner();
+        let b = other.into_inner();
+        let s = scalar.into_inner();
+
+        let diff = b - a;
+
+        Angle::new(if diff > PI {
+            lerp(a + 2.0 * PI, b, s)
+        } else if diff < -PI {
+            lerp(a, b + 2.0 * PI, s)
+        } else {
+            lerp(a, b, s)
+        })
+    }
 }
 
 impl Add<Angle> for Angle {

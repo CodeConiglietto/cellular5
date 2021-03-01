@@ -11,6 +11,9 @@ pub struct NodeSet {
     bit_color_nodes: Metarena<BitColorNodes>,
     byte_color_nodes: Metarena<ByteColorNodes>,
     float_color_nodes: Metarena<FloatColorNodes>,
+    hsv_color_nodes: Metarena<HSVColorNodes>,
+    cmyk_color_nodes: Metarena<CMYKColorNodes>,
+    lab_color_nodes: Metarena<LABColorNodes>,
     //continuous
     angle_nodes: Metarena<AngleNodes>,
     unfloat_nodes: Metarena<UNFloatNodes>,
@@ -89,6 +92,36 @@ impl Storage<FloatColorNodes> for NodeSet {
 
     fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<FloatColorNodes>> {
         &mut self.float_color_nodes.value
+    }
+}
+
+impl Storage<HSVColorNodes> for NodeSet {
+    fn arena(&self) -> &Arena<ArenaSlot<HSVColorNodes>> {
+        &self.hsv_color_nodes.value
+    }
+
+    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<HSVColorNodes>> {
+        &mut self.hsv_color_nodes.value
+    }
+}
+
+impl Storage<CMYKColorNodes> for NodeSet {
+    fn arena(&self) -> &Arena<ArenaSlot<CMYKColorNodes>> {
+        &self.cmyk_color_nodes.value
+    }
+
+    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<CMYKColorNodes>> {
+        &mut self.cmyk_color_nodes.value
+    }
+}
+
+impl Storage<LABColorNodes> for NodeSet {
+    fn arena(&self) -> &Arena<ArenaSlot<LABColorNodes>> {
+        &self.lab_color_nodes.value
+    }
+
+    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<LABColorNodes>> {
+        &mut self.lab_color_nodes.value
     }
 }
 

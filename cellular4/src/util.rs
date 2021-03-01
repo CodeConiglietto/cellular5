@@ -11,6 +11,7 @@ use ggez::{
 };
 
 use lazy_static::lazy_static;
+use lerp::Lerp;
 use log::debug;
 use nalgebra::*;
 use ndarray::{Array3, ArrayView3};
@@ -230,8 +231,8 @@ pub fn compute_blank_texture(ctx: &mut Context) -> GgImage {
     image
 }
 
-pub fn lerp(a: f32, b: f32, value: f32) -> f32 {
-    a + (b - a) * value
+pub fn lerp<F, T: Lerp<F>>(a: T, b: T, value: F) -> T {
+    T::lerp(a, b, value)
 }
 
 pub fn local_path<P: AsRef<Path>>(filename: P) -> PathBuf {

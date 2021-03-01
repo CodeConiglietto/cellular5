@@ -111,8 +111,10 @@ where
 
     fn generate_rng<R: Rng + ?Sized>(rng: &mut R, arg: Self::GenArg) -> Self {
         if arg.nodes.is_empty() {
-            ldbg!(arg.depth);
-            panic!("No nodesets left to allocate to! Is a node weight mislabeled?");
+            panic!(
+                "No nodesets left to allocate to at depth {}! Is a node weight mislabeled?",
+                arg.depth
+            );
         }
 
         if rng.gen_bool(CONSTS.graph_convergence) {

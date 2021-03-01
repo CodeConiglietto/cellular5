@@ -3,7 +3,8 @@ use std::f32::consts::PI;
 use approx::abs_diff_eq;
 use ggez::graphics::Color as GgColor;
 use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
-use palette::{encoding::srgb::Srgb, rgb::Rgb, Hsv, RgbHue};
+use nalgebra::Complex;
+use palette::{encoding::srgb::Srgb, rgb::Rgb, Hsv, Lab, Limited, RgbHue};
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -77,15 +78,6 @@ impl From<FloatColor> for ByteColor {
             b: Byte::new((other.b.into_inner() * 255.0) as u8),
             a: Byte::new((other.a.into_inner() * 255.0) as u8),
         }
-    }
-}
-
-pub fn float_color_from_pallette_rgb(rgb: Rgb, alpha: f32) -> FloatColor {
-    FloatColor {
-        r: UNFloat::new(rgb.red as f32),
-        g: UNFloat::new(rgb.green as f32),
-        b: UNFloat::new(rgb.blue as f32),
-        a: UNFloat::new(alpha),
     }
 }
 
@@ -169,22 +161,6 @@ impl BitColor {
                 a: Byte::new(255),
             },
         }
-    }
-
-    pub fn from_float_color(c: FloatColor) -> BitColor {
-        BitColor::from_components([
-            c.r.into_inner() >= 0.5,
-            c.g.into_inner() >= 0.5,
-            c.b.into_inner() >= 0.5,
-        ])
-    }
-
-    pub fn from_byte_color(c: ByteColor) -> BitColor {
-        BitColor::from_components([
-            c.r.into_inner() >= 127,
-            c.g.into_inner() >= 127,
-            c.b.into_inner() >= 127,
-        ])
     }
 
     pub fn to_index(self) -> usize {
@@ -309,6 +285,26 @@ impl BitColor {
     }
 }
 
+impl From<FloatColor> for BitColor {
+    fn from(c: FloatColor) -> Self {
+        Self::from_components([
+            c.r.into_inner() >= 0.5,
+            c.g.into_inner() >= 0.5,
+            c.b.into_inner() >= 0.5,
+        ])
+    }
+}
+
+impl From<ByteColor> for BitColor {
+    fn from(c: ByteColor) -> Self {
+        Self::from_components([
+            c.r.into_inner() > 127,
+            c.g.into_inner() > 127,
+            c.b.into_inner() > 127,
+        ])
+    }
+}
+
 impl<'a> Generatable<'a> for BitColor {
     type GenArg = GenArg<'a>;
 
@@ -341,16 +337,6 @@ impl<'a> Updatable<'a> for BitColor {
 
 impl<'a> UpdatableRecursively<'a> for BitColor {
     fn update_recursively(&mut self, _arg: UpdArg<'a>) {}
-}
-
-impl From<ByteColor> for BitColor {
-    fn from(other: ByteColor) -> Self {
-        Self::from_components([
-            other.r.into_inner() > 127,
-            other.g.into_inner() > 127,
-            other.b.into_inner() > 127,
-        ])
-    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq)]
@@ -491,6 +477,53 @@ impl From<BitColor> for FloatColor {
     }
 }
 
+impl From<HSVColor> for FloatColor {
+    fn from(hsv: HSVColor) -> Self {
+        let rgb = Rgb::<Srgb>::from(Hsv::<Srgb, _>::from_components((
+            RgbHue::from_radians(hsv.h.into_inner()),
+            hsv.s.into_inner(),
+            hsv.v.into_inner(),
+        )))
+        .clamp();
+
+        Self {
+            r: UNFloat::new(rgb.red as f32),
+            g: UNFloat::new(rgb.green as f32),
+            b: UNFloat::new(rgb.blue as f32),
+            a: hsv.a,
+        }
+    }
+}
+
+impl From<CMYKColor> for FloatColor {
+    fn from(cmyk: CMYKColor) -> Self {
+        Self {
+            r: UNFloat::new((1.0 - cmyk.c.into_inner()) * (1.0 - cmyk.k.into_inner())),
+            g: UNFloat::new((1.0 - cmyk.m.into_inner()) * (1.0 - cmyk.k.into_inner())),
+            b: UNFloat::new((1.0 - cmyk.y.into_inner()) * (1.0 - cmyk.k.into_inner())),
+            a: cmyk.a,
+        }
+    }
+}
+
+impl From<LABColor> for FloatColor {
+    fn from(lab: LABColor) -> Self {
+        let rgb = Rgb::<Srgb>::from(Lab::new(
+            lab.l.into_inner() * 100.0,
+            lab.ab.re().into_inner() * 127.0,
+            lab.ab.im().into_inner() * 127.0,
+        ))
+        .clamp();
+
+        Self {
+            r: UNFloat::new(rgb.red as f32),
+            g: UNFloat::new(rgb.green as f32),
+            b: UNFloat::new(rgb.blue as f32),
+            a: lab.alpha,
+        }
+    }
+}
+
 impl<'a> Generatable<'a> for FloatColor {
     type GenArg = GenArg<'a>;
 
@@ -513,5 +546,286 @@ impl<'a> Updatable<'a> for FloatColor {
 }
 
 impl<'a> UpdatableRecursively<'a> for FloatColor {
+    fn update_recursively(&mut self, _arg: UpdArg<'a>) {}
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq)]
+pub struct HSVColor {
+    pub h: Angle,
+    pub s: UNFloat,
+    pub v: UNFloat,
+    pub a: UNFloat,
+}
+
+impl HSVColor {
+    pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
+        Self {
+            h: Angle::random(rng),
+            s: UNFloat::random(rng),
+            v: UNFloat::random(rng),
+            a: UNFloat::random(rng),
+        }
+    }
+
+    pub fn lerp(self, other: Self, scalar: UNFloat) -> Self {
+        Self {
+            h: self.h.lerp(other.h, scalar),
+            s: self.s.lerp(other.s, scalar),
+            v: self.v.lerp(other.v, scalar),
+            a: self.a.lerp(other.a, scalar),
+        }
+    }
+
+    pub const ALL_ZERO: Self = Self {
+        h: Angle::ZERO,
+        s: UNFloat::ZERO,
+        v: UNFloat::ZERO,
+        a: UNFloat::ZERO,
+    };
+
+    pub const WHITE: Self = Self {
+        h: Angle::ZERO,
+        s: UNFloat::ZERO,
+        v: UNFloat::ONE,
+        a: UNFloat::ONE,
+    };
+
+    pub const BLACK: Self = Self {
+        h: Angle::ZERO,
+        s: UNFloat::ZERO,
+        v: UNFloat::ZERO,
+        a: UNFloat::ONE,
+    };
+}
+
+impl From<FloatColor> for HSVColor {
+    fn from(rgb: FloatColor) -> Self {
+        let hsv = Hsv::from(Rgb::<Srgb, _>::from_components((
+            rgb.r.into_inner(),
+            rgb.g.into_inner(),
+            rgb.b.into_inner(),
+        )));
+
+        Self {
+            h: Angle::new(hsv.hue.to_radians()),
+            s: UNFloat::new(hsv.saturation),
+            v: UNFloat::new(hsv.value),
+            a: rgb.a,
+        }
+    }
+}
+
+impl<'a> Generatable<'a> for HSVColor {
+    type GenArg = GenArg<'a>;
+
+    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, _arg: GenArg<'a>) -> Self {
+        Self::random(rng)
+    }
+}
+
+impl<'a> Mutatable<'a> for HSVColor {
+    type MutArg = MutArg<'a>;
+    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, _arg: MutArg<'a>) {
+        *self = Self::random(rng);
+    }
+}
+
+impl<'a> Updatable<'a> for HSVColor {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _arg: UpdArg<'a>) {}
+}
+
+impl<'a> UpdatableRecursively<'a> for HSVColor {
+    fn update_recursively(&mut self, _arg: UpdArg<'a>) {}
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq)]
+pub struct CMYKColor {
+    pub c: UNFloat,
+    pub m: UNFloat,
+    pub y: UNFloat,
+    pub k: UNFloat,
+    pub a: UNFloat,
+}
+
+impl CMYKColor {
+    pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
+        Self {
+            c: UNFloat::random(rng),
+            m: UNFloat::random(rng),
+            y: UNFloat::random(rng),
+            k: UNFloat::random(rng),
+            a: UNFloat::random(rng),
+        }
+    }
+
+    pub fn lerp(self, other: Self, scalar: UNFloat) -> Self {
+        Self {
+            c: self.c.lerp(other.c, scalar),
+            m: self.m.lerp(other.m, scalar),
+            y: self.y.lerp(other.y, scalar),
+            k: self.k.lerp(other.k, scalar),
+            a: self.a.lerp(other.a, scalar),
+        }
+    }
+
+    pub const ALL_ZERO: Self = Self {
+        c: UNFloat::ZERO,
+        m: UNFloat::ZERO,
+        y: UNFloat::ZERO,
+        k: UNFloat::ZERO,
+        a: UNFloat::ZERO,
+    };
+
+    pub const WHITE: Self = Self {
+        c: UNFloat::ZERO,
+        m: UNFloat::ZERO,
+        y: UNFloat::ZERO,
+        k: UNFloat::ZERO,
+        a: UNFloat::ONE,
+    };
+
+    pub const BLACK: Self = Self {
+        c: UNFloat::ZERO,
+        m: UNFloat::ZERO,
+        y: UNFloat::ZERO,
+        k: UNFloat::ONE,
+        a: UNFloat::ONE,
+    };
+}
+
+impl From<FloatColor> for CMYKColor {
+    fn from(rgb: FloatColor) -> Self {
+        let r = rgb.r.into_inner();
+        let g = rgb.g.into_inner();
+        let b = rgb.b.into_inner();
+
+        let m = r.max(g).max(b);
+
+        if m > 0.0 {
+            Self {
+                c: UNFloat::new((m - r) / m),
+                m: UNFloat::new((m - g) / m),
+                y: UNFloat::new((m - b) / m),
+                k: UNFloat::new(1.0 - m),
+                a: rgb.a,
+            }
+        } else {
+            Self {
+                a: rgb.a,
+                ..Self::BLACK
+            }
+        }
+    }
+}
+
+impl<'a> Generatable<'a> for CMYKColor {
+    type GenArg = GenArg<'a>;
+
+    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, _arg: GenArg<'a>) -> Self {
+        Self::random(rng)
+    }
+}
+
+impl<'a> Mutatable<'a> for CMYKColor {
+    type MutArg = MutArg<'a>;
+    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, _arg: MutArg<'a>) {
+        *self = Self::random(rng);
+    }
+}
+
+impl<'a> Updatable<'a> for CMYKColor {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _arg: UpdArg<'a>) {}
+}
+
+impl<'a> UpdatableRecursively<'a> for CMYKColor {
+    fn update_recursively(&mut self, _arg: UpdArg<'a>) {}
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Default, PartialEq)]
+pub struct LABColor {
+    pub l: SNFloat,
+    pub ab: SNComplex,
+    pub alpha: UNFloat,
+}
+
+impl LABColor {
+    pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
+        Self {
+            l: SNFloat::random(rng),
+            ab: SNComplex::random(rng),
+            alpha: UNFloat::random(rng),
+        }
+    }
+
+    pub fn lerp(self, other: Self, scalar: UNFloat) -> Self {
+        Self {
+            l: self.l.lerp(other.l, scalar),
+            ab: self.ab.lerp(other.ab, scalar),
+            alpha: self.alpha.lerp(other.alpha, scalar),
+        }
+    }
+
+    pub const ALL_ZERO: Self = Self {
+        l: SNFloat::ZERO,
+        ab: SNComplex::ZERO,
+        alpha: UNFloat::ZERO,
+    };
+
+    pub const WHITE: Self = Self {
+        l: SNFloat::ONE,
+        ab: SNComplex::ZERO,
+        alpha: UNFloat::ONE,
+    };
+
+    pub const BLACK: Self = Self {
+        l: SNFloat::ZERO,
+        ab: SNComplex::ZERO,
+        alpha: UNFloat::ONE,
+    };
+}
+
+impl From<FloatColor> for LABColor {
+    fn from(rgb: FloatColor) -> Self {
+        let lab = Lab::from(Rgb::<Srgb>::from_components((
+            rgb.r.into_inner(),
+            rgb.g.into_inner(),
+            rgb.b.into_inner(),
+        )))
+        .clamp();
+
+        Self {
+            l: SNFloat::new(lab.l / 100.0),
+            ab: SNComplex::new(Complex::new(lab.a as f64 / 127.0, lab.b as f64 / 127.0)),
+            alpha: rgb.a,
+        }
+    }
+}
+
+impl<'a> Generatable<'a> for LABColor {
+    type GenArg = GenArg<'a>;
+
+    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, _arg: GenArg<'a>) -> Self {
+        Self::random(rng)
+    }
+}
+
+impl<'a> Mutatable<'a> for LABColor {
+    type MutArg = MutArg<'a>;
+    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, _arg: MutArg<'a>) {
+        *self = Self::random(rng);
+    }
+}
+
+impl<'a> Updatable<'a> for LABColor {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _arg: UpdArg<'a>) {}
+}
+
+impl<'a> UpdatableRecursively<'a> for LABColor {
     fn update_recursively(&mut self, _arg: UpdArg<'a>) {}
 }

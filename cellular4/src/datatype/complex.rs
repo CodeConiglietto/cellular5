@@ -90,6 +90,14 @@ impl SNComplex {
             rng.gen_range(-1.0, 1.0),
         ))
     }
+
+    pub fn lerp(self, other: SNComplex, scalar: UNFloat) -> Self {
+        SNComplex::new(lerp(self.value, other.value, scalar.into_inner() as f64))
+    }
+
+    pub const ZERO: Self = Self {
+        value: Complex::new(0.0, 0.0),
+    };
 }
 
 impl Serialize for SNComplex {

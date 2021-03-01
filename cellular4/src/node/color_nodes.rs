@@ -3,7 +3,6 @@
 use std::{collections::VecDeque, f32::consts::PI};
 
 use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
-use palette::{encoding::srgb::Srgb, rgb::Rgb, Hsv, Lab, Limited, RgbHue};
 use rand::thread_rng;
 use serde::{Deserialize, Serialize};
 
@@ -66,52 +65,14 @@ pub enum FloatColorNodes {
         a_norm: UFloatNormaliser,
     },
 
-    #[mutagen(gen_weight = branch_node_weight)]
-    HSV {
-        h: NodeBox<UNFloatNodes>,
-        s: NodeBox<UNFloatNodes>,
-        v: NodeBox<UNFloatNodes>,
-        a: NodeBox<UNFloatNodes>,
-        offset: UNFloat,
-    },
+    #[mutagen(gen_weight = pipe_node_weight)]
+    FromHSVColor { child: NodeBox<HSVColorNodes> },
 
-    #[mutagen(gen_weight = branch_node_weight)]
-    HSVAngle {
-        h: NodeBox<AngleNodes>,
-        s: NodeBox<UNFloatNodes>,
-        v: NodeBox<UNFloatNodes>,
-        a: NodeBox<UNFloatNodes>,
-        offset: Angle,
-    },
+    #[mutagen(gen_weight = pipe_node_weight)]
+    FromCMYKColor { child: NodeBox<CMYKColorNodes> },
 
-    #[mutagen(gen_weight = branch_node_weight)]
-    CMYK {
-        c: NodeBox<UNFloatNodes>,
-        m: NodeBox<UNFloatNodes>,
-        y: NodeBox<UNFloatNodes>,
-        k: NodeBox<UNFloatNodes>,
-        a: NodeBox<UNFloatNodes>,
-    },
-
-    #[mutagen(gen_weight = branch_node_weight)]
-    LAB {
-        l: NodeBox<SNFloatNodes>,
-        a: NodeBox<SNFloatNodes>,
-        b: NodeBox<SNFloatNodes>,
-        alpha: NodeBox<UNFloatNodes>,
-    },
-
-    #[mutagen(gen_weight = branch_node_weight)]
-    ComplexLAB {
-        l: NodeBox<SNFloatNodes>,
-        child_complex: NodeBox<SNComplexNodes>,
-        alpha: NodeBox<UNFloatNodes>,
-    },
-    #[mutagen(gen_weight = branch_node_weight)]
-    IterativeResultLAB {
-        child_iterative_function: NodeBox<IterativeFunctionNodes>,
-        alpha: NodeBox<UNFloatNodes>,
-    },
+    #[mutagen(gen_weight = pipe_node_weight)]
+    FromLABColor { child: NodeBox<LABColorNodes> },
 
     #[mutagen(gen_weight = branch_node_weight)]
     ColorBlend {
@@ -276,15 +237,6 @@ pub enum FloatColorNodes {
         child_index: NodeBox<ByteNodes>,
         child_color: NodeBox<FloatColorNodes>,
     },
-
-    #[mutagen(gen_weight = 0.0)]
-    //branch_node_weight)]//TODO FIX, yes I know it says it down there but this is important. Go learn some fractal stuff buttface
-    DucksFractal {
-        child_offset: NodeBox<SNPointNodes>,
-        child_scale: NodeBox<SNPointNodes>,
-        child_iterations: NodeBox<ByteNodes>,
-        child_magnitude_normaliser: NodeBox<UFloatNormaliserNodes>,
-    },
 }
 
 impl Node for FloatColorNodes {
@@ -435,100 +387,9 @@ impl Node for FloatColorNodes {
                 b: b_norm.normalise(b.compute(compute_arg.reborrow()).into_inner()),
                 a: a_norm.normalise(a.compute(compute_arg.reborrow()).into_inner()),
             },
-            HSV { h, s, v, a, offset } => {
-                let rgb: Rgb = Hsv::<Srgb, _>::from_components((
-                    RgbHue::from_degrees(
-                        (h.compute(compute_arg.reborrow()).into_inner() + offset.into_inner())
-                            * 360.0,
-                    ),
-                    s.compute(compute_arg.reborrow()).into_inner() as f32,
-                    v.compute(compute_arg.reborrow()).into_inner() as f32,
-                ))
-                .into();
-
-                float_color_from_pallette_rgb(rgb, a.compute(compute_arg.reborrow()).into_inner())
-            }
-            HSVAngle { h, s, v, a, offset } => {
-                let rgb: Rgb = Hsv::<Srgb, _>::from_components((
-                    RgbHue::from_radians(
-                        h.compute(compute_arg.reborrow()).into_inner() + offset.into_inner(),
-                    ),
-                    s.compute(compute_arg.reborrow()).into_inner(),
-                    v.compute(compute_arg.reborrow()).into_inner(),
-                ))
-                .into();
-
-                float_color_from_pallette_rgb(rgb, a.compute(compute_arg.reborrow()).into_inner())
-            }
-            CMYK { c, m, y, k, a } => {
-                let k_value = k.compute(compute_arg.reborrow()).into_inner();
-
-                FloatColor {
-                    r: UNFloat::new(
-                        (1.0 - c.compute(compute_arg.reborrow()).into_inner()) * (1.0 - k_value),
-                    ),
-                    g: UNFloat::new(
-                        (1.0 - m.compute(compute_arg.reborrow()).into_inner()) * (1.0 - k_value),
-                    ),
-                    b: UNFloat::new(
-                        (1.0 - y.compute(compute_arg.reborrow()).into_inner()) * (1.0 - k_value),
-                    ),
-                    a: a.compute(compute_arg.reborrow()),
-                }
-            }
-            LAB { l, a, b, alpha } => {
-                let lab = Lab::new(
-                    l.compute(compute_arg.reborrow()).into_inner() * 100.0,
-                    a.compute(compute_arg.reborrow()).into_inner() * 127.0,
-                    b.compute(compute_arg.reborrow()).into_inner() * 127.0,
-                );
-
-                let rgb: Rgb = lab.into();
-
-                float_color_from_pallette_rgb(
-                    rgb.clamp(),
-                    alpha.compute(compute_arg.reborrow()).into_inner(),
-                )
-            }
-            ComplexLAB {
-                l,
-                child_complex,
-                alpha,
-            } => {
-                let complex = child_complex.compute(compute_arg.reborrow());
-
-                let lab = Lab::new(
-                    l.compute(compute_arg.reborrow()).into_inner() * 100.0,
-                    complex.re().into_inner() * 127.0,
-                    complex.im().into_inner() * 127.0,
-                );
-
-                let rgb: Rgb = lab.into();
-
-                float_color_from_pallette_rgb(
-                    rgb.clamp(),
-                    alpha.compute(compute_arg.reborrow()).into_inner(),
-                )
-            }
-            IterativeResultLAB {
-                child_iterative_function,
-                alpha,
-            } => {
-                let result = child_iterative_function.compute(compute_arg.reborrow());
-
-                let lab = Lab::new(
-                    (result.iter_final.into_inner() - 128) as f32 / 255.0 * 100.0,
-                    result.z_final.re().into_inner() * 127.0,
-                    result.z_final.im().into_inner() * 127.0,
-                );
-
-                let rgb: Rgb = lab.into();
-
-                float_color_from_pallette_rgb(
-                    rgb.clamp(),
-                    alpha.compute(compute_arg.reborrow()).into_inner(),
-                )
-            }
+            FromHSVColor { child } => child.compute(compute_arg).into(),
+            FromCMYKColor { child } => child.compute(compute_arg).into(),
+            FromLABColor { child } => child.compute(compute_arg).into(),
             ColorBlend {
                 child_a,
                 child_b,
@@ -1095,98 +956,6 @@ impl Node for FloatColorNodes {
             NextPointLineBuffer { buffer, .. } => {
                 buffer[compute_arg.coordinate_set.get_coord_point()]
             }
-
-            DucksFractal {
-                //TODO make gooderer
-                child_offset,
-                child_scale,
-                ..
-            } => {
-                let _offset = child_offset.compute(compute_arg.reborrow()).into_inner();
-                let _scale = child_scale.compute(compute_arg.reborrow()).into_inner();
-                let iterations = //50;
-                128 - (128 - compute_arg.coordinate_set.get_byte_t().into_inner() as i32).abs();
-                // 1 + child_iterations
-                //     .compute(compute_arg.reborrow())
-                //     .into_inner()
-                //     / 4;
-
-                // x and y are swapped intentionally
-                let c = Complex::new(
-                    f64::from(
-                        //0.001 *
-                        (1.0 - compute_arg.coordinate_set.get_unfloat_t().into_inner()) *
-                    // scale.y * 
-                    compute_arg.coordinate_set.y.into_inner(), // - 0.5
-                    ),
-                    f64::from(
-                        //0.001 *
-                        (1.0 - compute_arg.coordinate_set.get_unfloat_t().into_inner()) *
-                    // scale.x * 
-                    compute_arg.coordinate_set.x.into_inner(), // - 0.5
-                    ),
-                );
-
-                let _c_offset = Complex::new(
-                    // compute_arg.coordinate_set.get_unfloat_t().into_inner() as f64
-                    // f64::from(scale.y) *
-                    // f64::from(offset.y)
-                    0.0,
-                    // f64::from(scale.x) *
-                    // f64::from(offset.x)
-                    // compute_arg.coordinate_set.get_unfloat_t().into_inner() as f64
-                    0.0,
-                );
-
-                let mut magnitude = 0.0;
-
-                let (_z_final, _escape) = escape_time_system(
-                    c, // + c_offset
-                    iterations as usize,
-                    |z, _i| {
-                        (
-                            // if z.im > 0.0 { z } else { z.conj() }
-                            z.abs() + c
-                        )
-                            .ln()
-                    },
-                    |z, _i| {
-                        magnitude += z.norm();
-                        false
-                    },
-                );
-
-                // magnitude /= iterations as f64;
-
-                // IterativeResult::new(
-                //     SNComplex::new_normalised(
-                //         z_final,
-                //         child_exit_normaliser.compute(compute_arg.reborrow()),
-                //     ),
-                //     Byte::new(iterations),
-                // )
-
-                let rgb: Rgb = Hsv::<Srgb, _>::from_components((
-                    RgbHue::from_degrees(
-                        // magnitude as f32,
-                        // child_magnitude_normaliser.compute(compute_arg.reborrow()).normalise(magnitude as f32).into_inner()
-                        UFloatNormaliser::Sawtooth
-                            .normalise(
-                                //compute_arg.coordinate_set.get_unfloat_t().into_inner() +
-                                magnitude as f32,
-                            )
-                            .into_inner()
-                            * 360.0,
-                    ),
-                    1.0 as f32,
-                    // child_magnitude_normaliser.compute(compute_arg.reborrow()).normalise(magnitude as f32).into_inner(),
-                    // UFloatNormaliser::Sawtooth.normalise(magnitude as f32).into_inner()
-                    0.5,
-                ))
-                .into();
-
-                float_color_from_pallette_rgb(rgb, 1.0)
-            }
         }
     }
 }
@@ -1493,12 +1262,8 @@ impl Node for BitColorNodes {
                     * 0.99
                     * (CONSTS.max_colors) as f32) as usize,
             ),
-            FromFloatColor { child } => {
-                BitColor::from_float_color(child.compute(compute_arg.reborrow()))
-            }
-            FromByteColor { child } => {
-                BitColor::from_byte_color(child.compute(compute_arg.reborrow()))
-            }
+            FromFloatColor { child } => child.compute(compute_arg.reborrow()).into(),
+            FromByteColor { child } => child.compute(compute_arg.reborrow()).into(),
             FromNibbleIndex { child } => BitColor::from_index(
                 child.compute(compute_arg.reborrow()).into_inner() as usize % 8,
             ),
@@ -1642,6 +1407,374 @@ impl Node for ByteColorNodes {
 }
 
 impl<'a> Updatable<'a> for ByteColorNodes {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _arg: UpdArg<'a>) {}
+}
+
+#[derive(Generatable, UpdatableRecursively, Mutatable, Serialize, Deserialize, Debug)]
+#[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
+pub enum HSVColorNodes {
+    #[mutagen(gen_weight = leaf_node_weight)]
+    Constant { value: HSVColor },
+
+    #[mutagen(gen_weight = pipe_node_weight)]
+    FromFloatColor { child: NodeBox<FloatColorNodes> },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    FromComponents {
+        h: NodeBox<AngleNodes>,
+        s: NodeBox<UNFloatNodes>,
+        v: NodeBox<UNFloatNodes>,
+        a: NodeBox<UNFloatNodes>,
+        offset: Angle,
+    },
+
+    #[mutagen(gen_weight = 0.0)]
+    //branch_node_weight)]//TODO FIX, yes I know it says it down there but this is important. Go learn some fractal stuff buttface
+    DucksFractal {
+        child_offset: NodeBox<SNPointNodes>,
+        child_scale: NodeBox<SNPointNodes>,
+        child_iterations: NodeBox<ByteNodes>,
+        child_magnitude_normaliser: NodeBox<UFloatNormaliserNodes>,
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    ModifyState {
+        child: NodeBox<HSVColorNodes>,
+        child_state: NodeBox<CoordMapNodes>,
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    IfElse {
+        predicate: NodeBox<BooleanNodes>,
+        child_a: NodeBox<HSVColorNodes>,
+        child_b: NodeBox<HSVColorNodes>,
+    },
+}
+
+impl Node for HSVColorNodes {
+    type Output = HSVColor;
+
+    fn compute(&self, mut compute_arg: ComArg) -> Self::Output {
+        use HSVColorNodes::*;
+
+        match self {
+            Constant { value } => *value,
+
+            FromFloatColor { child } => child.compute(compute_arg).into(),
+
+            FromComponents { h, s, v, a, offset } => HSVColor {
+                h: h.compute(compute_arg.reborrow()) + *offset,
+                s: s.compute(compute_arg.reborrow()),
+                v: v.compute(compute_arg.reborrow()),
+                a: a.compute(compute_arg.reborrow()),
+            },
+
+            DucksFractal {
+                //TODO make gooderer
+                child_offset,
+                child_scale,
+                ..
+            } => {
+                let _offset = child_offset.compute(compute_arg.reborrow()).into_inner();
+                let _scale = child_scale.compute(compute_arg.reborrow()).into_inner();
+                let iterations = //50;
+                128 - (128 - compute_arg.coordinate_set.get_byte_t().into_inner() as i32).abs();
+                // 1 + child_iterations
+                //     .compute(compute_arg.reborrow())
+                //     .into_inner()
+                //     / 4;
+
+                // x and y are swapped intentionally
+                let c = Complex::new(
+                    f64::from(
+                        //0.001 *
+                        (1.0 - compute_arg.coordinate_set.get_unfloat_t().into_inner()) *
+                    // scale.y * 
+                    compute_arg.coordinate_set.y.into_inner(), // - 0.5
+                    ),
+                    f64::from(
+                        //0.001 *
+                        (1.0 - compute_arg.coordinate_set.get_unfloat_t().into_inner()) *
+                    // scale.x * 
+                    compute_arg.coordinate_set.x.into_inner(), // - 0.5
+                    ),
+                );
+
+                let _c_offset = Complex::new(
+                    // compute_arg.coordinate_set.get_unfloat_t().into_inner() as f64
+                    // f64::from(scale.y) *
+                    // f64::from(offset.y)
+                    0.0,
+                    // f64::from(scale.x) *
+                    // f64::from(offset.x)
+                    // compute_arg.coordinate_set.get_unfloat_t().into_inner() as f64
+                    0.0,
+                );
+
+                let mut magnitude = 0.0;
+
+                let (_z_final, _escape) = escape_time_system(
+                    c, // + c_offset
+                    iterations as usize,
+                    |z, _i| {
+                        (
+                            // if z.im > 0.0 { z } else { z.conj() }
+                            z.abs() + c
+                        )
+                            .ln()
+                    },
+                    |z, _i| {
+                        magnitude += z.norm();
+                        false
+                    },
+                );
+
+                // magnitude /= iterations as f64;
+
+                // IterativeResult::new(
+                //     SNComplex::new_normalised(
+                //         z_final,
+                //         child_exit_normaliser.compute(compute_arg.reborrow()),
+                //     ),
+                //     Byte::new(iterations),
+                // )
+
+                HSVColor {
+                    h: Angle::new(magnitude as f32),
+                    s: UNFloat::new(1.0),
+                    v: UNFloat::new(0.5),
+                    a: UNFloat::new(1.0),
+                }
+            }
+
+            ModifyState { child, child_state } => child.compute(ComArg {
+                coordinate_set: child_state.compute(compute_arg.reborrow()),
+                ..compute_arg.reborrow()
+            }),
+
+            IfElse {
+                predicate,
+                child_a,
+                child_b,
+            } => {
+                if predicate.compute(compute_arg.reborrow()).into_inner() {
+                    child_a.compute(compute_arg.reborrow())
+                } else {
+                    child_b.compute(compute_arg.reborrow())
+                }
+            }
+        }
+    }
+}
+
+impl<'a> Updatable<'a> for HSVColorNodes {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _arg: UpdArg<'a>) {}
+}
+
+#[derive(Generatable, UpdatableRecursively, Mutatable, Serialize, Deserialize, Debug)]
+#[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
+pub enum CMYKColorNodes {
+    #[mutagen(gen_weight = leaf_node_weight)]
+    Constant { value: CMYKColor },
+
+    #[mutagen(gen_weight = pipe_node_weight)]
+    FromFloatColor { child: NodeBox<FloatColorNodes> },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    FromComponents {
+        c: NodeBox<UNFloatNodes>,
+        m: NodeBox<UNFloatNodes>,
+        y: NodeBox<UNFloatNodes>,
+        k: NodeBox<UNFloatNodes>,
+        a: NodeBox<UNFloatNodes>,
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    ModifyState {
+        child: NodeBox<CMYKColorNodes>,
+        child_state: NodeBox<CoordMapNodes>,
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    IfElse {
+        predicate: NodeBox<BooleanNodes>,
+        child_a: NodeBox<CMYKColorNodes>,
+        child_b: NodeBox<CMYKColorNodes>,
+    },
+}
+
+impl Node for CMYKColorNodes {
+    type Output = CMYKColor;
+
+    fn compute(&self, mut compute_arg: ComArg) -> Self::Output {
+        use CMYKColorNodes::*;
+
+        match self {
+            Constant { value } => *value,
+
+            FromFloatColor { child } => child.compute(compute_arg).into(),
+
+            FromComponents { c, m, y, k, a } => CMYKColor {
+                c: c.compute(compute_arg.reborrow()),
+                m: m.compute(compute_arg.reborrow()),
+                y: y.compute(compute_arg.reborrow()),
+                k: k.compute(compute_arg.reborrow()),
+                a: a.compute(compute_arg.reborrow()),
+            },
+
+            ModifyState { child, child_state } => child.compute(ComArg {
+                coordinate_set: child_state.compute(compute_arg.reborrow()),
+                ..compute_arg.reborrow()
+            }),
+
+            IfElse {
+                predicate,
+                child_a,
+                child_b,
+            } => {
+                if predicate.compute(compute_arg.reborrow()).into_inner() {
+                    child_a.compute(compute_arg.reborrow())
+                } else {
+                    child_b.compute(compute_arg.reborrow())
+                }
+            }
+        }
+    }
+}
+
+impl<'a> Updatable<'a> for CMYKColorNodes {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _arg: UpdArg<'a>) {}
+}
+
+#[derive(Generatable, UpdatableRecursively, Mutatable, Serialize, Deserialize, Debug)]
+#[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
+pub enum LABColorNodes {
+    #[mutagen(gen_weight = leaf_node_weight)]
+    Constant { value: LABColor },
+
+    #[mutagen(gen_weight = pipe_node_weight)]
+    FromFloatColor { child: NodeBox<FloatColorNodes> },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    FromComponents {
+        l: NodeBox<SNFloatNodes>,
+        ab: NodeBox<SNComplexNodes>,
+        alpha: NodeBox<UNFloatNodes>,
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    IterativeResult {
+        child_iterative_function: NodeBox<IterativeFunctionNodes>,
+        alpha: NodeBox<UNFloatNodes>,
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    ModifyState {
+        child: NodeBox<LABColorNodes>,
+        child_state: NodeBox<CoordMapNodes>,
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    IfElse {
+        predicate: NodeBox<BooleanNodes>,
+        child_a: NodeBox<LABColorNodes>,
+        child_b: NodeBox<LABColorNodes>,
+    },
+}
+
+impl Node for LABColorNodes {
+    type Output = LABColor;
+
+    fn compute(&self, mut compute_arg: ComArg) -> Self::Output {
+        use LABColorNodes::*;
+
+        match self {
+            Constant { value } => *value,
+
+            FromFloatColor { child } => child.compute(compute_arg).into(),
+
+            FromComponents { l, ab, alpha } => LABColor {
+                l: l.compute(compute_arg.reborrow()),
+                ab: ab.compute(compute_arg.reborrow()),
+                alpha: alpha.compute(compute_arg.reborrow()),
+            },
+
+            IterativeResult {
+                child_iterative_function,
+                alpha,
+            } => {
+                let result = child_iterative_function.compute(compute_arg.reborrow());
+
+                LABColor {
+                    l: SNFloat::new((result.iter_final.into_inner() as f32 - 127.0) / 255.0),
+                    ab: result.z_final,
+                    alpha: alpha.compute(compute_arg.reborrow()),
+                }
+            }
+
+            ModifyState { child, child_state } => child.compute(ComArg {
+                coordinate_set: child_state.compute(compute_arg.reborrow()),
+                ..compute_arg.reborrow()
+            }),
+
+            IfElse {
+                predicate,
+                child_a,
+                child_b,
+            } => {
+                if predicate.compute(compute_arg.reborrow()).into_inner() {
+                    child_a.compute(compute_arg.reborrow())
+                } else {
+                    child_b.compute(compute_arg.reborrow())
+                }
+            }
+        }
+    }
+}
+
+impl<'a> Updatable<'a> for LABColorNodes {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _arg: UpdArg<'a>) {}
+}
+
+#[derive(Generatable, UpdatableRecursively, Mutatable, Serialize, Deserialize, Debug)]
+#[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
+pub enum GenericColorNodes {
+    Float { child: NodeBox<FloatColorNodes> },
+    Byte { child: NodeBox<ByteColorNodes> },
+    Bit { child: NodeBox<BitColorNodes> },
+
+    HSV { child: NodeBox<HSVColorNodes> },
+    CMYK { child: NodeBox<CMYKColorNodes> },
+    LAB { child: NodeBox<LABColorNodes> },
+}
+
+impl Node for GenericColorNodes {
+    type Output = FloatColor;
+
+    fn compute(&self, compute_arg: ComArg) -> Self::Output {
+        use GenericColorNodes::*;
+
+        match self {
+            Float { child } => child.compute(compute_arg),
+            Byte { child } => child.compute(compute_arg).into(),
+            Bit { child } => child.compute(compute_arg).into(),
+
+            HSV { child } => child.compute(compute_arg).into(),
+            CMYK { child } => child.compute(compute_arg).into(),
+            LAB { child } => child.compute(compute_arg).into(),
+        }
+    }
+}
+
+impl<'a> Updatable<'a> for GenericColorNodes {
     type UpdateArg = UpdArg<'a>;
 
     fn update(&mut self, _arg: UpdArg<'a>) {}

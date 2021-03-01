@@ -148,11 +148,11 @@ fn setup_logging(ui: &Ui) {
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 struct NodeTree {
     /// The root node for the tree that computes the next screen state
-    root_node: NodeBox<FloatColorNodes>,
+    root_node: GenericColorNodes,
     root_coordinate_node: NodeBox<CoordMapNodes>,
     root_frame_renderer: NodeBox<FrameRendererNodes>,
     compute_offset_node: NodeBox<CoordMapNodes>,
-    fade_color_node: NodeBox<FloatColorNodes>,
+    fade_color_node: GenericColorNodes,
     fade_color_alpha_multiplier: NodeBox<UNFloatNodes>,
     scaling_mode_node: NodeBox<BooleanNodes>,
 }

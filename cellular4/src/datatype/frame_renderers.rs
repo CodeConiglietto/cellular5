@@ -261,7 +261,10 @@ impl FrameRenderers {
                         .scale([scale_x, scale_y * original_alpha]),
                 )?;
             }
-            FrameRenderers::SpaceOdyssey { axis, scale_secondary_axis } => {
+            FrameRenderers::SpaceOdyssey {
+                axis,
+                scale_secondary_axis,
+            } => {
                 let original_alpha = 1.0 - args.back_lerp_val();
 
                 let dest_x = CONSTS.initial_window_width * 0.5;
@@ -275,9 +278,19 @@ impl FrameRenderers {
 
                 if axis.into_inner() {
                     x_scalar = original_alpha;
-                    y_scalar = 1.0 + if scale_secondary_axis.into_inner() { original_alpha } else {0.0};
+                    y_scalar = 1.0
+                        + if scale_secondary_axis.into_inner() {
+                            original_alpha
+                        } else {
+                            0.0
+                        };
                 } else {
-                    x_scalar = 1.0 + if scale_secondary_axis.into_inner() { original_alpha } else {0.0};
+                    x_scalar = 1.0
+                        + if scale_secondary_axis.into_inner() {
+                            original_alpha
+                        } else {
+                            0.0
+                        };
                     y_scalar = original_alpha;
                 };
 

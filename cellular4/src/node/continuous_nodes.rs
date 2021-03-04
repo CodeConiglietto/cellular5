@@ -103,11 +103,11 @@ impl Node for AngleNodes {
             ),
             MultiplyUNFloat { child_a, child_b } => Angle::new(
                 child_a.compute(compute_arg.reborrow()).into_inner()
-                * child_b.compute(compute_arg.reborrow()).into_inner(),
+                    * child_b.compute(compute_arg.reborrow()).into_inner(),
             ),
             MultiplySNFloat { child_a, child_b } => Angle::new(
                 child_a.compute(compute_arg.reborrow()).into_inner()
-                * child_b.compute(compute_arg.reborrow()).into_inner(),
+                    * child_b.compute(compute_arg.reborrow()).into_inner(),
             ),
             ModifyState { child, child_state } => child.compute(ComArg {
                 coordinate_set: child_state.compute(compute_arg.reborrow()),

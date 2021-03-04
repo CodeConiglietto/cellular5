@@ -227,7 +227,7 @@ impl Node for BooleanNodes {
                 Boolean {
                     value: value > min && value < max,
                 }
-            },
+            }
             // Majority {
             //     child,
             //     point_set,

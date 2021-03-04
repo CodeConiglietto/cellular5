@@ -11,10 +11,7 @@ use ndarray::Array2;
 use rand::prelude::*;
 use serde::{de::Deserializer, ser::Serializer, Deserialize, Serialize};
 
-use crate::{
-    datatype::{constraint_resolvers::*, continuous::*, discrete::*, points::*},
-    mutagen_args::*,
-};
+use crate::prelude::*;
 
 #[derive(Clone, Debug)]
 pub struct PointSet {
@@ -23,8 +20,10 @@ pub struct PointSet {
 }
 
 impl PointSet {
+    #[track_caller]
     pub fn new(points: Arc<Vec<SNPoint>>, generator: PointSetGenerator) -> Self {
         assert!(points.len() > 0);
+        assert!(points.len() <= 256);
         Self { points, generator }
     }
 
@@ -160,6 +159,7 @@ pub enum PointSetGenerator {
     Moore,
     VonNeumann,
     HexGrid,
+    TriGrid,
     Uniform {
         count: Byte,
     },
@@ -174,29 +174,36 @@ pub enum PointSetGenerator {
         linear: Boolean,
         nonlinearity_factor_halved: UNFloat, //This is the easiest way to introduce a variable nonlinearity which includes both squaring and square rooting
     },
+    FibonacciRings {
+        max_count: Byte,//full count will be less than this
+    },
     //TODO add fibonacci spiral
 }
 
 impl PointSetGenerator {
     pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
-        match rng.gen_range(0, 6) {
+        match rng.gen_range(0, 8) {
             // Skip Origin
             0 => PointSetGenerator::Moore,
             1 => PointSetGenerator::VonNeumann,
-            2 => PointSetGenerator::HexGrid,
-            3 => PointSetGenerator::Uniform {
+            2 => PointSetGenerator::TriGrid,
+            3 => PointSetGenerator::HexGrid,
+            4 => PointSetGenerator::Uniform {
                 count: Byte::random(rng),
             },
-            4 => PointSetGenerator::Poisson {
+            5 => PointSetGenerator::Poisson {
                 count: Byte::random(rng),
                 radius: UNFloat::random(rng),
             },
-            5 => PointSetGenerator::Spiral {
+            6 => PointSetGenerator::Spiral {
                 count: Byte::random(rng),
                 scalar: UNFloat::random(rng),
                 maximum: Angle::random(rng),
                 linear: Boolean::random(rng),
                 nonlinearity_factor_halved: UNFloat::random(rng),
+            },
+            7 => PointSetGenerator::FibonacciRings {
+                max_count: Byte::random(rng),
             },
             _ => unreachable!(),
         }
@@ -207,19 +214,48 @@ impl PointSetGenerator {
             PointSetGenerator::Origin => origin(),
             PointSetGenerator::Moore => moore(),
             PointSetGenerator::VonNeumann => von_neumann(),
+            PointSetGenerator::TriGrid => {
+                let x_ratio = 1.0 / 16.0;
+                let y_ratio = 1.0 / 16.0;
+                (0..16)
+                    .flat_map(|x| {
+                        (0..16).map(move |y| {
+                            SNPoint::new(Point2::new(
+                                2.0 * (x_ratio * x as f32
+                                    + if y % 2 == 0 {
+                                        0.25 * x_ratio
+                                    } else {
+                                        0.75 * x_ratio
+                                    })
+                                    - 1.0,
+                                2.0 * (y_ratio * y as f32 + y_ratio * 0.5) - 1.0,
+                            ))
+                        })
+                    })
+                    .collect()
+            }
             PointSetGenerator::HexGrid => {
                 let x_ratio = 1.0 / 16.0;
                 let y_ratio = 1.0 / 16.0;
-                (0..16).flat_map(|x| {
-                    (0..16).map(move |y| {
-                        SNPoint::new(
-                            Point2::new(
-                                2.0 * (x_ratio * x as f32 + if y % 2 == 0 {0.25 * x_ratio} else {0.75 * x_ratio}) - 1.0, 
-                                2.0 * (y_ratio * y as f32 + y_ratio * 0.5) - 1.0)
-                            )
+                (0..16)
+                    .flat_map(|x| {
+                        (0..16)
+                            .filter(move |y| !(y % 2 == x % 3))
+                            .map(move |y| {
+                                SNPoint::new(Point2::new(
+                                    2.0 * (x_ratio * x as f32
+                                        + if y % 2 == 0 {
+                                            0.25 * x_ratio
+                                        } else {
+                                            0.75 * x_ratio
+                                        })
+                                        - 1.0,
+                                    2.0 * (y_ratio * y as f32 + y_ratio * 0.5) - 1.0,
+                                ))
+                            })
                     })
-                }).collect()
-            },
+                    .collect()
+            }
             PointSetGenerator::Uniform { count } => {
                 uniform(rng, count.into_inner().max(2) as usize)
             }
@@ -265,6 +301,43 @@ impl PointSetGenerator {
                         )
                     })
                     .collect()
+            }
+            PointSetGenerator::FibonacciRings {max_count} => {
+                let mut prev_total: u16 = 0;
+                let mut new_total: u16 = 1;
+                
+                let mut total_total: u16 = 0;
+            
+                let mut sequence = Vec::new();
+
+                let max_count = max_count.into_inner().max(1);
+                
+                loop {
+                    let current_total = new_total;
+                    new_total += prev_total;
+                    prev_total = current_total;
+                    
+                    total_total += new_total;
+
+                    if total_total <= max_count as u16 {
+                        sequence.push(prev_total);
+                    }else{
+                        break;
+                    }
+                }
+
+                let sequence_value_count = sequence.len();
+
+                sequence.iter().enumerate().flat_map(|(index, point_count)| {
+                    (0..*point_count).map(move |i| {
+                        let theta = i as f32 * (2.0 * PI / *point_count as f32) - PI;
+                        let rho = index as f32 * 1.0 / sequence_value_count as f32;
+
+                        SNPoint::from_snfloats(
+                            SNFloat::new(rho * f32::sin(theta)),
+                            SNFloat::new(rho * f32::cos(theta)),
+                        )})
+                }).collect()
             }
         };
 

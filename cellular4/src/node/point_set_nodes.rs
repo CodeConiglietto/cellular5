@@ -41,7 +41,6 @@ pub enum PointSetNodes {
         child_normaliser: NodeBox<SFloatNormaliserNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
-    #[mutagen(gen_preferred)]
     RecomputedGrid {
         value: PointSet,
         x_count: Nibble,

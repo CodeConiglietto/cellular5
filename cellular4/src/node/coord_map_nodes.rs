@@ -8,7 +8,7 @@ use crate::prelude::*;
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum CoordMapNodes {
     // #[mutagen(gen_weight = leaf_node_weight)]
-    #[mutagen(gen_weight = 10.0)]
+    #[mutagen(gen_weight = 20.0)]
     Identity,
 
     #[mutagen(gen_weight = pipe_node_weight)]
@@ -71,7 +71,6 @@ pub enum CoordMapNodes {
         distance_function: DistanceFunction,
         normaliser: UFloatNormaliser,
     },
-
 
     #[mutagen(gen_weight = branch_node_weight)]
     ModifyState {
@@ -269,11 +268,18 @@ impl Node for CoordMapNodes {
                 normaliser,
             } => {
                 let p = compute_arg.coordinate_set.get_coord_point();
-                let angle = p.to_angle().into_inner() + compute_arg.reborrow().coordinate_set.get_angle_t().into_inner();
+                let angle = p.to_angle().into_inner()
+                    + compute_arg
+                        .reborrow()
+                        .coordinate_set
+                        .get_angle_t()
+                        .into_inner();
                 let sign_x = child_sign_x.compute(compute_arg.reborrow());
                 let sign_y = child_sign_y.compute(compute_arg.reborrow());
 
-                let rho = distance_function.calculate_normalised(SNPoint::zero(), p, normaliser).into_inner();
+                let rho = distance_function
+                    .calculate_normalised(SNPoint::zero(), p, normaliser)
+                    .into_inner();
 
                 let x = rho * f32::sin(angle);
                 let y = rho * f32::cos(angle);
@@ -318,9 +324,16 @@ impl Node for CoordMapNodes {
 
                 p = SNPoint::new(Point2::new(x, y));
 
-                let angle = p.to_angle().into_inner() + compute_arg.reborrow().coordinate_set.get_angle_t().into_inner();
+                let angle = p.to_angle().into_inner()
+                    + compute_arg
+                        .reborrow()
+                        .coordinate_set
+                        .get_angle_t()
+                        .into_inner();
 
-                let rho = distance_function.calculate_normalised(SNPoint::zero(), p, normaliser).into_inner();
+                let rho = distance_function
+                    .calculate_normalised(SNPoint::zero(), p, normaliser)
+                    .into_inner();
 
                 CoordinateSet {
                     x: SNFloat::new(rho * f32::sin(angle)),

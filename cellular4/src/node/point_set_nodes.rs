@@ -192,7 +192,7 @@ impl<'a> Updatable<'a> for PointSetNodes {
             PointSetNodes::ShearGrid {
                 ref mut value,
                 x_count,
-                
+
                 y_count,
                 child_x_scalar,
                 child_y_scalar,

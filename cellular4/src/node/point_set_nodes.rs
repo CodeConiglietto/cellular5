@@ -154,7 +154,6 @@ impl<'a> Updatable<'a> for PointSetNodes {
                         .points()
                         .par_iter()
                         .map(|p| {
-                            // TODO Attempt to refactor to use normalised_add instead of sawtooth_add
                             p.normalised_add(
                                 p.subtract_normalised(value.get_random_point())
                                     .scale_unfloat(
@@ -193,6 +192,7 @@ impl<'a> Updatable<'a> for PointSetNodes {
             PointSetNodes::ShearGrid {
                 ref mut value,
                 x_count,
+                
                 y_count,
                 child_x_scalar,
                 child_y_scalar,

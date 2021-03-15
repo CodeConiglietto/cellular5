@@ -1747,12 +1747,18 @@ impl<'a> Updatable<'a> for LABColorNodes {
 #[derive(Generatable, UpdatableRecursively, Mutatable, Serialize, Deserialize, Debug)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum GenericColorNodes {
+    #[mutagen(mut_reroll = 0.5)]
     Float { child: NodeBox<FloatColorNodes> },
+    #[mutagen(mut_reroll = 0.5)]
     Byte { child: NodeBox<ByteColorNodes> },
+    #[mutagen(mut_reroll = 0.5)]
     Bit { child: NodeBox<BitColorNodes> },
 
+    #[mutagen(mut_reroll = 0.5)]
     HSV { child: NodeBox<HSVColorNodes> },
+    #[mutagen(mut_reroll = 0.5)]
     CMYK { child: NodeBox<CMYKColorNodes> },
+    #[mutagen(mut_reroll = 0.5)]
     LAB { child: NodeBox<LABColorNodes> },
 }
 

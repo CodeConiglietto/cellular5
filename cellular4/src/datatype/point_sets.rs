@@ -174,15 +174,22 @@ pub enum PointSetGenerator {
         linear: Boolean,
         nonlinearity_factor_halved: UNFloat, //This is the easiest way to introduce a variable nonlinearity which includes both squaring and square rooting
     },
+    LinearIncreasingRings {
+        max_count: Byte,//full count will be less than this
+        ring_size_delta: Nibble,//full count will be less than this
+    },
     FibonacciRings {
         max_count: Byte,//full count will be less than this
     },
-    //TODO add fibonacci spiral
+    //TODO add fibonacci spiral also
+    SquaredRings {
+        max_count: Byte,//full count will be less than this
+    },
 }
 
 impl PointSetGenerator {
     pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
-        match rng.gen_range(0, 8) {
+        match rng.gen_range(0, 10) {
             // Skip Origin
             0 => PointSetGenerator::Moore,
             1 => PointSetGenerator::VonNeumann,
@@ -202,7 +209,14 @@ impl PointSetGenerator {
                 linear: Boolean::random(rng),
                 nonlinearity_factor_halved: UNFloat::random(rng),
             },
-            7 => PointSetGenerator::FibonacciRings {
+            7 => PointSetGenerator::LinearIncreasingRings {
+                max_count: Byte::random(rng),
+                ring_size_delta: Nibble::random(rng),
+            },
+            8 => PointSetGenerator::FibonacciRings {
+                max_count: Byte::random(rng),
+            },
+            9 => PointSetGenerator::SquaredRings {
                 max_count: Byte::random(rng),
             },
             _ => unreachable!(),
@@ -302,6 +316,45 @@ impl PointSetGenerator {
                     })
                     .collect()
             }
+            PointSetGenerator::LinearIncreasingRings {max_count, ring_size_delta} => {
+                let mut prev_total: u16 = 0;
+                let mut new_total: u16 = 1;
+                
+                let mut total_total: u16 = 0;
+
+                let ring_size_delta = ring_size_delta.into_inner() as u16;
+            
+                let mut sequence = Vec::new();
+
+                let max_count = max_count.into_inner().max(1);
+                
+                loop {
+                    let current_total = new_total;
+                    new_total = prev_total + ring_size_delta;
+                    prev_total = current_total;
+                    
+                    total_total += new_total;
+
+                    if total_total <= max_count as u16 {
+                        sequence.push(prev_total);
+                    }else{
+                        break;
+                    }
+                }
+
+                let sequence_value_count = sequence.len();
+
+                sequence.iter().enumerate().flat_map(|(index, point_count)| {
+                    (0..*point_count).map(move |i| {
+                        let theta = i as f32 * (2.0 * PI / *point_count as f32) - PI;
+                        let rho = index as f32 * 1.0 / sequence_value_count as f32;
+
+                        SNPoint::from_snfloats(
+                            SNFloat::new(rho * f32::sin(theta)),
+                            SNFloat::new(rho * f32::cos(theta)),
+                        )})
+                }).collect()
+            }
             PointSetGenerator::FibonacciRings {max_count} => {
                 let mut prev_total: u16 = 0;
                 let mut new_total: u16 = 1;
@@ -315,6 +368,43 @@ impl PointSetGenerator {
                 loop {
                     let current_total = new_total;
                     new_total += prev_total;
+                    prev_total = current_total;
+                    
+                    total_total += new_total;
+
+                    if total_total <= max_count as u16 {
+                        sequence.push(prev_total);
+                    }else{
+                        break;
+                    }
+                }
+
+                let sequence_value_count = sequence.len();
+
+                sequence.iter().enumerate().flat_map(|(index, point_count)| {
+                    (0..*point_count).map(move |i| {
+                        let theta = i as f32 * (2.0 * PI / *point_count as f32) - PI;
+                        let rho = index as f32 * 1.0 / sequence_value_count as f32;
+
+                        SNPoint::from_snfloats(
+                            SNFloat::new(rho * f32::sin(theta)),
+                            SNFloat::new(rho * f32::cos(theta)),
+                        )})
+                }).collect()
+            }
+            PointSetGenerator::SquaredRings {max_count} => {
+                let mut prev_total: u16 = 0;
+                let mut new_total: u16 = 1;
+                
+                let mut total_total: u16 = 0;
+            
+                let mut sequence = Vec::new();
+
+                let max_count = max_count.into_inner().max(1);
+                
+                loop {
+                    let current_total = new_total;
+                    new_total = prev_total * 2;
                     prev_total = current_total;
                     
                     total_total += new_total;

@@ -46,6 +46,7 @@ cpal = "0.13.2"
 realfft = "1.1.0"
 odds = "0.4.0"
 apodize = "1.0.0"
+average = "0.11.0"
 
 [target.'cfg(unix)'.dependencies]
 termion = "1.5.5"

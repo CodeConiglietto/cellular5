@@ -1,3 +1,5 @@
+use average::WeightedMean;
+use float_ord::FloatOrd;
 use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
 use serde::{Deserialize, Serialize};
 
@@ -467,6 +469,13 @@ pub enum ByteNodes {
     FromIterativeResult {
         child: NodeBox<IterativeFunctionNodes>,
     },
+
+    #[mutagen(gen_weight = mic_leaf_node_weight)]
+    PeakMicFrequency,
+
+    #[mutagen(gen_weight = mic_leaf_node_weight)]
+    AverageMicFrequency,
+
     #[mutagen(gen_weight = leaf_node_weight)]
     FromGametic,
     #[mutagen(gen_weight = branch_node_weight)]
@@ -509,6 +518,34 @@ impl Node for ByteNodes {
                 .compute(compute_arg.reborrow())
                 .modulus(child_divisor.compute(compute_arg.reborrow())),
             FromIterativeResult { child } => child.compute(compute_arg).iter_final,
+            PeakMicFrequency => Byte::new(
+                compute_arg
+                    .mic_histograms
+                    .as_ref()
+                    .unwrap()
+                    .linear
+                    .bins()
+                    .iter()
+                    .enumerate()
+                    .max_by_key(|(_, v)| FloatOrd(**v))
+                    .unwrap()
+                    .0 as u8,
+            ),
+
+            AverageMicFrequency => Byte::new(
+                compute_arg
+                    .mic_histograms
+                    .as_ref()
+                    .unwrap()
+                    .linear
+                    .bins()
+                    .iter()
+                    .enumerate()
+                    .map(|(i, v)| (i as f64, *v as f64))
+                    .collect::<WeightedMean>()
+                    .mean()
+                    .round() as u8,
+            ),
             FromGametic => compute_arg.coordinate_set.get_byte_t(),
             IfElse {
                 predicate,

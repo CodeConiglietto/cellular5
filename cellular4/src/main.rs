@@ -460,13 +460,6 @@ impl EventHandler for MyGame {
             self.tree_dirty = true;
         }
 
-        self.gamepads.update(ctx);
-
-        if let Some(mic) = self.mic.as_mut() {
-            mic.update(self.mic_histograms.as_mut().unwrap())
-                .unwrap_or_else(|e| warn!("Failed to update mic: {}", e));
-        }
-
         let current_t = self.current_t;
 
         let slice_height = CONSTS.cell_array_height / CONSTS.tics_per_update;
@@ -573,6 +566,13 @@ impl EventHandler for MyGame {
         self.rolling_update_stat_total += slice_update_stat;
 
         if timer::ticks(ctx) % CONSTS.tics_per_update == 0 {
+            self.gamepads.update(ctx);
+
+            if let Some(mic) = self.mic.as_mut() {
+                mic.update(self.mic_histograms.as_mut().unwrap())
+                    .unwrap_or_else(|e| warn!("Failed to update mic: {}", e));
+            }
+
             let next_cpu_t = CpuInstant::now().unwrap();
             let cpu_usage = (next_cpu_t - self.cpu_t).non_idle();
             let graph_stability = 1.0 - 0.95_f64.powf((current_t - self.last_mutation_t) as f64);
@@ -799,6 +799,8 @@ impl EventHandler for MyGame {
         }
 
         timer::yield_now();
+
+        std::thread::sleep(std::time::Duration::from_millis(3));
 
         Ok(())
     }

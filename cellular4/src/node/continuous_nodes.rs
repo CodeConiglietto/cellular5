@@ -515,8 +515,10 @@ pub enum UNFloatNodes {
         child_exit_normaliser: NodeBox<UFloatNormaliserNodes>,
     },
     #[mutagen(gen_weight = mic_leaf_node_weight)]
+    #[mutagen(gen_preferred)]
     FromAverageMicAmplitude,
     #[mutagen(gen_weight = mic_pipe_node_weight)]
+    #[mutagen(gen_preferred)]
     FromSingleMicFrequency { child_index: NodeBox<ByteNodes> },
 
     // #[mutagen(gen_weight = leaf_node_weight)]

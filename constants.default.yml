@@ -151,6 +151,9 @@ max_branch_depth: 5
 
 gamepad_node_weight_mod: 1.0
 
+use_mic: false
+mic_node_weight_mod: 1.0
+
 # Don't add this unless you have a Smithsonian API key of your own.
 # smithsonian_api_key: "foobarbaz"
 

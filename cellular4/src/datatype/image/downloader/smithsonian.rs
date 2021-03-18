@@ -90,7 +90,7 @@ impl ImageDownloader for Smithsonian {
                             for media in online_media.media {
                                 if media._type == "Images" {
                                     const FORMATS: &[ImageFormat] =
-                                        &[ImageFormat::PNG, ImageFormat::JPEG, ImageFormat::GIF];
+                                        &[ImageFormat::Png, ImageFormat::Jpeg, ImageFormat::Gif];
 
                                     let found_resource =
                                         media.resources.into_iter().find_map(|resource| {

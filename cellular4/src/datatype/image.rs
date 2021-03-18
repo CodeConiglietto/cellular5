@@ -7,7 +7,9 @@ use std::{
 };
 
 use failure::{format_err, Fallible};
-use image::{gif, imageops, AnimationDecoder, FilterType, ImageFormat, RgbaImage};
+use image::{
+    codecs::gif, imageops, imageops::FilterType, AnimationDecoder, ImageFormat, RgbaImage,
+};
 use lazy_static::lazy_static;
 use log::{debug, error, info, warn};
 use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
@@ -220,7 +222,7 @@ impl Display for ImageSource {
 fn load_frames(data: &[u8], format: Option<ImageFormat>) -> image::ImageResult<Vec<RgbaImage>> {
     // Special handling for gifs in case they are animated
     match format {
-        Some(ImageFormat::GIF) => Ok(gif::Decoder::new(Cursor::new(data))?
+        Some(ImageFormat::Gif) => Ok(gif::GifDecoder::new(Cursor::new(data))?
             .into_frames()
             .collect_frames()?
             .into_iter()
@@ -235,14 +237,14 @@ fn load_frames(data: &[u8], format: Option<ImageFormat>) -> image::ImageResult<V
             .collect()),
 
         Some(format) => Ok(vec![imageops::resize(
-            &image::load_from_memory_with_format(data, format)?.to_rgba(),
+            &image::load_from_memory_with_format(data, format)?.to_rgba8(),
             CONSTS.cell_array_width as u32,
             CONSTS.cell_array_height as u32,
             FilterType::Gaussian,
         )]),
 
         None => Ok(vec![imageops::resize(
-            &image::load_from_memory(data)?.to_rgba(),
+            &image::load_from_memory(data)?.to_rgba8(),
             CONSTS.cell_array_width as u32,
             CONSTS.cell_array_height as u32,
             FilterType::Gaussian,

@@ -11,6 +11,7 @@ pub use crate::{
     },
     gamepad::*,
     history::*,
+    mic::*,
     mutagen_args::*,
     node::{
         automata_nodes::*, color_blend_nodes::*, color_nodes::*, complex_nodes::*,

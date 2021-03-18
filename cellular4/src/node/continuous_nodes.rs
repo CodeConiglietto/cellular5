@@ -514,6 +514,11 @@ pub enum UNFloatNodes {
         child_normaliser: NodeBox<SFloatNormaliserNodes>,
         child_exit_normaliser: NodeBox<UFloatNormaliserNodes>,
     },
+    #[mutagen(gen_weight = mic_leaf_node_weight)]
+    FromAverageMicAmplitude,
+    #[mutagen(gen_weight = mic_pipe_node_weight)]
+    FromSingleMicFrequency { child_index: NodeBox<ByteNodes> },
+
     // #[mutagen(gen_weight = leaf_node_weight)]
     // LastRotation,
     #[mutagen(gen_weight = branch_node_weight)]
@@ -780,6 +785,32 @@ impl Node for UNFloatNodes {
                     .compute(compute_arg.reborrow())
                     .normalise((escape as f32 / iterations as f32) * 4.0)
             }
+
+            FromAverageMicAmplitude => {
+                let histogram = &compute_arg.mic_histograms().as_ref().unwrap().linear;
+
+                let v = histogram.bins().iter().sum::<f32>()
+                    / histogram.max()
+                    / histogram.bins().len() as f32;
+
+                let v = if v.is_normal() { v } else { 0.0 };
+
+                UNFloat::new(v)
+            }
+
+            FromSingleMicFrequency { child_index } => {
+                let index = child_index.compute(compute_arg.reborrow());
+
+                UNFloat::new(
+                    compute_arg
+                        .mic_histograms()
+                        .as_ref()
+                        .unwrap()
+                        .linear
+                        .get(usize::from(index.into_inner())),
+                )
+            }
+
             SubDivideSawtooth { child_a, child_b } => child_a
                 .compute(compute_arg.reborrow())
                 .subdivide_sawtooth(child_b.compute(compute_arg.reborrow())),

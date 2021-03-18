@@ -8,6 +8,9 @@ edition = "2018"
 mutagen = { path = "../mutagen", features = ["serde"] }
 dot-serde = { path = "../dot-serde" }
 
+# TODO Update this to 0.6.0 once that's released
+ggez = { git = "https://github.com/cerebralcourt/ggez.git", branch = "patch-1" }
+
 approx = "0.3.2"
 bresenham = "0.1.1"
 chrono = { version = "0.4.10", features = ["serde"] }
@@ -18,14 +21,13 @@ float-ord = "0.2.0"
 generational-arena = { version = "0.2.8", features = ["serde"] }
 gfx = "0.18.2"
 gfx_device_gl = "0.16.2"
-ggez = "0.5.1"
-image = "0.22.5"
+image = "0.23.0"
 itertools = "0.8.1"
 lazy_static = "1.4.0"
 log = "0.4.8"
 nalgebra = { version = "0.21.0", features = ["serde-serialize"] }
 ndarray = { version = "0.13.0", features = ["rayon"] }
-noise = "0.6.0"
+noise = { version = "0.7.0", default-features = false }
 num = "0.2"
 opener = "0.4.1"
 palette = "0.5.0"
@@ -40,6 +42,10 @@ serde_yaml = "0.8.12"
 structopt = "0.3.9"
 walkdir = "2.3.1"
 lerp = "0.4.0"
+cpal = "0.13.2"
+realfft = "1.1.0"
+odds = "0.4.0"
+apodize = "1.0.0"
 
 [target.'cfg(unix)'.dependencies]
 termion = "1.5.5"

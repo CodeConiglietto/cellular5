@@ -82,6 +82,22 @@ pub mod mutagen_functions {
         }
     }
 
+    pub fn mic_pipe_node_weight<T: MutagenArg>(arg: T) -> f64 {
+        if arg.mic_histograms().is_none() {
+            0.0
+        } else {
+            CONSTS.mic_node_weight_mod * pipe_node_weight(arg)
+        }
+    }
+
+    pub fn mic_leaf_node_weight<T: MutagenArg>(arg: T) -> f64 {
+        if arg.mic_histograms().is_none() {
+            0.0
+        } else {
+            CONSTS.mic_node_weight_mod * leaf_node_weight(arg)
+        }
+    }
+
     #[cfg(test)]
     mod tests {
         use super::*;
@@ -90,6 +106,7 @@ pub mod mutagen_functions {
         struct TestArg<'a> {
             depth: usize,
             gamepads: &'a Gamepads,
+            mic_histograms: &'a Option<FrequencyHistograms>,
         }
 
         impl<'a> MutagenArg for TestArg<'a> {
@@ -100,6 +117,10 @@ pub mod mutagen_functions {
             fn gamepads(&self) -> &Gamepads {
                 &self.gamepads
             }
+
+            fn mic_histograms(&self) -> &Option<FrequencyHistograms> {
+                &self.mic_histograms
+            }
         }
 
         #[test]
@@ -108,6 +129,7 @@ pub mod mutagen_functions {
                 let arg = TestArg {
                     depth,
                     gamepads: &Gamepads::new(),
+                    mic_histograms: &Some(FrequencyHistograms::new(256)),
                 };
 
                 assert!(
@@ -123,6 +145,7 @@ pub mod mutagen_functions {
             let arg = TestArg {
                 depth: max_node_depth(),
                 gamepads: &Gamepads::new(),
+                mic_histograms: &Some(FrequencyHistograms::new(256)),
             };
 
             assert!(leaf_node_weight(arg) > 0.0);

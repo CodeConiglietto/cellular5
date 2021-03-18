@@ -93,6 +93,9 @@ pub struct Constants {
 
     pub gamepad_node_weight_mod: f64,
 
+    pub use_mic: bool,
+    pub mic_node_weight_mod: f64,
+
     pub smithsonian_api_key: Option<String>,
     pub gfycat: Option<GfycatConfig>,
 

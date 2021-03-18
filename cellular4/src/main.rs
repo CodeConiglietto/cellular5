@@ -61,6 +61,7 @@ pub mod datatype;
 pub mod gamepad;
 pub mod gfx_renderer;
 pub mod history;
+pub mod mic;
 pub mod mutagen_args;
 pub mod node;
 pub mod node_set;
@@ -81,7 +82,7 @@ fn main() {
     // The preloader can take a while to destroy since it may be waiting on IO/network,and we want the window to close responsively
     let image_preloader = Rc::new(Preloader::new(32, RandomImageLoader::new));
 
-    let (mut ctx, mut event_loop) = ContextBuilder::new("cellular4", "CodeBunny")
+    let (mut ctx, event_loop) = ContextBuilder::new("cellular4", "CodeBunny")
         .window_mode(
             WindowMode::default()
                 .dimensions(CONSTS.initial_window_width, CONSTS.initial_window_height)
@@ -99,25 +100,9 @@ fn main() {
         .build()
         .expect("Could not create ggez context!");
 
-    let mut my_game = MyGame::new(&mut ctx, opts, Rc::clone(&image_preloader));
+    let my_game = MyGame::new(&mut ctx, opts, Rc::clone(&image_preloader));
 
-    match event::run(&mut ctx, &mut event_loop, &mut my_game) {
-        Ok(_) => println!("Exited cleanly."),
-        Err(e) => println!("Error occurred: {}", e),
-    }
-
-    if CONSTS.mutagen_profiler_graphs {
-        println!("Generating graphs...");
-
-        match MutagenProfiler::load(MutagenProfiler::default_path()) {
-            Ok(profiler) => profiler
-                .save_graphs(MutagenProfiler::default_graphs_path())
-                .unwrap_or_else(|e| warn!("Failed to save profiler graphs: {}", e)),
-            Err(e) => warn!("Failed to load profiler for graphing: {}", e),
-        }
-
-        println!("Done!");
-    }
+    event::run(ctx, event_loop, my_game);
 }
 
 fn setup_logging(ui: &Ui) {
@@ -235,6 +220,8 @@ struct MyGame {
     next_history_step: HistoryStep,
 
     blank_texture: GgImage,
+    mic: Option<FftMicReader>,
+    mic_histograms: Option<FrequencyHistograms>,
     gamepads: Gamepads,
 
     //The rolling total used to calculate the average per update instead of per slice
@@ -301,6 +288,18 @@ impl MyGame {
             None
         };
 
+        let (mic, mic_histograms) = if CONSTS.use_mic {
+            match FftMicReader::new(FftConfig::default()) {
+                Ok(mic) => (Some(mic), Some(FrequencyHistograms::new(256))),
+                Err(e) => {
+                    warn!("Failed to initialize mic: {}", e);
+                    (None, None)
+                }
+            }
+        } else {
+            (None, None)
+        };
+
         let mut gamepads = Gamepads::new();
 
         MyGame {
@@ -339,6 +338,7 @@ impl MyGame {
                     coordinate_set: history.history_steps[0].update_coordinate,
                     image_preloader: &*image_preloader,
                     profiler: &mut profiler,
+                    mic_histograms: &mic_histograms,
                     gamepads: &mut gamepads,
                 },
             ),
@@ -357,6 +357,8 @@ impl MyGame {
             history,
             image_preloader,
             profiler,
+            mic,
+            mic_histograms,
             gamepads,
         }
     }
@@ -439,12 +441,31 @@ impl EventHandler for MyGame {
         self.gamepads.register_gamepad(ctx, id);
     }
 
+    fn quit_event(&mut self, _ctx: &mut Context) -> bool {
+        if let Some(profiler) = &self.profiler {
+            println!("Saving profiler graphs...");
+
+            profiler
+                .save_graphs(MutagenProfiler::default_graphs_path())
+                .unwrap_or_else(|e| warn!("Failed to save profiler graphs: {}", e));
+
+            println!("Done!");
+        }
+
+        false
+    }
+
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
         if keyboard::is_key_pressed(ctx, KeyCode::Space) {
             self.tree_dirty = true;
         }
 
         self.gamepads.update(ctx);
+
+        if let Some(mic) = self.mic.as_mut() {
+            mic.update(self.mic_histograms.as_mut().unwrap())
+                .unwrap_or_else(|e| warn!("Failed to update mic: {}", e));
+        }
 
         let current_t = self.current_t;
 
@@ -459,6 +480,7 @@ impl EventHandler for MyGame {
         let new_update_iter = new_update_slice.lanes_mut(NdAxis(2));
 
         let history = &self.history;
+        let mic_histograms = &self.mic_histograms;
         let gamepads = &self.gamepads;
 
         //let rule_sets = self.rule_sets;
@@ -484,6 +506,7 @@ impl EventHandler for MyGame {
                 coordinate_set,
                 history,
                 depth: 0,
+                mic_histograms,
                 gamepads,
             };
 
@@ -610,6 +633,7 @@ impl EventHandler for MyGame {
                             history: &self.history,
                             image_preloader: &mut self.image_preloader,
                             profiler: &mut self.profiler,
+                            mic_histograms: &self.mic_histograms,
                             gamepads: &mut self.gamepads,
                         },
                     );
@@ -627,6 +651,7 @@ impl EventHandler for MyGame {
                                 history: &self.history,
                                 image_preloader: &mut self.image_preloader,
                                 profiler: &mut self.profiler,
+                                mic_histograms: &self.mic_histograms,
                                 gamepads: &mut self.gamepads,
                             },
                         );
@@ -643,6 +668,7 @@ impl EventHandler for MyGame {
                                 history: &self.history,
                                 image_preloader: &mut self.image_preloader,
                                 profiler: &mut self.profiler,
+                                mic_histograms: &self.mic_histograms,
                                 gamepads: &mut self.gamepads,
                             },
                         );
@@ -671,6 +697,7 @@ impl EventHandler for MyGame {
                 depth: 0,
                 image_preloader: &mut self.image_preloader,
                 profiler: &mut self.profiler,
+                mic_histograms: &self.mic_histograms,
                 gamepads: &mut self.gamepads,
                 current_t,
             };
@@ -697,6 +724,7 @@ impl EventHandler for MyGame {
                 depth: 0,
                 image_preloader: &mut self.image_preloader,
                 profiler: &mut self.profiler,
+                mic_histograms: &self.mic_histograms,
                 gamepads: &mut self.gamepads,
                 current_t,
             };
@@ -743,6 +771,7 @@ impl EventHandler for MyGame {
                     data: &mut self.data,
                     image_preloader: &mut self.image_preloader,
                     profiler: &mut self.profiler,
+                    mic_histograms: &self.mic_histograms,
                     gamepads: &mut self.gamepads,
                     depth,
                     current_t,

@@ -5,9 +5,10 @@ use crate::prelude::*;
 pub trait MutagenArg {
     fn depth(&self) -> usize;
     fn gamepads(&self) -> &Gamepads;
+
+    fn mic_histograms(&self) -> &Option<FrequencyHistograms>;
 }
 
-#[derive(Debug)]
 pub struct GenArg<'a> {
     pub nodes: &'a mut [NodeSet],
     pub data: &'a mut DataSet,
@@ -15,6 +16,7 @@ pub struct GenArg<'a> {
     pub current_t: usize,
     pub coordinate_set: CoordinateSet,
     pub history: &'a History,
+    pub mic_histograms: &'a Option<FrequencyHistograms>,
     pub image_preloader: &'a Preloader<Image>,
     pub profiler: &'a mut Option<MutagenProfiler>,
     pub gamepads: &'a mut Gamepads,
@@ -29,6 +31,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, GenArg<'a>> for GenArg<'b> {
             current_t: self.current_t,
             coordinate_set: self.coordinate_set,
             history: &self.history,
+            mic_histograms: &self.mic_histograms,
             image_preloader: &self.image_preloader,
             profiler: &mut self.profiler,
             gamepads: &mut self.gamepads,
@@ -52,9 +55,12 @@ impl<'a> MutagenArg for GenArg<'a> {
     fn gamepads(&self) -> &Gamepads {
         &self.gamepads
     }
+
+    fn mic_histograms(&self) -> &Option<FrequencyHistograms> {
+        &self.mic_histograms
+    }
 }
 
-#[derive(Debug)]
 pub struct MutArg<'a> {
     pub nodes: &'a mut [NodeSet],
     pub data: &'a mut DataSet,
@@ -62,6 +68,7 @@ pub struct MutArg<'a> {
     pub current_t: usize,
     pub coordinate_set: CoordinateSet,
     pub history: &'a History,
+    pub mic_histograms: &'a Option<FrequencyHistograms>,
     pub image_preloader: &'a Preloader<Image>,
     pub profiler: &'a mut Option<MutagenProfiler>,
     pub gamepads: &'a mut Gamepads,
@@ -76,6 +83,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, MutArg<'a>> for MutArg<'b> {
             current_t: self.current_t,
             coordinate_set: self.coordinate_set,
             history: &self.history,
+            mic_histograms: &self.mic_histograms,
             image_preloader: &self.image_preloader,
             profiler: &mut self.profiler,
             gamepads: &mut self.gamepads,
@@ -92,6 +100,7 @@ impl<'a> From<MutArg<'a>> for GenArg<'a> {
             current_t: arg.current_t,
             coordinate_set: arg.coordinate_set,
             history: arg.history,
+            mic_histograms: arg.mic_histograms,
             image_preloader: arg.image_preloader,
             profiler: arg.profiler,
             gamepads: arg.gamepads,
@@ -115,9 +124,13 @@ impl<'a> MutagenArg for MutArg<'a> {
     fn gamepads(&self) -> &Gamepads {
         &self.gamepads
     }
+
+    fn mic_histograms(&self) -> &Option<FrequencyHistograms> {
+        &self.mic_histograms
+    }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct ComArg<'a> {
     pub nodes: &'a [NodeSet],
     pub data: &'a DataSet,
@@ -125,6 +138,7 @@ pub struct ComArg<'a> {
     pub history: &'a History,
     pub depth: usize,
     pub current_t: usize,
+    pub mic_histograms: &'a Option<FrequencyHistograms>,
     pub gamepads: &'a Gamepads,
 }
 
@@ -155,6 +169,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, ComArg<'a>> for ComArg<'b> {
             history: &self.history,
             depth: self.depth,
             current_t: self.current_t,
+            mic_histograms: &self.mic_histograms,
             gamepads: &self.gamepads,
         }
     }
@@ -170,9 +185,12 @@ impl<'a> MutagenArg for ComArg<'a> {
     fn gamepads(&self) -> &Gamepads {
         &self.gamepads
     }
+
+    fn mic_histograms(&self) -> &Option<FrequencyHistograms> {
+        &self.mic_histograms
+    }
 }
 
-#[derive(Debug)]
 pub struct UpdArg<'a> {
     pub nodes: &'a mut [NodeSet],
     pub data: &'a mut DataSet,
@@ -181,6 +199,7 @@ pub struct UpdArg<'a> {
     pub depth: usize,
     pub current_t: usize,
     pub image_preloader: &'a Preloader<Image>,
+    pub mic_histograms: &'a Option<FrequencyHistograms>,
     pub profiler: &'a mut Option<MutagenProfiler>,
     pub gamepads: &'a mut Gamepads,
 }
@@ -194,6 +213,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, UpdArg<'a>> for UpdArg<'b> {
             history: &self.history,
             depth: self.depth,
             current_t: self.current_t,
+            mic_histograms: &self.mic_histograms,
             image_preloader: &self.image_preloader,
             profiler: &mut self.profiler,
             gamepads: &mut self.gamepads,
@@ -210,6 +230,7 @@ impl<'a> From<UpdArg<'a>> for ComArg<'a> {
             history: arg.history,
             depth: arg.depth,
             current_t: arg.current_t,
+            mic_histograms: arg.mic_histograms,
             gamepads: arg.gamepads,
         }
     }
@@ -226,6 +247,7 @@ impl<'a> From<GenArg<'a>> for UpdArg<'a> {
             history: arg.history,
             image_preloader: arg.image_preloader,
             profiler: arg.profiler,
+            mic_histograms: arg.mic_histograms,
             gamepads: arg.gamepads,
         }
     }
@@ -246,6 +268,10 @@ impl<'a> MutagenArg for UpdArg<'a> {
 
     fn gamepads(&self) -> &Gamepads {
         &self.gamepads
+    }
+
+    fn mic_histograms(&self) -> &Option<FrequencyHistograms> {
+        &self.mic_histograms
     }
 }
 

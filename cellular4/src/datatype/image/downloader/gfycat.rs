@@ -197,7 +197,7 @@ impl ImageDownloader for Gfycat {
         Ok(Image::load(
             ImageSource::Other(name),
             &buf,
-            Some(ImageFormat::GIF),
+            Some(ImageFormat::Gif),
         )?)
     }
 }

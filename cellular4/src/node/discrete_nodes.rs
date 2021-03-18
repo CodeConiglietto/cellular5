@@ -532,8 +532,8 @@ impl Node for ByteNodes {
                     .0 as u8,
             ),
 
-            AverageMicFrequency => Byte::new(
-                compute_arg
+            AverageMicFrequency => {
+                let v = compute_arg
                     .mic_histograms
                     .as_ref()
                     .unwrap()
@@ -541,11 +541,15 @@ impl Node for ByteNodes {
                     .bins()
                     .iter()
                     .enumerate()
-                    .map(|(i, v)| (i as f64, *v as f64))
+                    .map(|(i, v)| ((i + 1) as f64, *v as f64))
                     .collect::<WeightedMean>()
                     .mean()
-                    .round() as u8,
-            ),
+                    - 1.0;
+
+                let v = if v.is_normal() { v } else { 0.0 };
+
+                Byte::new(v.round() as u8)
+            }
             FromGametic => compute_arg.coordinate_set.get_byte_t(),
             IfElse {
                 predicate,

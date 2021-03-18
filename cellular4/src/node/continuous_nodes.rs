@@ -444,17 +444,29 @@ pub enum UNFloatNodes {
     // #[mutagen(gen_weight = leaf_node_weight)]
     // Random,
     #[mutagen(gen_weight = leaf_node_weight)]
-    Constant { value: UNFloat },
+    Constant {
+        value: UNFloat,
+    },
     #[mutagen(gen_weight = pipe_node_weight)]
-    FromAngle { child: NodeBox<AngleNodes> },
+    FromAngle {
+        child: NodeBox<AngleNodes>,
+    },
     #[mutagen(gen_weight = pipe_node_weight)]
-    FromBoolean { child: NodeBox<BooleanNodes> },
+    FromBoolean {
+        child: NodeBox<BooleanNodes>,
+    },
     #[mutagen(gen_weight = pipe_node_weight)]
-    FromSNFloat { child: NodeBox<SNFloatNodes> },
+    FromSNFloat {
+        child: NodeBox<SNFloatNodes>,
+    },
     #[mutagen(gen_weight = pipe_node_weight)]
-    AbsSNFloat { child: NodeBox<SNFloatNodes> },
+    AbsSNFloat {
+        child: NodeBox<SNFloatNodes>,
+    },
     #[mutagen(gen_weight = pipe_node_weight)]
-    SquareSNFloat { child: NodeBox<SNFloatNodes> },
+    SquareSNFloat {
+        child: NodeBox<SNFloatNodes>,
+    },
     #[mutagen(gen_weight = branch_node_weight)]
     Multiply {
         child_a: NodeBox<UNFloatNodes>,
@@ -474,7 +486,9 @@ pub enum UNFloatNodes {
         child_b: NodeBox<UNFloatNodes>,
     },
     #[mutagen(gen_weight = pipe_node_weight)]
-    InvertNormalised { child: NodeBox<UNFloatNodes> },
+    InvertNormalised {
+        child: NodeBox<UNFloatNodes>,
+    },
     #[mutagen(gen_weight = branch_node_weight)]
     ColorAverage {
         child: NodeBox<FloatColorNodes>,
@@ -484,11 +498,17 @@ pub enum UNFloatNodes {
         child_a: NodeBox<BooleanNodes>,
     },
     #[mutagen(gen_weight = pipe_node_weight)]
-    ColorComponentH { child: NodeBox<FloatColorNodes> },
+    ColorComponentH {
+        child: NodeBox<FloatColorNodes>,
+    },
     #[mutagen(gen_weight = pipe_node_weight)]
-    ColorComponentS { child: NodeBox<FloatColorNodes> },
+    ColorComponentS {
+        child: NodeBox<FloatColorNodes>,
+    },
     #[mutagen(gen_weight = pipe_node_weight)]
-    ColorComponentV { child: NodeBox<FloatColorNodes> },
+    ColorComponentV {
+        child: NodeBox<FloatColorNodes>,
+    },
     #[mutagen(gen_weight = leaf_node_weight)]
     FromGametic,
     #[mutagen(gen_weight = pipe_node_weight)]
@@ -519,7 +539,9 @@ pub enum UNFloatNodes {
     AverageMicAmplitude,
     #[mutagen(gen_weight = mic_pipe_node_weight)]
     #[mutagen(gen_preferred)]
-    SingleMicFrequency { child_index: NodeBox<ByteNodes> },
+    SingleMicFrequency {
+        child_index: NodeBox<ByteNodes>,
+    },
     #[mutagen(gen_weight = mic_leaf_node_weight)]
     #[mutagen(gen_preferred)]
     PeakMicFrequency,
@@ -837,16 +859,19 @@ impl Node for UNFloatNodes {
             AverageMicFrequency => {
                 let histogram = &compute_arg.mic_histograms.as_ref().unwrap().linear;
 
-                UNFloat::new(
-                    histogram
-                        .bins()
-                        .iter()
-                        .enumerate()
-                        .map(|(i, v)| (i as f64, *v as f64))
-                        .collect::<WeightedMean>()
-                        .mean() as f32
-                        / histogram.bins().len() as f32,
-                )
+                let v = (histogram
+                    .bins()
+                    .iter()
+                    .enumerate()
+                    .map(|(i, v)| ((i + 1) as f64, *v as f64))
+                    .collect::<WeightedMean>()
+                    .mean()
+                    - 1.0) as f32
+                    / histogram.bins().len() as f32;
+
+                let v = if v.is_normal() { v } else { 0.0 };
+
+                UNFloat::new(v)
             }
             SubDivideSawtooth { child_a, child_b } => child_a
                 .compute(compute_arg.reborrow())

@@ -1,5 +1,7 @@
 use std::f64::consts::PI;
 
+use average::WeightedMean;
+use float_ord::FloatOrd;
 use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
 use nalgebra::*;
 use num::signum;
@@ -515,9 +517,13 @@ pub enum UNFloatNodes {
         child_exit_normaliser: NodeBox<UFloatNormaliserNodes>,
     },
     #[mutagen(gen_weight = mic_leaf_node_weight)]
-    FromAverageMicAmplitude,
+    AverageMicAmplitude,
     #[mutagen(gen_weight = mic_pipe_node_weight)]
-    FromSingleMicFrequency { child_index: NodeBox<ByteNodes> },
+    SingleMicFrequency { child_index: NodeBox<ByteNodes> },
+    #[mutagen(gen_weight = mic_leaf_node_weight)]
+    PeakMicFrequency,
+    #[mutagen(gen_weight = mic_leaf_node_weight)]
+    AverageMicFrequency,
 
     // #[mutagen(gen_weight = leaf_node_weight)]
     // LastRotation,
@@ -786,7 +792,7 @@ impl Node for UNFloatNodes {
                     .normalise((escape as f32 / iterations as f32) * 4.0)
             }
 
-            FromAverageMicAmplitude => {
+            AverageMicAmplitude => {
                 let histogram = &compute_arg.mic_histograms().as_ref().unwrap().linear;
 
                 let v = histogram.bins().iter().sum::<f32>()
@@ -798,7 +804,7 @@ impl Node for UNFloatNodes {
                 UNFloat::new(v)
             }
 
-            FromSingleMicFrequency { child_index } => {
+            SingleMicFrequency { child_index } => {
                 let index = child_index.compute(compute_arg.reborrow());
 
                 UNFloat::new(
@@ -811,6 +817,35 @@ impl Node for UNFloatNodes {
                 )
             }
 
+            PeakMicFrequency => {
+                let histogram = &compute_arg.mic_histograms.as_ref().unwrap().linear;
+
+                UNFloat::new(
+                    histogram
+                        .bins()
+                        .iter()
+                        .enumerate()
+                        .max_by_key(|(_, v)| FloatOrd(**v))
+                        .unwrap()
+                        .0 as f32
+                        / histogram.bins().len() as f32,
+                )
+            }
+
+            AverageMicFrequency => {
+                let histogram = &compute_arg.mic_histograms.as_ref().unwrap().linear;
+
+                UNFloat::new(
+                    histogram
+                        .bins()
+                        .iter()
+                        .enumerate()
+                        .map(|(i, v)| (i as f64, *v as f64))
+                        .collect::<WeightedMean>()
+                        .mean() as f32
+                        / histogram.bins().len() as f32,
+                )
+            }
             SubDivideSawtooth { child_a, child_b } => child_a
                 .compute(compute_arg.reborrow())
                 .subdivide_sawtooth(child_b.compute(compute_arg.reborrow())),

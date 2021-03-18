@@ -25,6 +25,10 @@ impl<T> Metarena<T> {
             value: Arena::new(),
         }
     }
+
+    pub fn len(&self) -> usize {
+        self.value.len()
+    }
 }
 
 impl<T> Default for Metarena<T> {

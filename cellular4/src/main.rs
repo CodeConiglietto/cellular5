@@ -558,6 +558,8 @@ impl EventHandler for MyGame {
                 ((self.average_update_stat + self.rolling_update_stat_total) / 2.0).clamp_values();
 
             //dbg!(timer::fps(ctx));
+            // let node_count: usize = self.nodes.iter().map(|node_set| node_set.count_all()).sum();
+            // info!("Node amount: {}", node_count);
 
             self.rolling_update_stat_total = UpdateStat {
                 activity_value: 0.0,

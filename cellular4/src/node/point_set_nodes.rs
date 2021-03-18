@@ -10,7 +10,6 @@ use crate::prelude::*;
 #[derive(Generatable, UpdatableRecursively, Mutatable, Deserialize, Serialize, Debug)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum PointSetNodes {
-    //TODO: change mutagen weights to not be a hack
     #[mutagen(gen_weight = leaf_node_weight)]
     Constant { value: PointSet },
     #[mutagen(gen_weight = pipe_node_weight)]

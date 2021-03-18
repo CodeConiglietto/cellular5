@@ -190,6 +190,9 @@ pub enum PointSetGenerator {
         linear: Boolean,
         nonlinearity_factor_halved: UNFloat, //This is the easiest way to introduce a variable nonlinearity which includes both squaring and square rooting
     },
+    RandomRings {
+        max_rings: Nibble,
+    },
     LinearIncreasingRings {
         max_count: Byte,         //full count will be less than this
         ring_size_delta: Nibble, //full count will be less than this
@@ -205,7 +208,7 @@ pub enum PointSetGenerator {
 
 impl PointSetGenerator {
     pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
-        match rng.gen_range(0, 12) {
+        match rng.gen_range(0, 13) {
             // Skip Origin
             0 => PointSetGenerator::Moore,
             1 => PointSetGenerator::VonNeumann,
@@ -241,14 +244,17 @@ impl PointSetGenerator {
                 linear: Boolean::random(rng),
                 nonlinearity_factor_halved: UNFloat::random(rng),
             },
-            9 => PointSetGenerator::LinearIncreasingRings {
+            9 => PointSetGenerator::RandomRings {
+                max_rings: Nibble::random(rng),
+            },
+            10 => PointSetGenerator::LinearIncreasingRings {
                 max_count: Byte::random(rng),
                 ring_size_delta: Nibble::random(rng),
             },
-            10 => PointSetGenerator::FibonacciRings {
+            11 => PointSetGenerator::FibonacciRings {
                 max_count: Byte::random(rng),
             },
-            11 => PointSetGenerator::SquaredRings {
+            12 => PointSetGenerator::SquaredRings {
                 max_count: Byte::random(rng),
             },
             _ => unreachable!(),
@@ -421,6 +427,33 @@ impl PointSetGenerator {
                             SNFloat::new(rho * f32::sin(theta)),
                             SNFloat::new(rho * f32::cos(theta)),
                         )
+                    })
+                    .collect()
+            }
+            PointSetGenerator::RandomRings { max_rings } => {
+                let mut sequence = Vec::new();
+
+                let max_rings = max_rings.into_inner() + 1;
+
+                for _ in 0..max_rings {
+                    sequence.push(Nibble::random(rng).into_inner() + 1);
+                }
+
+                let sequence_value_count = sequence.len();
+
+                sequence
+                    .iter()
+                    .enumerate()
+                    .flat_map(|(index, point_count)| {
+                        (0..*point_count).map(move |i| {
+                            let theta = i as f32 * (2.0 * PI / *point_count as f32) - PI;
+                            let rho = index as f32 * 1.0 / sequence_value_count as f32;
+
+                            SNPoint::from_snfloats(
+                                SNFloat::new(rho * f32::sin(theta)),
+                                SNFloat::new(rho * f32::cos(theta)),
+                            )
+                        })
                     })
                     .collect()
             }

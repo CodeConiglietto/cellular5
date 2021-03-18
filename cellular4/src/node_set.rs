@@ -47,6 +47,34 @@ impl NodeSet {
     pub fn new() -> NodeSet {
         Self::default()
     }
+
+    //ensure this is updated for accurate counts. Don't rely on this for anything
+    pub fn count_all(&self) -> usize {
+        self.color_blend_nodes.len()
+            + self.bit_color_nodes.len()
+            + self.byte_color_nodes.len()
+            + self.float_color_nodes.len()
+            + self.hsv_color_nodes.len()
+            + self.cmyk_color_nodes.len()
+            + self.lab_color_nodes.len()
+            + self.angle_nodes.len()
+            + self.unfloat_nodes.len()
+            + self.snfloat_nodes.len()
+            + self.coord_map_nodes.len()
+            + self.boolean_nodes.len()
+            + self.nibble_nodes.len()
+            + self.byte_nodes.len()
+            + self.uint_nodes.len()
+            + self.sint_nodes.len()
+            + self.snfloat_matrix3_nodes.len()
+            + self.snpoint_nodes.len()
+            + self.point_set_nodes.len()
+            + self.iterative_function_nodes.len()
+            + self.sncomplex_nodes.len()
+            + self.sfloat_normaliser_nodes.len()
+            + self.ufloat_normaliser_nodes.len()
+            + self.frame_renderer_nodes.len()
+    }
 }
 
 impl<'a> Updatable<'a> for NodeSet {

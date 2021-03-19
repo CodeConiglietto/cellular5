@@ -517,19 +517,19 @@ pub enum UNFloatNodes {
         child_exit_normaliser: NodeBox<UFloatNormaliserNodes>,
     },
 
-    #[mutagen(gen_weight = mic_pipe_node_weight)]
-    AverageMicAmplitude { child_gamma: NodeBox<BooleanNodes> },
+    #[mutagen(gen_weight = mic_leaf_node_weight)]
+    AverageMicAmplitude { use_gamma: Boolean },
     #[mutagen(gen_weight = mic_pipe_node_weight)]
     SingleMicFrequency {
         child_index: NodeBox<ByteNodes>,
-        child_gamma: NodeBox<BooleanNodes>,
+        use_gamma: Boolean,
     },
-    #[mutagen(gen_weight = mic_pipe_node_weight)]
+    #[mutagen(gen_weight = mic_leaf_node_weight)]
     #[mutagen(gen_preferred)]
-    PeakMicFrequency { child_gamma: NodeBox<BooleanNodes> },
-    #[mutagen(gen_weight = mic_pipe_node_weight)]
+    PeakMicFrequency { use_gamma: Boolean },
+    #[mutagen(gen_weight = mic_leaf_node_weight)]
     #[mutagen(gen_preferred)]
-    AverageMicFrequency { child_gamma: NodeBox<BooleanNodes> },
+    AverageMicFrequency { use_gamma: Boolean },
 
     // #[mutagen(gen_weight = leaf_node_weight)]
     // LastRotation,
@@ -798,13 +798,12 @@ impl Node for UNFloatNodes {
                     .normalise((escape as f32 / iterations as f32) * 4.0)
             }
 
-            AverageMicAmplitude { child_gamma } => {
-                let gamma = child_gamma.compute(compute_arg.reborrow()).into_inner();
+            AverageMicAmplitude { use_gamma } => {
                 let histogram = &compute_arg
                     .mic_histograms()
                     .as_ref()
                     .unwrap()
-                    .get_histogram(gamma);
+                    .get_histogram(use_gamma.into_inner());
 
                 let v = histogram.bins().iter().sum::<f32>()
                     / histogram.max()
@@ -817,26 +816,24 @@ impl Node for UNFloatNodes {
 
             SingleMicFrequency {
                 child_index,
-                child_gamma,
+                use_gamma,
             } => {
-                let gamma = child_gamma.compute(compute_arg.reborrow()).into_inner();
                 let index = child_index.compute(compute_arg.reborrow());
 
                 compute_arg
                     .mic_histograms()
                     .as_ref()
                     .unwrap()
-                    .get_histogram(gamma)
+                    .get_histogram(use_gamma.into_inner())
                     .get_normalised(usize::from(index.into_inner()))
             }
 
-            PeakMicFrequency { child_gamma } => {
-                let gamma = child_gamma.compute(compute_arg.reborrow()).into_inner();
+            PeakMicFrequency { use_gamma } => {
                 let histogram = &compute_arg
                     .mic_histograms
                     .as_ref()
                     .unwrap()
-                    .get_histogram(gamma);
+                    .get_histogram(use_gamma.into_inner());
 
                 UNFloat::new(
                     histogram
@@ -850,13 +847,12 @@ impl Node for UNFloatNodes {
                 )
             }
 
-            AverageMicFrequency { child_gamma } => {
-                let gamma = child_gamma.compute(compute_arg.reborrow()).into_inner();
+            AverageMicFrequency { use_gamma } => {
                 let histogram = &compute_arg
                     .mic_histograms
                     .as_ref()
                     .unwrap()
-                    .get_histogram(gamma);
+                    .get_histogram(use_gamma.into_inner());
 
                 let v = (histogram
                     .bins()

@@ -288,8 +288,8 @@ impl MyGame {
             None
         };
 
-        let (mic, mic_histograms) = if CONSTS.use_mic {
-            match FftMicReader::new(FftConfig::default()) {
+        let (mic, mic_histograms) = if let Some(config) = &CONSTS.mic {
+            match FftMicReader::new(config.clone()) {
                 Ok(mic) => (Some(mic), Some(FrequencyHistograms::new(256))),
                 Err(e) => {
                     warn!("Failed to initialize mic: {}", e);

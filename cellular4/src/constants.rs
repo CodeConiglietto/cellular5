@@ -93,14 +93,22 @@ pub struct Constants {
 
     pub gamepad_node_weight_mod: f64,
 
-    pub use_mic: bool,
-    pub mic_node_weight_mod: f64,
+    pub mic: Option<MicConfig>,
 
     pub smithsonian_api_key: Option<String>,
     pub gfycat: Option<GfycatConfig>,
 
     pub mutagen_profiler: bool,
     pub mutagen_profiler_graphs: bool,
+}
+
+#[derive(Clone, Deserialize)]
+pub struct MicConfig {
+    pub min_frequency: f32,
+    pub max_frequency: f32,
+    pub gamma: f32,
+    pub lerp_factor: f32,
+    pub target_fps: f32,
 }
 
 #[derive(Clone, Deserialize)]

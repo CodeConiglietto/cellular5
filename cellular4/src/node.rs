@@ -86,7 +86,15 @@ pub mod mutagen_functions {
         if arg.mic_histograms().is_none() {
             0.0
         } else {
-            CONSTS.mic_node_weight_mod * pipe_node_weight(arg)
+            pipe_node_weight(arg)
+        }
+    }
+
+    pub fn mic_leaf_node_weight<T: MutagenArg>(arg: T) -> f64 {
+        if arg.mic_histograms().is_none() {
+            0.0
+        } else {
+            leaf_node_weight(arg)
         }
     }
 

@@ -15,26 +15,6 @@ use realfft::{num_complex::Complex, RealFftPlanner, RealToComplex};
 
 use crate::prelude::*;
 
-pub struct FftConfig {
-    min_freq: f32,
-    max_freq: f32,
-    gamma: f32,
-    lerp_factor: f32,
-    fps: f32,
-}
-
-impl Default for FftConfig {
-    fn default() -> Self {
-        Self {
-            min_freq: 20.0,
-            max_freq: 20_000.0,
-            gamma: 2.0,
-            lerp_factor: 0.1,
-            fps: 60.0,
-        }
-    }
-}
-
 pub struct FrequencyHistogram {
     current: Vec<f32>,
     next: Vec<f32>,
@@ -91,7 +71,7 @@ impl FrequencyHistograms {
 }
 
 pub struct FftMicReader {
-    config: FftConfig,
+    config: MicConfig,
 
     mic: MicReader,
 
@@ -103,16 +83,16 @@ pub struct FftMicReader {
     window: Vec<f32>,
 
     adj_lerp_factor: f32,
-    min_freq_idx: usize,
-    max_freq_idx: usize,
+    min_frequency_idx: usize,
+    max_frequency_idx: usize,
     norm: f32,
 }
 
 impl FftMicReader {
-    pub fn new(config: FftConfig) -> Fallible<Self> {
+    pub fn new(config: MicConfig) -> Fallible<Self> {
         let mic = MicReader::build(|stream_config| {
             usize::from(stream_config.channels)
-                * chunk_size_for_fps(stream_config.sample_rate.0, config.fps)
+                * chunk_size_for_fps(stream_config.sample_rate.0, config.target_fps)
         })?;
 
         let stream_config = mic.config();
@@ -136,8 +116,10 @@ impl FftMicReader {
 
         let norm = 1.0 / (fft_in_buf.len() as f32).sqrt();
 
-        let min_freq_idx = freq_to_fft_idx(config.min_freq, sample_rate, fft_out_buf.len());
-        let max_freq_idx = freq_to_fft_idx(config.max_freq, sample_rate, fft_out_buf.len());
+        let min_frequency_idx =
+            frequency_to_fft_idx(config.min_frequency, sample_rate, fft_out_buf.len());
+        let max_frequency_idx =
+            frequency_to_fft_idx(config.max_frequency, sample_rate, fft_out_buf.len());
 
         Ok(Self {
             config,
@@ -148,8 +130,8 @@ impl FftMicReader {
             fft_scratch,
             window,
             adj_lerp_factor,
-            min_freq_idx,
-            max_freq_idx,
+            min_frequency_idx,
+            max_frequency_idx,
             norm,
         })
     }
@@ -190,7 +172,7 @@ impl FftMicReader {
                     )
                     .map_err(|e| format_err!("Failed computing FFT: {}", e))?;
 
-                let select_fft = &self.fft_out_buf[self.min_freq_idx..self.max_freq_idx];
+                let select_fft = &self.fft_out_buf[self.min_frequency_idx..self.max_frequency_idx];
 
                 let mut prev_lin_bin_idx = 0;
                 let mut prev_gamma_bin_idx = 0;
@@ -211,8 +193,8 @@ impl FftMicReader {
                         let bin_idx = gamma_corrected_bin_idx(
                             fft_idx,
                             select_fft.len(),
-                            self.config.min_freq,
-                            self.config.max_freq,
+                            self.config.min_frequency,
+                            self.config.max_frequency,
                             histogram.next.len(),
                             *gamma,
                         );
@@ -254,7 +236,7 @@ fn chunk_size_for_fps(sample_rate: u32, fps: f32) -> usize {
     }
 }
 
-fn freq_to_fft_idx(freq: f32, sample_rate: u32, out_fft_buf_len: usize) -> usize {
+fn frequency_to_fft_idx(freq: f32, sample_rate: u32, out_fft_buf_len: usize) -> usize {
     num::clamp(
         (2.0 * freq / sample_rate as f32 * (out_fft_buf_len - 1) as f32).round() as usize + 1,
         1,

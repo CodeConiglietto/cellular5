@@ -470,11 +470,11 @@ pub enum ByteNodes {
         child: NodeBox<IterativeFunctionNodes>,
     },
 
-    #[mutagen(gen_weight = mic_pipe_node_weight)]
-    PeakMicFrequency { child_gamma: NodeBox<BooleanNodes> },
+    #[mutagen(gen_weight = mic_leaf_node_weight)]
+    PeakMicFrequency { use_gamma: Boolean },
 
-    #[mutagen(gen_weight = mic_pipe_node_weight)]
-    AverageMicFrequency { child_gamma: NodeBox<BooleanNodes> },
+    #[mutagen(gen_weight = mic_leaf_node_weight)]
+    AverageMicFrequency { use_gamma: Boolean },
 
     #[mutagen(gen_weight = leaf_node_weight)]
     FromGametic,
@@ -518,32 +518,26 @@ impl Node for ByteNodes {
                 .compute(compute_arg.reborrow())
                 .modulus(child_divisor.compute(compute_arg.reborrow())),
             FromIterativeResult { child } => child.compute(compute_arg).iter_final,
-            PeakMicFrequency { child_gamma } => {
-                let gamma = child_gamma.compute(compute_arg.reborrow()).into_inner();
+            PeakMicFrequency { use_gamma } => Byte::new(
+                compute_arg
+                    .mic_histograms
+                    .as_ref()
+                    .unwrap()
+                    .get_histogram(use_gamma.into_inner())
+                    .bins()
+                    .iter()
+                    .enumerate()
+                    .max_by_key(|(_, v)| FloatOrd(**v))
+                    .unwrap()
+                    .0 as u8,
+            ),
 
-                Byte::new(
-                    compute_arg
-                        .mic_histograms
-                        .as_ref()
-                        .unwrap()
-                        .get_histogram(gamma)
-                        .bins()
-                        .iter()
-                        .enumerate()
-                        .max_by_key(|(_, v)| FloatOrd(**v))
-                        .unwrap()
-                        .0 as u8,
-                )
-            }
-
-            AverageMicFrequency { child_gamma } => {
-                let gamma = child_gamma.compute(compute_arg.reborrow()).into_inner();
-
+            AverageMicFrequency { use_gamma } => {
                 let v = compute_arg
                     .mic_histograms
                     .as_ref()
                     .unwrap()
-                    .get_histogram(gamma)
+                    .get_histogram(use_gamma.into_inner())
                     .bins()
                     .iter()
                     .enumerate()

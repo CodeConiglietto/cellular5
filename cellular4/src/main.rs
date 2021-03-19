@@ -808,13 +808,16 @@ impl EventHandler for MyGame {
             let mut next_update_time = self.last_update_time + update_delta;
 
             // Drop updates if we're more than one update behind
-            while Instant::now() > next_update_time + update_delta {
+            let now = Instant::now();
+            while now > next_update_time + update_delta {
                 next_update_time += update_delta;
             }
 
             self.last_update_time = next_update_time;
 
-            thread::sleep(next_update_time - Instant::now());
+            if now < next_update_time {
+                thread::sleep(next_update_time - now);
+            }
         } else {
             timer::yield_now();
         }

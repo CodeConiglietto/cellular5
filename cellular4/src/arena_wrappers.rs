@@ -14,7 +14,7 @@ pub trait Storage<T> {
     fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<T>>;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Metarena<T> {
     pub value: Arena<ArenaSlot<T>>,
 }
@@ -57,7 +57,7 @@ where
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct ArenaSlot<T> {
     value: T,
     last_accessed: usize,

@@ -1,9 +1,10 @@
 use generational_arena::*;
 use mutagen::{Updatable, UpdatableRecursively};
+use serde::{Deserialize, Serialize};
 
 use crate::{arena_wrappers::*, prelude::*, ArenaSlot};
 
-#[derive(Default, Debug, UpdatableRecursively)]
+#[derive(Default, Debug, UpdatableRecursively, Serialize, Deserialize)]
 pub struct NodeSet {
     //color_blend
     color_blend_nodes: Metarena<ColorBlendNodes>,

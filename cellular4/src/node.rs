@@ -90,14 +90,6 @@ pub mod mutagen_functions {
         }
     }
 
-    pub fn mic_leaf_node_weight<T: MutagenArg>(arg: T) -> f64 {
-        if arg.mic_histograms().is_none() {
-            0.0
-        } else {
-            CONSTS.mic_node_weight_mod * leaf_node_weight(arg)
-        }
-    }
-
     #[cfg(test)]
     mod tests {
         use super::*;

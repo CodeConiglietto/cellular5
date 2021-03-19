@@ -444,29 +444,17 @@ pub enum UNFloatNodes {
     // #[mutagen(gen_weight = leaf_node_weight)]
     // Random,
     #[mutagen(gen_weight = leaf_node_weight)]
-    Constant {
-        value: UNFloat,
-    },
+    Constant { value: UNFloat },
     #[mutagen(gen_weight = pipe_node_weight)]
-    FromAngle {
-        child: NodeBox<AngleNodes>,
-    },
+    FromAngle { child: NodeBox<AngleNodes> },
     #[mutagen(gen_weight = pipe_node_weight)]
-    FromBoolean {
-        child: NodeBox<BooleanNodes>,
-    },
+    FromBoolean { child: NodeBox<BooleanNodes> },
     #[mutagen(gen_weight = pipe_node_weight)]
-    FromSNFloat {
-        child: NodeBox<SNFloatNodes>,
-    },
+    FromSNFloat { child: NodeBox<SNFloatNodes> },
     #[mutagen(gen_weight = pipe_node_weight)]
-    AbsSNFloat {
-        child: NodeBox<SNFloatNodes>,
-    },
+    AbsSNFloat { child: NodeBox<SNFloatNodes> },
     #[mutagen(gen_weight = pipe_node_weight)]
-    SquareSNFloat {
-        child: NodeBox<SNFloatNodes>,
-    },
+    SquareSNFloat { child: NodeBox<SNFloatNodes> },
     #[mutagen(gen_weight = branch_node_weight)]
     Multiply {
         child_a: NodeBox<UNFloatNodes>,
@@ -486,9 +474,7 @@ pub enum UNFloatNodes {
         child_b: NodeBox<UNFloatNodes>,
     },
     #[mutagen(gen_weight = pipe_node_weight)]
-    InvertNormalised {
-        child: NodeBox<UNFloatNodes>,
-    },
+    InvertNormalised { child: NodeBox<UNFloatNodes> },
     #[mutagen(gen_weight = branch_node_weight)]
     ColorAverage {
         child: NodeBox<FloatColorNodes>,
@@ -498,17 +484,11 @@ pub enum UNFloatNodes {
         child_a: NodeBox<BooleanNodes>,
     },
     #[mutagen(gen_weight = pipe_node_weight)]
-    ColorComponentH {
-        child: NodeBox<FloatColorNodes>,
-    },
+    ColorComponentH { child: NodeBox<FloatColorNodes> },
     #[mutagen(gen_weight = pipe_node_weight)]
-    ColorComponentS {
-        child: NodeBox<FloatColorNodes>,
-    },
+    ColorComponentS { child: NodeBox<FloatColorNodes> },
     #[mutagen(gen_weight = pipe_node_weight)]
-    ColorComponentV {
-        child: NodeBox<FloatColorNodes>,
-    },
+    ColorComponentV { child: NodeBox<FloatColorNodes> },
     #[mutagen(gen_weight = leaf_node_weight)]
     FromGametic,
     #[mutagen(gen_weight = pipe_node_weight)]
@@ -536,18 +516,21 @@ pub enum UNFloatNodes {
         child_normaliser: NodeBox<SFloatNormaliserNodes>,
         child_exit_normaliser: NodeBox<UFloatNormaliserNodes>,
     },
-    AverageMicAmplitude,
+
+    #[mutagen(gen_weight = mic_pipe_node_weight)]
+    AverageMicAmplitude { child_gamma: NodeBox<BooleanNodes> },
     #[mutagen(gen_weight = mic_pipe_node_weight)]
     #[mutagen(gen_preferred)]
     SingleMicFrequency {
         child_index: NodeBox<ByteNodes>,
+        child_gamma: NodeBox<BooleanNodes>,
     },
-    #[mutagen(gen_weight = mic_leaf_node_weight)]
+    #[mutagen(gen_weight = mic_pipe_node_weight)]
     #[mutagen(gen_preferred)]
-    PeakMicFrequency,
-    #[mutagen(gen_weight = mic_leaf_node_weight)]
+    PeakMicFrequency { child_gamma: NodeBox<BooleanNodes> },
+    #[mutagen(gen_weight = mic_pipe_node_weight)]
     #[mutagen(gen_preferred)]
-    AverageMicFrequency,
+    AverageMicFrequency { child_gamma: NodeBox<BooleanNodes> },
 
     // #[mutagen(gen_weight = leaf_node_weight)]
     // LastRotation,
@@ -816,8 +799,13 @@ impl Node for UNFloatNodes {
                     .normalise((escape as f32 / iterations as f32) * 4.0)
             }
 
-            AverageMicAmplitude => {
-                let histogram = &compute_arg.mic_histograms().as_ref().unwrap().linear;
+            AverageMicAmplitude { child_gamma } => {
+                let gamma = child_gamma.compute(compute_arg.reborrow()).into_inner();
+                let histogram = &compute_arg
+                    .mic_histograms()
+                    .as_ref()
+                    .unwrap()
+                    .get_histogram(gamma);
 
                 let v = histogram.bins().iter().sum::<f32>()
                     / histogram.max()
@@ -828,7 +816,11 @@ impl Node for UNFloatNodes {
                 UNFloat::new(v)
             }
 
-            SingleMicFrequency { child_index } => {
+            SingleMicFrequency {
+                child_index,
+                child_gamma,
+            } => {
+                let gamma = child_gamma.compute(compute_arg.reborrow()).into_inner();
                 let index = child_index.compute(compute_arg.reborrow());
 
                 UNFloat::new(
@@ -836,13 +828,18 @@ impl Node for UNFloatNodes {
                         .mic_histograms()
                         .as_ref()
                         .unwrap()
-                        .linear
-                        .get(usize::from(index.into_inner())),
+                        .get_histogram(gamma)
+                        .get_normalised(usize::from(index.into_inner())),
                 )
             }
 
-            PeakMicFrequency => {
-                let histogram = &compute_arg.mic_histograms.as_ref().unwrap().linear;
+            PeakMicFrequency { child_gamma } => {
+                let gamma = child_gamma.compute(compute_arg.reborrow()).into_inner();
+                let histogram = &compute_arg
+                    .mic_histograms
+                    .as_ref()
+                    .unwrap()
+                    .get_histogram(gamma);
 
                 UNFloat::new(
                     histogram
@@ -856,8 +853,13 @@ impl Node for UNFloatNodes {
                 )
             }
 
-            AverageMicFrequency => {
-                let histogram = &compute_arg.mic_histograms.as_ref().unwrap().linear;
+            AverageMicFrequency { child_gamma } => {
+                let gamma = child_gamma.compute(compute_arg.reborrow()).into_inner();
+                let histogram = &compute_arg
+                    .mic_histograms
+                    .as_ref()
+                    .unwrap()
+                    .get_histogram(gamma);
 
                 let v = (histogram
                     .bins()

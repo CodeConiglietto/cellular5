@@ -56,7 +56,7 @@ impl FrequencyHistogram {
         self.max
     }
 
-    pub fn get(&self, index: usize) -> f32 {
+    pub fn get_normalised(&self, index: usize) -> f32 {
         let v = self.current[index] / self.max;
         if v.is_normal() {
             v
@@ -67,8 +67,8 @@ impl FrequencyHistogram {
 }
 
 pub struct FrequencyHistograms {
-    pub linear: FrequencyHistogram,
-    pub gamma: FrequencyHistogram,
+    linear: FrequencyHistogram,
+    gamma: FrequencyHistogram,
 }
 
 impl FrequencyHistograms {
@@ -76,6 +76,14 @@ impl FrequencyHistograms {
         Self {
             linear: FrequencyHistogram::new(n_bins),
             gamma: FrequencyHistogram::new(n_bins),
+        }
+    }
+
+    pub fn get_histogram(&self, gamma: bool) -> &FrequencyHistogram {
+        if gamma {
+            &self.gamma
+        } else {
+            &self.linear
         }
     }
 }

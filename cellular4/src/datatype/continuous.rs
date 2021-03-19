@@ -180,6 +180,12 @@ impl SNFloat {
         Self::new(self.value.abs())
     }
 
+    pub fn force_sign(self, sign: bool) -> Self {
+        Self::new(
+            self.value.abs() * if sign {1.0} else {-1.0}
+        )
+    }
+
     pub fn invert(self) -> Self {
         Self::new(self.value * -1.0)
     }

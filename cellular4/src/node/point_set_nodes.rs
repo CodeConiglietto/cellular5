@@ -14,7 +14,7 @@ pub enum PointSetNodes {
     Constant { value: PointSet },
     #[mutagen(gen_weight = leaf_node_weight)]
     #[mutagen(gen_preferred)]
-    PointSpectrogram { value: PointSet, range_a: Byte, range_b: Byte },
+    PointSpectrogram { value: PointSet, range_a: Byte, range_b: Byte, use_gamma: Boolean },
     #[mutagen(gen_weight = pipe_node_weight)]
     Translating {
         value: PointSet,
@@ -124,8 +124,11 @@ impl<'a> Updatable<'a> for PointSetNodes {
                 ref mut value,
                 range_a,
                 range_b,
+                use_gamma,
             } => {
                 let mut samples = Vec::new();
+
+                let use_gamma = use_gamma.into_inner();
 
                 let x_ratio = 1.0 / 128.0;
 
@@ -138,8 +141,8 @@ impl<'a> Updatable<'a> for PointSetNodes {
                                     .mic_histograms()
                                     .as_ref()
                                     .unwrap()
-                                    .gamma
-                                    .get(i) * if i % 2 == 0 {1.0} else{-1.0}),
+                                    .get_histogram(use_gamma)
+                                    .get_normalised(i).into_inner() * if i % 2 == 0 {1.0} else{-1.0}),
                         ));
                 }
 

@@ -82,6 +82,8 @@ cell_array_width: 20
 cell_array_height: 20
 tics_per_update: 2
 
+target_fps: 60
+
 fullscreen: false
 # fullscreen: true
 console_width: 100

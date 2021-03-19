@@ -22,6 +22,7 @@ lazy_static! {
 
 #[derive(Deserialize)]
 pub struct Constants {
+    pub target_fps: u32,
     pub tics_per_update: usize,
 
     pub initial_window_width: f32,

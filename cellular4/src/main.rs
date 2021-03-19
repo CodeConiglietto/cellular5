@@ -798,9 +798,11 @@ impl EventHandler for MyGame {
             self.cpu_t = next_cpu_t;
         }
 
-        timer::yield_now();
-
-        std::thread::sleep(std::time::Duration::from_millis(1));
+        if timer::check_update_time(ctx, CONSTS.target_fps) {
+            timer::yield_now();
+        } else {
+            timer::sleep(timer::remaining_update_time(ctx));
+        }
 
         Ok(())
     }

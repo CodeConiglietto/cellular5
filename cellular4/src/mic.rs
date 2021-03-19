@@ -180,7 +180,7 @@ impl FftMicReader {
                 for (fft_idx, fft_sample) in select_fft.iter().enumerate() {
                     let scaled = fft_sample * self.norm;
                     let power = scaled.norm_sqr();
-                    let power_log = power.ln();
+                    let power_log = (power + 1.0).ln();
 
                     for (gamma, spectrogram, prev_bin_idx) in &mut [
                         (

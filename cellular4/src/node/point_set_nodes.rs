@@ -14,7 +14,12 @@ pub enum PointSetNodes {
     Constant { value: PointSet },
     #[mutagen(gen_weight = leaf_node_weight)]
     #[mutagen(gen_preferred)]
-    PointSpectrogram { value: PointSet, range_a: Byte, range_b: Byte, use_gamma: Boolean },
+    PointSpectrogram {
+        value: PointSet,
+        range_a: Byte,
+        range_b: Byte,
+        use_gamma: Boolean,
+    },
     #[mutagen(gen_weight = pipe_node_weight)]
     Translating {
         value: PointSet,
@@ -133,17 +138,18 @@ impl<'a> Updatable<'a> for PointSetNodes {
                 let x_ratio = 1.0 / 128.0;
 
                 for i in 0..128 {
-                    samples.push(
-                        SNPoint::from_snfloats(
-                            SNFloat::new((i as f32 * x_ratio + 0.5 * x_ratio) * 2.0 - 1.0), 
-                            SNFloat::new(
-                                arg
-                                    .mic_histograms()
-                                    .as_ref()
-                                    .unwrap()
-                                    .get_histogram(use_gamma)
-                                    .get_normalised(i).into_inner() * if i % 2 == 0 {1.0} else{-1.0}),
-                        ));
+                    samples.push(SNPoint::from_snfloats(
+                        SNFloat::new((i as f32 * x_ratio + 0.5 * x_ratio) * 2.0 - 1.0),
+                        SNFloat::new(
+                            arg.mic_spectrograms()
+                                .as_ref()
+                                .unwrap()
+                                .get_spectrogram(use_gamma)
+                                .get_normalised(i)
+                                .into_inner()
+                                * if i % 2 == 0 { 1.0 } else { -1.0 },
+                        ),
+                    ));
                 }
 
                 value.replace(Arc::new(samples));

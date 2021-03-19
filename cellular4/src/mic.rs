@@ -13,6 +13,8 @@ use lerp::Lerp;
 use odds::stride::Stride;
 use realfft::{num_complex::Complex, RealFftPlanner, RealToComplex};
 
+use crate::prelude::*;
+
 pub struct FftConfig {
     min_freq: f32,
     max_freq: f32,
@@ -56,19 +58,19 @@ impl FrequencyHistogram {
         self.max
     }
 
-    pub fn get(&self, index: usize) -> f32 {
+    pub fn get_normalised(&self, index: usize) -> UNFloat {
         let v = self.current[index] / self.max;
         if v.is_normal() {
-            v
+            UNFloat::new(v)
         } else {
-            0.0
+            UNFloat::ZERO
         }
     }
 }
 
 pub struct FrequencyHistograms {
-    pub linear: FrequencyHistogram,
-    pub gamma: FrequencyHistogram,
+    linear: FrequencyHistogram,
+    gamma: FrequencyHistogram,
 }
 
 impl FrequencyHistograms {
@@ -76,6 +78,14 @@ impl FrequencyHistograms {
         Self {
             linear: FrequencyHistogram::new(n_bins),
             gamma: FrequencyHistogram::new(n_bins),
+        }
+    }
+
+    pub fn get_histogram(&self, gamma: bool) -> &FrequencyHistogram {
+        if gamma {
+            &self.gamma
+        } else {
+            &self.linear
         }
     }
 }

@@ -538,15 +538,12 @@ pub enum UNFloatNodes {
     },
     AverageMicAmplitude,
     #[mutagen(gen_weight = mic_pipe_node_weight)]
-    #[mutagen(gen_preferred)]
     SingleMicFrequency {
         child_index: NodeBox<ByteNodes>,
     },
     #[mutagen(gen_weight = mic_leaf_node_weight)]
-    #[mutagen(gen_preferred)]
     PeakMicFrequency,
     #[mutagen(gen_weight = mic_leaf_node_weight)]
-    #[mutagen(gen_preferred)]
     AverageMicFrequency,
 
     // #[mutagen(gen_weight = leaf_node_weight)]

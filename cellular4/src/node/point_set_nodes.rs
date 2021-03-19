@@ -12,6 +12,9 @@ use crate::prelude::*;
 pub enum PointSetNodes {
     #[mutagen(gen_weight = leaf_node_weight)]
     Constant { value: PointSet },
+    #[mutagen(gen_weight = leaf_node_weight)]
+    #[mutagen(gen_preferred)]
+    PointSpectrogram { value: PointSet, range_a: Byte, range_b: Byte },
     #[mutagen(gen_weight = pipe_node_weight)]
     Translating {
         value: PointSet,
@@ -96,6 +99,7 @@ impl Node for PointSetNodes {
 
         match self {
             Constant { value } => value.clone(),
+            PointSpectrogram { value, .. } => value.clone(),
             Translating { value, .. } => value.clone(),
             Spreading { value, .. } => value.clone(),
             Polygonal { value, .. } => value.clone(),
@@ -116,6 +120,31 @@ impl<'a> Updatable<'a> for PointSetNodes {
 
     fn update(&mut self, mut arg: UpdArg<'a>) {
         match self {
+            PointSetNodes::PointSpectrogram {
+                ref mut value,
+                range_a,
+                range_b,
+            } => {
+                let mut samples = Vec::new();
+
+                let x_ratio = 1.0 / 128.0;
+
+                for i in 0..128 {
+                    samples.push(
+                        SNPoint::from_snfloats(
+                            SNFloat::new((i as f32 * x_ratio + 0.5 * x_ratio) * 2.0 - 1.0), 
+                            SNFloat::new(
+                                arg
+                                    .mic_histograms()
+                                    .as_ref()
+                                    .unwrap()
+                                    .gamma
+                                    .get(i) * if i % 2 == 0 {1.0} else{-1.0}),
+                        ));
+                }
+
+                value.replace(Arc::new(samples));
+            }
             PointSetNodes::Translating {
                 ref mut value,
                 child,

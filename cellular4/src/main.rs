@@ -4,7 +4,12 @@
 #[macro_use]
 extern crate gfx;
 
-use std::{fs, rc::Rc};
+use std::{
+    fs,
+    rc::Rc,
+    thread,
+    time::{Duration, Instant},
+};
 
 use cpu_monitor::CpuInstant;
 use ggez::{
@@ -240,6 +245,7 @@ struct MyGame {
     last_mutation_t: usize,
     last_render_t: usize,
     cpu_t: CpuInstant,
+    last_update_time: Instant,
     rng: DeterministicRng,
     ui: Ui,
 
@@ -352,6 +358,7 @@ impl MyGame {
             last_mutation_t: 0,
             last_render_t: 0,
             cpu_t: CpuInstant::now().unwrap(),
+            last_update_time: Instant::now(),
             ui,
             rng,
             history,
@@ -796,12 +803,20 @@ impl EventHandler for MyGame {
 
             self.current_t += 1;
             self.cpu_t = next_cpu_t;
-        }
 
-        if timer::check_update_time(ctx, CONSTS.target_fps) {
-            timer::yield_now();
+            let update_delta = Duration::from_secs_f64(1.0 / CONSTS.target_fps as f64);
+            let mut next_update_time = self.last_update_time + update_delta;
+
+            // Drop updates if we're more than one update behind
+            while Instant::now() > next_update_time + update_delta {
+                next_update_time += update_delta;
+            }
+
+            self.last_update_time = next_update_time;
+
+            thread::sleep(next_update_time - Instant::now());
         } else {
-            timer::sleep(timer::remaining_update_time(ctx));
+            timer::yield_now();
         }
 
         Ok(())

@@ -83,6 +83,7 @@ pub struct FftMicReader {
     window: Vec<f32>,
 
     adj_lerp_factor: f32,
+    adj_range_decay_factor: f32,
     min_frequency_idx: usize,
     max_frequency_idx: usize,
     norm: f32,
@@ -110,9 +111,10 @@ impl FftMicReader {
             .map(|w| w as f32)
             .collect::<Vec<_>>();
 
-        let adj_lerp_factor = config
-            .lerp_factor
-            .powf(fft_in_buf.len() as f32 / sample_rate as f32);
+        let adj_lerp_factor =
+            adjust_for_slice_rate(config.lerp_factor, fft_in_buf.len(), sample_rate);
+        let adj_range_decay_factor =
+            adjust_for_slice_rate(config.range_decay_factor, fft_in_buf.len(), sample_rate);
 
         let norm = 1.0 / (fft_in_buf.len() as f32).sqrt();
 
@@ -130,6 +132,7 @@ impl FftMicReader {
             fft_scratch,
             window,
             adj_lerp_factor,
+            adj_range_decay_factor,
             min_frequency_idx,
             max_frequency_idx,
             norm,
@@ -148,6 +151,8 @@ impl FftMicReader {
                     for next_bin in spectrogram.next.iter_mut() {
                         *next_bin = 0.0;
                     }
+
+                    spectrogram.max *= self.adj_range_decay_factor;
                 }
 
                 first = false;
@@ -238,12 +243,16 @@ fn chunk_size_for_fps(sample_rate: u32, fps: f32) -> usize {
     }
 }
 
-fn frequency_to_fft_idx(freq: f32, sample_rate: u32, out_fft_buf_len: usize) -> usize {
+fn frequency_to_fft_idx(freq: f32, sample_rate: u32, fft_out_buf_len: usize) -> usize {
     num::clamp(
-        (2.0 * freq / sample_rate as f32 * (out_fft_buf_len - 1) as f32).round() as usize + 1,
+        (2.0 * freq / sample_rate as f32 * (fft_out_buf_len - 1) as f32).round() as usize + 1,
         1,
-        out_fft_buf_len,
+        fft_out_buf_len,
     )
+}
+
+fn adjust_for_slice_rate(value: f32, fft_in_buf_len: usize, sample_rate: u32) -> f32 {
+    value.powf(fft_in_buf_len as f32 / sample_rate as f32)
 }
 
 fn gamma_corrected_bin_idx(

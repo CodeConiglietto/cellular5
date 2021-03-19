@@ -108,6 +108,7 @@ pub struct MicConfig {
     pub max_frequency: f32,
     pub gamma: f32,
     pub lerp_factor: f32,
+    pub range_decay_factor: f32,
     pub target_fps: f32,
 }
 

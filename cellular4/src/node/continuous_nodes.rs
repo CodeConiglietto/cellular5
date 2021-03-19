@@ -823,14 +823,12 @@ impl Node for UNFloatNodes {
                 let gamma = child_gamma.compute(compute_arg.reborrow()).into_inner();
                 let index = child_index.compute(compute_arg.reborrow());
 
-                UNFloat::new(
-                    compute_arg
-                        .mic_histograms()
-                        .as_ref()
-                        .unwrap()
-                        .get_histogram(gamma)
-                        .get_normalised(usize::from(index.into_inner())),
-                )
+                compute_arg
+                    .mic_histograms()
+                    .as_ref()
+                    .unwrap()
+                    .get_histogram(gamma)
+                    .get_normalised(usize::from(index.into_inner()))
             }
 
             PeakMicFrequency { child_gamma } => {

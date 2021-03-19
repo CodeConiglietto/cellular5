@@ -114,7 +114,6 @@ pub enum CoordMapNodes {
         child_b: NodeBox<SNPointNodes>,
     },
     #[mutagen(gen_weight = branch_node_weight)]
-    #[mutagen(gen_preferred)]
     TesellatePolarTwoClosestPointSet {
         child_points: NodeBox<PointSetNodes>,
         child_theta: NodeBox<AngleNodes>,

@@ -13,8 +13,14 @@ pub enum PointSetNodes {
     #[mutagen(gen_weight = leaf_node_weight)]
     Constant { value: PointSet },
     #[mutagen(gen_weight = leaf_node_weight)]
-    #[mutagen(gen_preferred)]
     PointSpectrogram {
+        value: PointSet,
+        range_a: Byte,
+        range_b: Byte,
+        use_gamma: Boolean,
+    },
+    #[mutagen(gen_weight = leaf_node_weight)]
+    CenteredPointSpectrogram {
         value: PointSet,
         range_a: Byte,
         range_b: Byte,
@@ -105,6 +111,7 @@ impl Node for PointSetNodes {
         match self {
             Constant { value } => value.clone(),
             PointSpectrogram { value, .. } => value.clone(),
+            CenteredPointSpectrogram { value, .. } => value.clone(),
             Translating { value, .. } => value.clone(),
             Spreading { value, .. } => value.clone(),
             Polygonal { value, .. } => value.clone(),
@@ -150,6 +157,38 @@ impl<'a> Updatable<'a> for PointSetNodes {
                                 * if i % 2 == 0 { 1.0 } else { -1.0 },
                         ),
                     ));
+                }
+
+                value.replace(Arc::new(samples));
+            }
+            PointSetNodes::CenteredPointSpectrogram {
+                ref mut value,
+                range_a,
+                range_b,
+                use_gamma,
+            } => {
+                let mut samples = Vec::new();
+
+                let use_gamma = use_gamma.into_inner();
+
+                let x_ratio = 1.0 / 64.0;
+
+                for i in 0..64 {
+                    let point = SNPoint::from_snfloats(
+                        SNFloat::new(i as f32 * x_ratio + 0.5 * x_ratio),
+                        SNFloat::new(
+                            arg.mic_spectrograms()
+                                .as_ref()
+                                .unwrap()
+                                .get_spectrogram(use_gamma)
+                                .get_normalised(i)
+                                .into_inner()
+                                * if i % 2 == 0 { 1.0 } else { -1.0 },
+                        ),
+                    );
+
+                    samples.push(point);
+                    samples.push(point.clone().invert_x());
                 }
 
                 value.replace(Arc::new(samples));

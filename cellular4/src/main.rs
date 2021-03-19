@@ -221,7 +221,7 @@ struct MyGame {
 
     blank_texture: GgImage,
     mic: Option<FftMicReader>,
-    mic_histograms: Option<FrequencyHistograms>,
+    mic_spectrograms: Option<FrequencySpectrograms>,
     gamepads: Gamepads,
 
     //The rolling total used to calculate the average per update instead of per slice
@@ -288,9 +288,9 @@ impl MyGame {
             None
         };
 
-        let (mic, mic_histograms) = if let Some(config) = &CONSTS.mic {
+        let (mic, mic_spectrograms) = if let Some(config) = &CONSTS.mic {
             match FftMicReader::new(config.clone()) {
-                Ok(mic) => (Some(mic), Some(FrequencyHistograms::new(256))),
+                Ok(mic) => (Some(mic), Some(FrequencySpectrograms::new(256))),
                 Err(e) => {
                     warn!("Failed to initialize mic: {}", e);
                     (None, None)
@@ -338,7 +338,7 @@ impl MyGame {
                     coordinate_set: history.history_steps[0].update_coordinate,
                     image_preloader: &*image_preloader,
                     profiler: &mut profiler,
-                    mic_histograms: &mic_histograms,
+                    mic_spectrograms: &mic_spectrograms,
                     gamepads: &mut gamepads,
                 },
             ),
@@ -358,7 +358,7 @@ impl MyGame {
             image_preloader,
             profiler,
             mic,
-            mic_histograms,
+            mic_spectrograms,
             gamepads,
         }
     }
@@ -473,7 +473,7 @@ impl EventHandler for MyGame {
         let new_update_iter = new_update_slice.lanes_mut(NdAxis(2));
 
         let history = &self.history;
-        let mic_histograms = &self.mic_histograms;
+        let mic_spectrograms = &self.mic_spectrograms;
         let gamepads = &self.gamepads;
 
         //let rule_sets = self.rule_sets;
@@ -499,7 +499,7 @@ impl EventHandler for MyGame {
                 coordinate_set,
                 history,
                 depth: 0,
-                mic_histograms,
+                mic_spectrograms,
                 gamepads,
             };
 
@@ -569,7 +569,7 @@ impl EventHandler for MyGame {
             self.gamepads.update(ctx);
 
             if let Some(mic) = self.mic.as_mut() {
-                mic.update(self.mic_histograms.as_mut().unwrap())
+                mic.update(self.mic_spectrograms.as_mut().unwrap())
                     .unwrap_or_else(|e| warn!("Failed to update mic: {}", e));
             }
 
@@ -633,7 +633,7 @@ impl EventHandler for MyGame {
                             history: &self.history,
                             image_preloader: &mut self.image_preloader,
                             profiler: &mut self.profiler,
-                            mic_histograms: &self.mic_histograms,
+                            mic_spectrograms: &self.mic_spectrograms,
                             gamepads: &mut self.gamepads,
                         },
                     );
@@ -651,7 +651,7 @@ impl EventHandler for MyGame {
                                 history: &self.history,
                                 image_preloader: &mut self.image_preloader,
                                 profiler: &mut self.profiler,
-                                mic_histograms: &self.mic_histograms,
+                                mic_spectrograms: &self.mic_spectrograms,
                                 gamepads: &mut self.gamepads,
                             },
                         );
@@ -668,7 +668,7 @@ impl EventHandler for MyGame {
                                 history: &self.history,
                                 image_preloader: &mut self.image_preloader,
                                 profiler: &mut self.profiler,
-                                mic_histograms: &self.mic_histograms,
+                                mic_spectrograms: &self.mic_spectrograms,
                                 gamepads: &mut self.gamepads,
                             },
                         );
@@ -697,7 +697,7 @@ impl EventHandler for MyGame {
                 depth: 0,
                 image_preloader: &mut self.image_preloader,
                 profiler: &mut self.profiler,
-                mic_histograms: &self.mic_histograms,
+                mic_spectrograms: &self.mic_spectrograms,
                 gamepads: &mut self.gamepads,
                 current_t,
             };
@@ -724,7 +724,7 @@ impl EventHandler for MyGame {
                 depth: 0,
                 image_preloader: &mut self.image_preloader,
                 profiler: &mut self.profiler,
-                mic_histograms: &self.mic_histograms,
+                mic_spectrograms: &self.mic_spectrograms,
                 gamepads: &mut self.gamepads,
                 current_t,
             };
@@ -771,7 +771,7 @@ impl EventHandler for MyGame {
                     data: &mut self.data,
                     image_preloader: &mut self.image_preloader,
                     profiler: &mut self.profiler,
-                    mic_histograms: &self.mic_histograms,
+                    mic_spectrograms: &self.mic_spectrograms,
                     gamepads: &mut self.gamepads,
                     depth,
                     current_t,

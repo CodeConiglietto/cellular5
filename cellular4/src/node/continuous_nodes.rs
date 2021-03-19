@@ -799,15 +799,15 @@ impl Node for UNFloatNodes {
             }
 
             AverageMicAmplitude { use_gamma } => {
-                let histogram = &compute_arg
-                    .mic_histograms()
+                let spectrogram = &compute_arg
+                    .mic_spectrograms()
                     .as_ref()
                     .unwrap()
-                    .get_histogram(use_gamma.into_inner());
+                    .get_spectrogram(use_gamma.into_inner());
 
-                let v = histogram.bins().iter().sum::<f32>()
-                    / histogram.max()
-                    / histogram.bins().len() as f32;
+                let v = spectrogram.bins().iter().sum::<f32>()
+                    / spectrogram.max()
+                    / spectrogram.bins().len() as f32;
 
                 let v = if v.is_normal() { v } else { 0.0 };
 
@@ -821,40 +821,40 @@ impl Node for UNFloatNodes {
                 let index = child_index.compute(compute_arg.reborrow());
 
                 compute_arg
-                    .mic_histograms()
+                    .mic_spectrograms()
                     .as_ref()
                     .unwrap()
-                    .get_histogram(use_gamma.into_inner())
+                    .get_spectrogram(use_gamma.into_inner())
                     .get_normalised(usize::from(index.into_inner()))
             }
 
             PeakMicFrequency { use_gamma } => {
-                let histogram = &compute_arg
-                    .mic_histograms
+                let spectrogram = &compute_arg
+                    .mic_spectrograms
                     .as_ref()
                     .unwrap()
-                    .get_histogram(use_gamma.into_inner());
+                    .get_spectrogram(use_gamma.into_inner());
 
                 UNFloat::new(
-                    histogram
+                    spectrogram
                         .bins()
                         .iter()
                         .enumerate()
                         .max_by_key(|(_, v)| FloatOrd(**v))
                         .unwrap()
                         .0 as f32
-                        / histogram.bins().len() as f32,
+                        / spectrogram.bins().len() as f32,
                 )
             }
 
             AverageMicFrequency { use_gamma } => {
-                let histogram = &compute_arg
-                    .mic_histograms
+                let spectrogram = &compute_arg
+                    .mic_spectrograms
                     .as_ref()
                     .unwrap()
-                    .get_histogram(use_gamma.into_inner());
+                    .get_spectrogram(use_gamma.into_inner());
 
-                let v = (histogram
+                let v = (spectrogram
                     .bins()
                     .iter()
                     .enumerate()
@@ -862,7 +862,7 @@ impl Node for UNFloatNodes {
                     .collect::<WeightedMean>()
                     .mean()
                     - 1.0) as f32
-                    / histogram.bins().len() as f32;
+                    / spectrogram.bins().len() as f32;
 
                 let v = if v.is_normal() { v } else { 0.0 };
 

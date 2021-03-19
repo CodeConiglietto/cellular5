@@ -15,13 +15,13 @@ use realfft::{num_complex::Complex, RealFftPlanner, RealToComplex};
 
 use crate::prelude::*;
 
-pub struct FrequencyHistogram {
+pub struct FrequencySpectrogram {
     current: Vec<f32>,
     next: Vec<f32>,
     max: f32,
 }
 
-impl FrequencyHistogram {
+impl FrequencySpectrogram {
     pub fn new(n_bins: usize) -> Self {
         Self {
             current: vec![0.0; n_bins],
@@ -48,20 +48,20 @@ impl FrequencyHistogram {
     }
 }
 
-pub struct FrequencyHistograms {
-    linear: FrequencyHistogram,
-    gamma: FrequencyHistogram,
+pub struct FrequencySpectrograms {
+    linear: FrequencySpectrogram,
+    gamma: FrequencySpectrogram,
 }
 
-impl FrequencyHistograms {
+impl FrequencySpectrograms {
     pub fn new(n_bins: usize) -> Self {
         Self {
-            linear: FrequencyHistogram::new(n_bins),
-            gamma: FrequencyHistogram::new(n_bins),
+            linear: FrequencySpectrogram::new(n_bins),
+            gamma: FrequencySpectrogram::new(n_bins),
         }
     }
 
-    pub fn get_histogram(&self, gamma: bool) -> &FrequencyHistogram {
+    pub fn get_spectrogram(&self, gamma: bool) -> &FrequencySpectrogram {
         if gamma {
             &self.gamma
         } else {
@@ -136,7 +136,7 @@ impl FftMicReader {
         })
     }
 
-    pub fn update(&mut self, histograms: &mut FrequencyHistograms) -> Fallible<()> {
+    pub fn update(&mut self, spectrograms: &mut FrequencySpectrograms) -> Fallible<()> {
         let stream_config = self.mic.config();
         let num_channels = stream_config.channels as usize;
 
@@ -144,8 +144,8 @@ impl FftMicReader {
 
         while let Some(chunk) = self.mic.next_chunk() {
             if first {
-                for histogram in &mut [&mut histograms.linear, &mut histograms.gamma] {
-                    for next_bin in histogram.next.iter_mut() {
+                for spectrogram in &mut [&mut spectrograms.linear, &mut spectrograms.gamma] {
+                    for next_bin in spectrogram.next.iter_mut() {
                         *next_bin = 0.0;
                     }
                 }
@@ -182,26 +182,26 @@ impl FftMicReader {
                     let power = scaled.norm_sqr();
                     let power_log = power.ln();
 
-                    for (gamma, histogram, prev_bin_idx) in &mut [
+                    for (gamma, spectrogram, prev_bin_idx) in &mut [
                         (
                             self.config.gamma,
-                            &mut histograms.gamma,
+                            &mut spectrograms.gamma,
                             &mut prev_gamma_bin_idx,
                         ),
-                        (1.0, &mut histograms.linear, &mut prev_lin_bin_idx),
+                        (1.0, &mut spectrograms.linear, &mut prev_lin_bin_idx),
                     ] {
                         let bin_idx = gamma_corrected_bin_idx(
                             fft_idx,
                             select_fft.len(),
                             self.config.min_frequency,
                             self.config.max_frequency,
-                            histogram.next.len(),
+                            spectrogram.next.len(),
                             *gamma,
                         );
 
                         let bin_range = (**prev_bin_idx + 1).min(bin_idx)..=bin_idx;
 
-                        for next_bin in &mut histogram.next[bin_range] {
+                        for next_bin in &mut spectrogram.next[bin_range] {
                             *next_bin = f32::max(*next_bin, power_log);
                         }
 
@@ -209,10 +209,12 @@ impl FftMicReader {
                     }
                 }
 
-                for histogram in &mut [&mut histograms.linear, &mut histograms.gamma] {
-                    for (bin, next_bin) in histogram.current.iter_mut().zip(histogram.next.iter()) {
+                for spectrogram in &mut [&mut spectrograms.linear, &mut spectrograms.gamma] {
+                    for (bin, next_bin) in
+                        spectrogram.current.iter_mut().zip(spectrogram.next.iter())
+                    {
                         *bin = bin.lerp(*next_bin, self.adj_lerp_factor);
-                        histogram.max = histogram.max.max(*bin);
+                        spectrogram.max = spectrogram.max.max(*bin);
                     }
                 }
             }

@@ -99,7 +99,7 @@ where
             coordinate_set: arg.coordinate_set,
             history: arg.history,
             current_t: arg.current_t,
-            mic_histograms: arg.mic_histograms,
+            mic_spectrograms: arg.mic_spectrograms,
             gamepads: arg.gamepads,
         })
     }
@@ -155,7 +155,7 @@ where
             coordinate_set,
             image_preloader,
             profiler,
-            mic_histograms,
+            mic_spectrograms,
             gamepads,
         } = arg;
 
@@ -198,7 +198,7 @@ where
                 coordinate_set,
                 image_preloader,
                 profiler: &mut None,
-                mic_histograms,
+                mic_spectrograms,
                 gamepads,
             };
 
@@ -225,7 +225,7 @@ where
                     coordinate_set,
                     image_preloader,
                     profiler,
-                    mic_histograms,
+                    mic_spectrograms,
                     gamepads,
                 },
             ),
@@ -269,7 +269,7 @@ where
                     coordinate_set: arg.coordinate_set,
                     image_preloader: arg.image_preloader,
                     profiler: arg.profiler,
-                    mic_histograms: arg.mic_histograms,
+                    mic_spectrograms: arg.mic_spectrograms,
                     gamepads: arg.gamepads,
                 },
             );
@@ -301,7 +301,7 @@ where
                 current_t: arg.current_t,
                 image_preloader: arg.image_preloader,
                 profiler: arg.profiler,
-                mic_histograms: arg.mic_histograms,
+                mic_spectrograms: arg.mic_spectrograms,
                 gamepads: arg.gamepads,
             });
         }
@@ -330,7 +330,7 @@ where
                 current_t: arg.current_t,
                 image_preloader: arg.image_preloader,
                 profiler: arg.profiler,
-                mic_histograms: arg.mic_histograms,
+                mic_spectrograms: arg.mic_spectrograms,
                 gamepads: arg.gamepads,
             });
         }

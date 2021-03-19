@@ -83,7 +83,7 @@ pub mod mutagen_functions {
     }
 
     pub fn mic_pipe_node_weight<T: MutagenArg>(arg: T) -> f64 {
-        if arg.mic_histograms().is_none() {
+        if arg.mic_spectrograms().is_none() {
             0.0
         } else {
             pipe_node_weight(arg)
@@ -91,7 +91,7 @@ pub mod mutagen_functions {
     }
 
     pub fn mic_leaf_node_weight<T: MutagenArg>(arg: T) -> f64 {
-        if arg.mic_histograms().is_none() {
+        if arg.mic_spectrograms().is_none() {
             0.0
         } else {
             leaf_node_weight(arg)
@@ -106,7 +106,7 @@ pub mod mutagen_functions {
         struct TestArg<'a> {
             depth: usize,
             gamepads: &'a Gamepads,
-            mic_histograms: &'a Option<FrequencyHistograms>,
+            mic_spectrograms: &'a Option<FrequencySpectrograms>,
         }
 
         impl<'a> MutagenArg for TestArg<'a> {
@@ -118,8 +118,8 @@ pub mod mutagen_functions {
                 &self.gamepads
             }
 
-            fn mic_histograms(&self) -> &Option<FrequencyHistograms> {
-                &self.mic_histograms
+            fn mic_spectrograms(&self) -> &Option<FrequencySpectrograms> {
+                &self.mic_spectrograms
             }
         }
 
@@ -129,7 +129,7 @@ pub mod mutagen_functions {
                 let arg = TestArg {
                     depth,
                     gamepads: &Gamepads::new(),
-                    mic_histograms: &Some(FrequencyHistograms::new(256)),
+                    mic_spectrograms: &Some(FrequencySpectrograms::new(256)),
                 };
 
                 assert!(
@@ -145,7 +145,7 @@ pub mod mutagen_functions {
             let arg = TestArg {
                 depth: max_node_depth(),
                 gamepads: &Gamepads::new(),
-                mic_histograms: &Some(FrequencyHistograms::new(256)),
+                mic_spectrograms: &Some(FrequencySpectrograms::new(256)),
             };
 
             assert!(leaf_node_weight(arg) > 0.0);

@@ -520,10 +520,10 @@ impl Node for ByteNodes {
             FromIterativeResult { child } => child.compute(compute_arg).iter_final,
             PeakMicFrequency { use_gamma } => Byte::new(
                 compute_arg
-                    .mic_histograms
+                    .mic_spectrograms
                     .as_ref()
                     .unwrap()
-                    .get_histogram(use_gamma.into_inner())
+                    .get_spectrogram(use_gamma.into_inner())
                     .bins()
                     .iter()
                     .enumerate()
@@ -534,10 +534,10 @@ impl Node for ByteNodes {
 
             AverageMicFrequency { use_gamma } => {
                 let v = compute_arg
-                    .mic_histograms
+                    .mic_spectrograms
                     .as_ref()
                     .unwrap()
-                    .get_histogram(use_gamma.into_inner())
+                    .get_spectrogram(use_gamma.into_inner())
                     .bins()
                     .iter()
                     .enumerate()

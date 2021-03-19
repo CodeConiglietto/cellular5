@@ -157,6 +157,7 @@ gamepad_node_weight_mod: 1.0
 #   max_frequency: 20000.0
 #   gamma: 2.0
 #   lerp_factor: 0.1
+#   range_decay_factor: 0.9
 #   target_fps: 60.0
 
 

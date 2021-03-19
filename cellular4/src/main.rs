@@ -800,7 +800,7 @@ impl EventHandler for MyGame {
 
         timer::yield_now();
 
-        std::thread::sleep(std::time::Duration::from_millis(1));
+        std::thread::sleep(std::time::Duration::from_millis(4));
 
         Ok(())
     }

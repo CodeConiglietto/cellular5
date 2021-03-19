@@ -120,7 +120,7 @@ pub enum FloatColorNodes {
     #[mutagen(gen_weight = branch_node_weight)]
     TriangleBlendAutomata {
         reseed_stable: Boolean,
-        rho_divisor: Nibble,
+        rho_divisor: Byte,
         child_rho: NodeBox<UNFloatNodes>,
         child_theta: NodeBox<AngleNodes>,
         child_normaliser: NodeBox<SFloatNormaliserNodes>,
@@ -130,7 +130,7 @@ pub enum FloatColorNodes {
     PolygonBlendAutomata {
         reseed_stable: Boolean,
         child_point_count: NodeBox<NibbleNodes>,
-        rho_divisor: Nibble,
+        rho_divisor: Byte,
         child_rho: NodeBox<UNFloatNodes>,
         child_theta: NodeBox<AngleNodes>,
         child_normaliser: NodeBox<SFloatNormaliserNodes>,
@@ -140,7 +140,7 @@ pub enum FloatColorNodes {
     PolygonAddSubtractAutomata {
         reseed_stable: Boolean,
         child_point_count: NodeBox<NibbleNodes>,
-        rho_divisor: Nibble,
+        rho_divisor: Byte,
         enforce_same_rho: Boolean,
         child_rho_a: NodeBox<UNFloatNodes>,
         child_rho_b: NodeBox<UNFloatNodes>,

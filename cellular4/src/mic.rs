@@ -112,9 +112,9 @@ impl FftMicReader {
             .collect::<Vec<_>>();
 
         let adj_lerp_factor =
-            adjust_for_slice_rate(config.lerp_factor, fft_in_buf.len(), sample_rate);
+            adjust_for_slice_rate(config.lerp_factor, sample_rate, fft_in_buf.len());
         let adj_range_decay_factor =
-            adjust_for_slice_rate(config.range_decay_factor, fft_in_buf.len(), sample_rate);
+            adjust_for_slice_rate(config.range_decay_factor, sample_rate, fft_in_buf.len());
 
         let norm = 1.0 / (fft_in_buf.len() as f32).sqrt();
 
@@ -251,7 +251,7 @@ fn frequency_to_fft_idx(freq: f32, sample_rate: u32, fft_out_buf_len: usize) -> 
     )
 }
 
-fn adjust_for_slice_rate(value: f32, fft_in_buf_len: usize, sample_rate: u32) -> f32 {
+fn adjust_for_slice_rate(value: f32, sample_rate: u32, fft_in_buf_len: usize) -> f32 {
     value.powf(fft_in_buf_len as f32 / sample_rate as f32)
 }
 

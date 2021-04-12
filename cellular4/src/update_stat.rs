@@ -32,12 +32,13 @@ pub struct UpdateStat {
 //How symmetrical it is over the x and y axes
 impl UpdateStat {
     pub fn should_mutate(&self) -> bool {
-        (thread_rng().gen::<f64>() * self.mutation_likelihood()).powf(3.0)
-                // * 0.5
+        (thread_rng().gen::<f64>() * self.mutation_likelihood()
                 * CONSTS.cell_array_lerp_length as f64
+                / CONSTS.target_fps as f64).powf(3.0)
          > thread_rng().gen::<f64>() * (1.0 - self.graph_stability)
         //TODO: The following are placeholders until we can get something better going
-        // || self.activity_value < 0.001
+        || self.activity_value <= 0.1e-5
+        || self.alpha_value <= 0.1e-5
         // || self.local_similarity_value > 0.999
         || self.global_similarity_value > 0.99
     }

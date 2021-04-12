@@ -576,6 +576,15 @@ impl HSVColor {
         }
     }
 
+    pub fn offset_hue(self, hue: Angle) -> Self {
+        Self {
+            h: self.h.add(hue),
+            s: self.s,
+            v: self.v,
+            a: self.a,
+        }
+    }
+
     pub const ALL_ZERO: Self = Self {
         h: Angle::ZERO,
         s: UNFloat::ZERO,

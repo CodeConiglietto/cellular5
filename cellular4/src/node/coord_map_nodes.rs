@@ -7,8 +7,8 @@ use crate::prelude::*;
 #[derive(Generatable, UpdatableRecursively, Mutatable, Serialize, Deserialize, Debug)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum CoordMapNodes {
-    // #[mutagen(gen_weight = leaf_node_weight)]
-    #[mutagen(gen_weight = 20.0)]
+    #[mutagen(gen_weight = leaf_node_weight)]
+    // #[mutagen(gen_weight = 20.0)]
     Identity,
 
     #[mutagen(gen_weight = pipe_node_weight)]
@@ -46,6 +46,16 @@ pub enum CoordMapNodes {
 
     #[mutagen(gen_weight = leaf_node_weight)]
     Abs,
+
+    #[mutagen(gen_weight = mic_pipe_node_weight)]
+    ShiftAxisSpectrogram {
+        axis: Boolean,
+        invert_freq_indexing: Boolean,
+        use_gamma: Boolean,
+        odd_sign: Boolean,
+        even_sign: Boolean,
+        child_normaliser: NodeBox<SFloatNormaliserNodes>,
+    },
 
     #[mutagen(gen_weight = branch_node_weight)]
     SelectiveAbs {
@@ -216,6 +226,51 @@ impl Node for CoordMapNodes {
                     y: p.y().abs(),
                     t: compute_arg.coordinate_set.t,
                 }
+            }
+            ShiftAxisSpectrogram {
+                axis,
+                invert_freq_indexing,
+                use_gamma,
+                odd_sign,
+                even_sign,
+                child_normaliser,
+            } => {
+                let axis = axis.into_inner();
+                let invert_freq_indexing = invert_freq_indexing.into_inner();
+
+                let axis_value = if axis {
+                    compute_arg.coordinate_set.x.to_unsigned().into_inner()
+                } else {
+                    compute_arg.coordinate_set.y.to_unsigned().into_inner()
+                };
+
+                let freq = ((axis_value * 256.0) as usize).min(255);
+
+                let mut val = SNFloat::new(
+                    compute_arg
+                        .mic_spectrograms()
+                        .as_ref()
+                        .unwrap()
+                        .get_spectrogram(use_gamma.into_inner())
+                        .get_normalised(if invert_freq_indexing {
+                            255 - freq
+                        } else {
+                            freq
+                        })
+                        .into_inner(),
+                );
+
+                if freq % 2 == 0 && even_sign.into_inner() || freq % 2 == 1 && odd_sign.into_inner()
+                {
+                    val = val.invert();
+                }
+
+                compute_arg.coordinate_set.get_coord_shifted(
+                    if axis { SNFloat::ZERO } else { val },
+                    if axis { val } else { SNFloat::ZERO },
+                    SNFloat::ZERO,
+                    child_normaliser.compute(compute_arg.reborrow()),
+                )
             }
             SelectiveAbs {
                 child_abs_x,

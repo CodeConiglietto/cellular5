@@ -120,8 +120,8 @@ impl<'a> Mutatable<'a> for Nibble {
     type MutArg = MutArg<'a>;
     fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, _arg: MutArg<'a>) {
         match rng.gen_range(0, 3) {
-            0 => *self = Self::new((self.into_inner() + 1) % 16),
-            1 => *self = Self::new((self.into_inner() - 1) % 16),
+            0 => *self = Self::new(self.into_inner().saturating_add(1) % 16),
+            1 => *self = Self::new(self.into_inner().saturating_sub(1) % 16), //TODO: This won't wrap equally in both directiosn. Fix pls
             2 => *self = Self::random(rng),
             _ => unreachable!(),
         }

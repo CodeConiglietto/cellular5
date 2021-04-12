@@ -24,21 +24,18 @@ pub enum FloatColorNodes {
     #[mutagen(gen_weight = pipe_node_weight)]
     Grayscale { child: NodeBox<UNFloatNodes> },
 
-    //Brute force attempt to get more visually satisfying behaviour
     #[mutagen(gen_weight = pipe_node_weight)]
-    AbsChildCoords { child: NodeBox<FloatColorNodes> },
+    FromGenericColor { child: NodeBox<GenericColorNodes> },
+    
     #[mutagen(gen_weight = pipe_node_weight)]
     InvertXBlendChild { child: NodeBox<FloatColorNodes> },
-    #[mutagen(gen_weight = pipe_node_weight)]
-    HueTShifting {
-        child: NodeBox<FloatColorNodes>,
-        scaling_factor: SNFloat,
-    },
+
     #[mutagen(gen_weight = branch_node_weight)]
-    HueShifting {
-        child: NodeBox<FloatColorNodes>,
-        child_shift_value: NodeBox<SNFloatNodes>,
+    GrayscaleWithAlpha {
+        child: NodeBox<UNFloatNodes>,
+        child_alpha: NodeBox<UNFloatNodes>,
     },
+
     #[mutagen(gen_weight = branch_node_weight)]
     SetSaturation {
         child: NodeBox<FloatColorNodes>,
@@ -263,7 +260,7 @@ impl Node for FloatColorNodes {
                     ((compute_arg.coordinate_set.y.into_inner() + 1.0)
                         * 0.5
                         * CONSTS.cell_array_height as f32) as usize,
-                    (compute_arg.reborrow().current_t - 1).max(0),
+                    compute_arg.reborrow().current_t.saturating_sub(1),
                 )
                 .into(),
             Grayscale { child } => {
@@ -275,73 +272,22 @@ impl Node for FloatColorNodes {
                     a: value,
                 }
             }
-            AbsChildCoords { child } => {
-                let new_point = compute_arg.coordinate_set.get_coord_point().abs();
-                child.compute(compute_arg.reborrow().replace_coords(&new_point))
+            GrayscaleWithAlpha { child, child_alpha } => {
+                let value = child.compute(compute_arg.reborrow());
+                FloatColor {
+                    r: value,
+                    g: value,
+                    b: value,
+                    a: child_alpha.compute(compute_arg.reborrow()),
+                }
             }
+            FromGenericColor { child } => child.compute(compute_arg).into(),
             InvertXBlendChild { child } => {
                 let new_point = compute_arg.coordinate_set.get_coord_point().invert_x();
                 let color_a = child.compute(compute_arg.reborrow());
                 let color_b = child.compute(compute_arg.reborrow().replace_coords(&new_point));
 
                 color_a.lerp(color_b, UNFloat::new(0.5))
-            }
-            HueTShifting {
-                child,
-                scaling_factor,
-            } => {
-                let color = child.compute(compute_arg.reborrow());
-
-                let hsv_tuple = rgb_tuple_to_hsv_tuple(
-                    color.r.into_inner(),
-                    color.g.into_inner(),
-                    color.b.into_inner(),
-                );
-
-                let rgb_tuple = hsv_tuple_to_rgb_tuple(
-                    hsv_tuple.0
-                        + compute_arg
-                            .reborrow()
-                            .coordinate_set
-                            .get_unfloat_t()
-                            .into_inner()
-                            * scaling_factor.into_inner(),
-                    hsv_tuple.1,
-                    hsv_tuple.2,
-                );
-
-                FloatColor {
-                    r: UNFloat::new(rgb_tuple.0),
-                    g: UNFloat::new(rgb_tuple.1),
-                    b: UNFloat::new(rgb_tuple.2),
-                    a: color.a,
-                }
-            }
-            HueShifting {
-                child,
-                child_shift_value,
-            } => {
-                let color = child.compute(compute_arg.reborrow());
-                let shift_value = child_shift_value.compute(compute_arg.reborrow());
-
-                let hsv_tuple = rgb_tuple_to_hsv_tuple(
-                    color.r.into_inner(),
-                    color.g.into_inner(),
-                    color.b.into_inner(),
-                );
-
-                let rgb_tuple = hsv_tuple_to_rgb_tuple(
-                    hsv_tuple.0 + shift_value.into_inner(),
-                    hsv_tuple.1,
-                    hsv_tuple.2,
-                );
-
-                FloatColor {
-                    r: UNFloat::new(rgb_tuple.0),
-                    g: UNFloat::new(rgb_tuple.1),
-                    b: UNFloat::new(rgb_tuple.2),
-                    a: color.a,
-                }
             }
             SetSaturation {
                 child,
@@ -516,7 +462,7 @@ impl Node for FloatColorNodes {
             } => {
                 let rho = UNFloat::new(
                     child_rho.compute(compute_arg.reborrow()).into_inner()
-                        / (rho_divisor.into_inner() + 1) as f32,
+                        / rho_divisor.into_inner().saturating_add(1) as f32,
                 );
                 let theta = child_theta.compute(compute_arg.reborrow());
                 let normaliser = child_normaliser.compute(compute_arg.reborrow());
@@ -524,7 +470,7 @@ impl Node for FloatColorNodes {
                 // TODO rewrite this once we have a polar type node
                 let middle = compute_arg.coordinate_set.get_coord_point();
 
-                let hist_t = (compute_arg.reborrow().current_t - 1).max(0);
+                let hist_t = compute_arg.reborrow().current_t.saturating_sub(1);
 
                 compute_arg.reborrow().history.get_normalised(
                     middle.normalised_add(
@@ -547,7 +493,7 @@ impl Node for FloatColorNodes {
             } => {
                 let rho = UNFloat::new(
                     child_rho.compute(compute_arg.reborrow()).into_inner()
-                        / (rho_divisor.into_inner() + 1) as f32,
+                        / rho_divisor.into_inner().saturating_add(1) as f32,
                 );
                 let theta = child_theta.compute(compute_arg.reborrow());
                 let normaliser = child_normaliser.compute(compute_arg.reborrow());
@@ -559,7 +505,7 @@ impl Node for FloatColorNodes {
                 // TODO rewrite this once we have a polar type node
                 let middle = compute_arg.coordinate_set.get_coord_point();
 
-                let hist_t = (compute_arg.reborrow().current_t - 1).max(0);
+                let hist_t = compute_arg.reborrow().current_t.saturating_sub(1);
 
                 let color_a = compute_arg.reborrow().history.get_normalised(
                     middle.normalised_add(
@@ -684,14 +630,14 @@ impl Node for FloatColorNodes {
                     + 1;
                 let rho_a = UNFloat::new(
                     child_rho_a.compute(compute_arg.reborrow()).into_inner()
-                        / (rho_divisor.into_inner() + 1) as f32,
+                        / rho_divisor.into_inner().saturating_add(1) as f32,
                 );
                 let rho_b = if enforce_same_rho.into_inner() {
                     rho_a
                 } else {
                     UNFloat::new(
                         child_rho_b.compute(compute_arg.reborrow()).into_inner()
-                            / (rho_divisor.into_inner() + 1) as f32,
+                            / rho_divisor.into_inner().saturating_add(1) as f32,
                     )
                 };
                 let theta_a = child_theta_a.compute(compute_arg.reborrow());
@@ -705,7 +651,7 @@ impl Node for FloatColorNodes {
                 // TODO rewrite this once we have a polar type node
                 let middle = compute_arg.coordinate_set.get_coord_point();
 
-                let hist_t = (compute_arg.reborrow().current_t - 1).max(0);
+                let hist_t = compute_arg.reborrow().current_t.saturating_sub(1);
 
                 let coordinate_set = compute_arg.reborrow().coordinate_set;
 
@@ -820,7 +766,7 @@ impl Node for FloatColorNodes {
                 let rho = UNFloat::new(
                     child_rho.compute(compute_arg.reborrow()).into_inner()
                         / (8 - point_count + 1) as f32
-                        / (rho_divisor.into_inner() + 1) as f32,
+                        / rho_divisor.into_inner().saturating_add(1) as f32,
                 );
                 let theta = child_theta.compute(compute_arg.reborrow());
                 let normaliser = child_normaliser.compute(compute_arg.reborrow());
@@ -828,7 +774,7 @@ impl Node for FloatColorNodes {
                 // TODO rewrite this once we have a polar type node
                 let middle = compute_arg.coordinate_set.get_coord_point();
 
-                let hist_t = (compute_arg.reborrow().current_t - 1).max(0);
+                let hist_t = compute_arg.reborrow().current_t.saturating_sub(1);
 
                 let mut r_total = 0.0;
                 let mut g_total = 0.0;
@@ -1187,9 +1133,10 @@ pub enum BitColorNodes {
     FromUNFloat { child: NodeBox<UNFloatNodes> },
 
     #[mutagen(gen_weight = pipe_node_weight)]
-    FromFloatColor { child: NodeBox<FloatColorNodes> },
-    #[mutagen(gen_weight = pipe_node_weight)]
-    FromByteColor { child: NodeBox<ByteColorNodes> },
+    FromGenericColor { child: NodeBox<GenericColorNodes> },
+
+    // #[mutagen(gen_weight = pipe_node_weight)]
+    // FromByteColor { child: NodeBox<ByteColorNodes> },
     #[mutagen(gen_weight = pipe_node_weight)]
     FromNibbleIndex { child: NodeBox<NibbleNodes> },
 
@@ -1262,8 +1209,8 @@ impl Node for BitColorNodes {
                     * 0.99
                     * (CONSTS.max_colors) as f32) as usize,
             ),
-            FromFloatColor { child } => child.compute(compute_arg.reborrow()).into(),
-            FromByteColor { child } => child.compute(compute_arg.reborrow()).into(),
+            FromGenericColor { child } => child.compute(compute_arg).into(),
+            // FromByteColor { child } => child.compute(compute_arg.reborrow()).into(),
             FromNibbleIndex { child } => BitColor::from_index(
                 child.compute(compute_arg.reborrow()).into_inner() as usize % 8,
             ),
@@ -1300,13 +1247,15 @@ pub enum ByteColorNodes {
 
     #[mutagen(gen_weight = leaf_node_weight)]
     FromImage { image: Image },
+
     #[mutagen(gen_weight = leaf_node_weight)]
     FromCellArray,
-    #[mutagen(gen_weight = pipe_node_weight)]
-    FromFloatColor { child: NodeBox<FloatColorNodes> },
-    #[mutagen(gen_weight = pipe_node_weight)]
-    FromBitColor { child: NodeBox<FloatColorNodes> },
 
+    #[mutagen(gen_weight = pipe_node_weight)]
+    FromGenericColor { child: NodeBox<GenericColorNodes> },
+
+    // #[mutagen(gen_weight = pipe_node_weight)]
+    // FromBitColor { child: NodeBox<FloatColorNodes> },
     #[mutagen(gen_weight = branch_node_weight)]
     Decompose {
         r: NodeBox<ByteNodes>,
@@ -1385,8 +1334,8 @@ impl Node for ByteColorNodes {
 
                 color
             }
-            FromFloatColor { child } => child.compute(compute_arg.reborrow()).into(),
-            FromBitColor { child } => child.compute(compute_arg.reborrow()).into(),
+            FromGenericColor { child } => child.compute(compute_arg).into(),
+            // FromBitColor { child } => child.compute(compute_arg.reborrow()).into(),
             ModifyState { child, child_state } => child.compute(ComArg {
                 coordinate_set: child_state.compute(compute_arg.reborrow()),
                 ..compute_arg.reborrow()
@@ -1419,7 +1368,7 @@ pub enum HSVColorNodes {
     Constant { value: HSVColor },
 
     #[mutagen(gen_weight = pipe_node_weight)]
-    FromFloatColor { child: NodeBox<FloatColorNodes> },
+    FromGenericColor { child: NodeBox<GenericColorNodes> },
 
     #[mutagen(gen_weight = branch_node_weight)]
     FromComponents {
@@ -1428,6 +1377,17 @@ pub enum HSVColorNodes {
         v: NodeBox<UNFloatNodes>,
         a: NodeBox<UNFloatNodes>,
         offset: Angle,
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    OffsetHue {
+        child_color: NodeBox<HSVColorNodes>,
+        child_offset: NodeBox<AngleNodes>,
+    },
+    #[mutagen(gen_weight = pipe_node_weight)]
+    HueTShifting {
+        child_color: NodeBox<HSVColorNodes>,
+        scaling_factor: SNFloat,
     },
 
     #[mutagen(gen_weight = 0.0)]
@@ -1462,7 +1422,7 @@ impl Node for HSVColorNodes {
         match self {
             Constant { value } => *value,
 
-            FromFloatColor { child } => child.compute(compute_arg).into(),
+            FromGenericColor { child } => child.compute(compute_arg).into(),
 
             FromComponents { h, s, v, a, offset } => HSVColor {
                 h: h.compute(compute_arg.reborrow()) + *offset,
@@ -1470,6 +1430,32 @@ impl Node for HSVColorNodes {
                 v: v.compute(compute_arg.reborrow()),
                 a: a.compute(compute_arg.reborrow()),
             },
+
+            OffsetHue {
+                child_color,
+                child_offset,
+            } => {
+                let c = child_color.compute(compute_arg.reborrow());
+
+                c.offset_hue(child_offset.compute(compute_arg.reborrow()))
+            }
+            HueTShifting {
+                child_color,
+                scaling_factor,
+            } => {
+                let c = child_color.compute(compute_arg.reborrow());
+
+                c.offset_hue(Angle::new(
+                    compute_arg
+                        .reborrow()
+                        .coordinate_set
+                        .get_unfloat_t()
+                        .to_signed()
+                        .to_angle()
+                        .into_inner()
+                        * scaling_factor.into_inner(),
+                ))
+            }
 
             DucksFractal {
                 //TODO make gooderer
@@ -1582,7 +1568,7 @@ pub enum CMYKColorNodes {
     Constant { value: CMYKColor },
 
     #[mutagen(gen_weight = pipe_node_weight)]
-    FromFloatColor { child: NodeBox<FloatColorNodes> },
+    FromGenericColor { child: NodeBox<GenericColorNodes> },
 
     #[mutagen(gen_weight = branch_node_weight)]
     FromComponents {
@@ -1616,7 +1602,7 @@ impl Node for CMYKColorNodes {
         match self {
             Constant { value } => *value,
 
-            FromFloatColor { child } => child.compute(compute_arg).into(),
+            FromGenericColor { child } => child.compute(compute_arg).into(),
 
             FromComponents { c, m, y, k, a } => CMYKColor {
                 c: c.compute(compute_arg.reborrow()),
@@ -1659,7 +1645,7 @@ pub enum LABColorNodes {
     Constant { value: LABColor },
 
     #[mutagen(gen_weight = pipe_node_weight)]
-    FromFloatColor { child: NodeBox<FloatColorNodes> },
+    FromGenericColor { child: NodeBox<GenericColorNodes> },
 
     #[mutagen(gen_weight = branch_node_weight)]
     FromComponents {
@@ -1697,7 +1683,7 @@ impl Node for LABColorNodes {
         match self {
             Constant { value } => *value,
 
-            FromFloatColor { child } => child.compute(compute_arg).into(),
+            FromGenericColor { child } => child.compute(compute_arg).into(),
 
             FromComponents { l, ab, alpha } => LABColor {
                 l: l.compute(compute_arg.reborrow()),
@@ -1747,18 +1733,27 @@ impl<'a> Updatable<'a> for LABColorNodes {
 #[derive(Generatable, UpdatableRecursively, Mutatable, Serialize, Deserialize, Debug)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum GenericColorNodes {
+    //Necessary for using a generic color node as a child
+    #[mutagen(gen_weight = leaf_node_weight)]
+    Constant { value: FloatColor },
     #[mutagen(mut_reroll = 0.5)]
+    #[mutagen(gen_weight = pipe_node_weight)]
     Float { child: NodeBox<FloatColorNodes> },
     #[mutagen(mut_reroll = 0.5)]
+    #[mutagen(gen_weight = pipe_node_weight)]
     Byte { child: NodeBox<ByteColorNodes> },
     #[mutagen(mut_reroll = 0.5)]
+    #[mutagen(gen_weight = pipe_node_weight)]
     Bit { child: NodeBox<BitColorNodes> },
 
     #[mutagen(mut_reroll = 0.5)]
+    #[mutagen(gen_weight = pipe_node_weight)]
     HSV { child: NodeBox<HSVColorNodes> },
     #[mutagen(mut_reroll = 0.5)]
+    #[mutagen(gen_weight = pipe_node_weight)]
     CMYK { child: NodeBox<CMYKColorNodes> },
     #[mutagen(mut_reroll = 0.5)]
+    #[mutagen(gen_weight = pipe_node_weight)]
     LAB { child: NodeBox<LABColorNodes> },
 }
 
@@ -1769,6 +1764,7 @@ impl Node for GenericColorNodes {
         use GenericColorNodes::*;
 
         match self {
+            Constant { value } => *value,
             Float { child } => child.compute(compute_arg),
             Byte { child } => child.compute(compute_arg).into(),
             Bit { child } => child.compute(compute_arg).into(),

@@ -9,6 +9,7 @@ pub struct NodeSet {
     //color_blend
     color_blend_nodes: Metarena<ColorBlendNodes>,
     //color
+    generic_color_nodes: Metarena<GenericColorNodes>,
     bit_color_nodes: Metarena<BitColorNodes>,
     byte_color_nodes: Metarena<ByteColorNodes>,
     float_color_nodes: Metarena<FloatColorNodes>,
@@ -91,6 +92,16 @@ impl Storage<ColorBlendNodes> for NodeSet {
 
     fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<ColorBlendNodes>> {
         &mut self.color_blend_nodes.value
+    }
+}
+
+impl Storage<GenericColorNodes> for NodeSet {
+    fn arena(&self) -> &Arena<ArenaSlot<GenericColorNodes>> {
+        &self.generic_color_nodes.value
+    }
+
+    fn arena_mut(&mut self) -> &mut Arena<ArenaSlot<GenericColorNodes>> {
+        &mut self.generic_color_nodes.value
     }
 }
 

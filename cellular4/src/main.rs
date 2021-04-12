@@ -733,7 +733,7 @@ impl EventHandler for MyGame {
             //Workaround, TODO:please fix
             //double TODO: fix this please it could be breaking other stuff
             //triple TODO: please it's important
-            self.next_history_step.update_coordinate.t = timer::time_since_start(ctx).as_secs_f32();//current_t as f32;
+            self.next_history_step.update_coordinate.t = timer::time_since_start(ctx).as_secs_f32(); //current_t as f32;
 
             let mut step_upd_arg = UpdArg {
                 coordinate_set: self.next_history_step.update_coordinate,

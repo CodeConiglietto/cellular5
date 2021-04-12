@@ -65,12 +65,12 @@ impl UNFloat {
     }
 
     pub fn new_sin(value: f32) -> Self {
-        let scaled_value = (value  - 0.5) * PI;
+        let scaled_value = (value - 0.5) * PI;
         Self::new(scaled_value.sin() / 2.0 + 0.5)
     }
 
     pub fn new_sin_repeating(value: f32) -> Self {
-        let scaled_value = (value  + 0.5) * PI * 2.0;
+        let scaled_value = (value + 0.5) * PI * 2.0;
         Self::new(scaled_value.sin() / 2.0 + 0.5)
     }
 

@@ -26,7 +26,7 @@ pub enum FloatColorNodes {
 
     #[mutagen(gen_weight = pipe_node_weight)]
     FromGenericColor { child: NodeBox<GenericColorNodes> },
-    
+
     #[mutagen(gen_weight = pipe_node_weight)]
     InvertXBlendChild { child: NodeBox<FloatColorNodes> },
 

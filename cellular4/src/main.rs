@@ -18,6 +18,7 @@ use ggez::{
     graphics,
     graphics::Image as GgImage,
     input::keyboard,
+    mint::Point2,
     timer, Context, ContextBuilder, GameResult,
 };
 use log::{info, warn};
@@ -228,6 +229,7 @@ struct MyGame {
     mic: Option<FftMicReader>,
     mic_spectrograms: Option<FrequencySpectrograms>,
     gamepads: Gamepads,
+    mouse_position: Point2<f32>,
 
     //The rolling total used to calculate the average per update instead of per slice
     rolling_update_stat_total: UpdateStat,
@@ -307,6 +309,7 @@ impl MyGame {
         };
 
         let mut gamepads = Gamepads::new();
+        let mut mouse_position = ggez::input::mouse::position(ctx);
 
         MyGame {
             blank_texture: compute_blank_texture(ctx),
@@ -346,6 +349,7 @@ impl MyGame {
                     profiler: &mut profiler,
                     mic_spectrograms: &mic_spectrograms,
                     gamepads: &mut gamepads,
+                    mouse_position: &mut mouse_position,
                 },
             ),
 
@@ -367,6 +371,7 @@ impl MyGame {
             mic,
             mic_spectrograms,
             gamepads,
+            mouse_position,
         }
     }
 }
@@ -481,7 +486,9 @@ impl EventHandler for MyGame {
 
         let history = &self.history;
         let mic_spectrograms = &self.mic_spectrograms;
+        //TODO
         let gamepads = &self.gamepads;
+        let mut mouse_position = ggez::input::mouse::position(ctx);
 
         //let rule_sets = self.rule_sets;
 
@@ -508,6 +515,7 @@ impl EventHandler for MyGame {
                 depth: 0,
                 mic_spectrograms,
                 gamepads,
+                mouse_position: &mouse_position,
             };
 
             let transformed_coords = root_coordinate_node.compute(compute_arg.reborrow());
@@ -642,6 +650,7 @@ impl EventHandler for MyGame {
                             profiler: &mut self.profiler,
                             mic_spectrograms: &self.mic_spectrograms,
                             gamepads: &mut self.gamepads,
+                            mouse_position: &mut self.mouse_position,
                         },
                     );
                 } else {
@@ -660,6 +669,7 @@ impl EventHandler for MyGame {
                                 profiler: &mut self.profiler,
                                 mic_spectrograms: &self.mic_spectrograms,
                                 gamepads: &mut self.gamepads,
+                                mouse_position: &mut self.mouse_position,
                             },
                         );
                     } else {
@@ -677,6 +687,7 @@ impl EventHandler for MyGame {
                                 profiler: &mut self.profiler,
                                 mic_spectrograms: &self.mic_spectrograms,
                                 gamepads: &mut self.gamepads,
+                                mouse_position: &mut self.mouse_position,
                             },
                         );
                     }
@@ -707,6 +718,7 @@ impl EventHandler for MyGame {
                 mic_spectrograms: &self.mic_spectrograms,
                 gamepads: &mut self.gamepads,
                 current_t,
+                mouse_position: &mut mouse_position,
             };
 
             // dbg!(last_update_arg.coordinate_set);
@@ -721,7 +733,7 @@ impl EventHandler for MyGame {
             //Workaround, TODO:please fix
             //double TODO: fix this please it could be breaking other stuff
             //triple TODO: please it's important
-            self.next_history_step.update_coordinate.t = current_t as f32;
+            self.next_history_step.update_coordinate.t = timer::time_since_start(ctx).as_secs_f32();//current_t as f32;
 
             let mut step_upd_arg = UpdArg {
                 coordinate_set: self.next_history_step.update_coordinate,
@@ -734,6 +746,7 @@ impl EventHandler for MyGame {
                 mic_spectrograms: &self.mic_spectrograms,
                 gamepads: &mut self.gamepads,
                 current_t,
+                mouse_position: &mut mouse_position,
             };
 
             let mut step_com_arg: ComArg = step_upd_arg.reborrow().into();
@@ -782,6 +795,7 @@ impl EventHandler for MyGame {
                     gamepads: &mut self.gamepads,
                     depth,
                     current_t,
+                    mouse_position: &mut mouse_position,
                 };
 
                 current.update_recursively(step_upd_arg.reborrow());

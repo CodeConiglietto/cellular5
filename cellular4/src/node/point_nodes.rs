@@ -15,6 +15,10 @@ pub enum SNPointNodes {
     #[mutagen(gen_weight = leaf_node_weight)]
     Constant { value: SNPoint },
     #[mutagen(gen_weight = pipe_node_weight)]
+    MouseCoords {
+        child_normaliser: NodeBox<UFloatNormaliserNodes>,
+    },
+    #[mutagen(gen_weight = pipe_node_weight)]
     FromComplex {
         child_complex: NodeBox<SNComplexNodes>,
     },
@@ -55,6 +59,18 @@ impl Node for SNPointNodes {
             Zero => SNPoint::zero(),
             Coordinate => compute_arg.coordinate_set.get_coord_point(),
             Constant { value } => *value,
+            MouseCoords { child_normaliser } => {
+                let mouse_pos = compute_arg.reborrow().mouse_position.clone();
+                let normaliser = child_normaliser.compute(compute_arg.reborrow());
+                SNPoint::from_snfloats(
+                    normaliser
+                        .normalise(mouse_pos.x / CONSTS.initial_window_width as f32)
+                        .to_signed(),
+                    normaliser
+                        .normalise(mouse_pos.y / CONSTS.initial_window_height as f32)
+                        .to_signed(),
+                )
+            }
             FromComplex { child_complex } => {
                 SNPoint::from_complex(child_complex.compute(compute_arg))
             }

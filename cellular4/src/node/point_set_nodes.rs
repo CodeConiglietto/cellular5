@@ -15,6 +15,7 @@ pub enum PointSetNodes {
     #[mutagen(gen_weight = leaf_node_weight)]
     PointSpectrogram {
         value: PointSet,
+        force_min_zero: Boolean,
         range_a: Byte,
         range_b: Byte,
         use_gamma: Boolean,
@@ -22,6 +23,7 @@ pub enum PointSetNodes {
     #[mutagen(gen_weight = leaf_node_weight)]
     CenteredPointSpectrogram {
         value: PointSet,
+        force_min_zero: Boolean,
         range_a: Byte,
         range_b: Byte,
         use_gamma: Boolean,
@@ -134,17 +136,34 @@ impl<'a> Updatable<'a> for PointSetNodes {
         match self {
             PointSetNodes::PointSpectrogram {
                 ref mut value,
+                force_min_zero,
                 range_a,
                 range_b,
                 use_gamma,
             } => {
+                let range_a = if force_min_zero.into_inner() {
+                    0
+                } else {
+                    range_a.into_inner()
+                };
+                let range_b = range_b.into_inner();
+                let mut min = range_a.min(range_b);
+                let mut max = range_a.max(range_b);
+
+                if min == max {
+                    min = 0;
+                    max = 255;
+                }
+
+                let difference = max - min;
+
                 let mut samples = Vec::new();
 
                 let use_gamma = use_gamma.into_inner();
 
-                let x_ratio = 1.0 / 128.0;
+                let x_ratio = 1.0 / difference as f32;
 
-                for i in 0..128 {
+                for i in 0..difference {
                     samples.push(SNPoint::from_snfloats(
                         SNFloat::new((i as f32 * x_ratio + 0.5 * x_ratio) * 2.0 - 1.0),
                         SNFloat::new(
@@ -152,7 +171,7 @@ impl<'a> Updatable<'a> for PointSetNodes {
                                 .as_ref()
                                 .unwrap()
                                 .get_spectrogram(use_gamma)
-                                .get_normalised(i)
+                                .get_normalised((i + min) as usize)
                                 .into_inner()
                                 * if i % 2 == 0 { 1.0 } else { -1.0 },
                         ),
@@ -163,17 +182,34 @@ impl<'a> Updatable<'a> for PointSetNodes {
             }
             PointSetNodes::CenteredPointSpectrogram {
                 ref mut value,
+                force_min_zero,
                 range_a,
                 range_b,
                 use_gamma,
             } => {
+                let range_a = if force_min_zero.into_inner() {
+                    0
+                } else {
+                    range_a.into_inner()
+                } / 2;
+                let range_b = range_b.into_inner() / 2;
+                let mut min = range_a.min(range_b);
+                let mut max = range_a.max(range_b);
+
+                if min == max {
+                    min = 0;
+                    max = 127;
+                }
+
+                let difference = max - min;
+
                 let mut samples = Vec::new();
 
                 let use_gamma = use_gamma.into_inner();
 
-                let x_ratio = 1.0 / 64.0;
+                let x_ratio = 1.0 / difference as f32;
 
-                for i in 0..64 {
+                for i in 0..difference {
                     let point = SNPoint::from_snfloats(
                         SNFloat::new(i as f32 * x_ratio + 0.5 * x_ratio),
                         SNFloat::new(
@@ -181,7 +217,7 @@ impl<'a> Updatable<'a> for PointSetNodes {
                                 .as_ref()
                                 .unwrap()
                                 .get_spectrogram(use_gamma)
-                                .get_normalised(i)
+                                .get_normalised((i + min) as usize)
                                 .into_inner()
                                 * if i % 2 == 0 { 1.0 } else { -1.0 },
                         ),

@@ -1,6 +1,7 @@
 use mutagen::Reborrow;
 
 use crate::prelude::*;
+use ggez::mint::Point2;
 
 pub trait MutagenArg {
     fn depth(&self) -> usize;
@@ -20,6 +21,7 @@ pub struct GenArg<'a> {
     pub image_preloader: &'a Preloader<Image>,
     pub profiler: &'a mut Option<MutagenProfiler>,
     pub gamepads: &'a mut Gamepads,
+    pub mouse_position: &'a mut Point2<f32>,
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, GenArg<'a>> for GenArg<'b> {
@@ -35,6 +37,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, GenArg<'a>> for GenArg<'b> {
             image_preloader: &self.image_preloader,
             profiler: &mut self.profiler,
             gamepads: &mut self.gamepads,
+            mouse_position: &mut self.mouse_position,
         }
     }
 }
@@ -72,6 +75,7 @@ pub struct MutArg<'a> {
     pub image_preloader: &'a Preloader<Image>,
     pub profiler: &'a mut Option<MutagenProfiler>,
     pub gamepads: &'a mut Gamepads,
+    pub mouse_position: &'a mut Point2<f32>,
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, MutArg<'a>> for MutArg<'b> {
@@ -87,6 +91,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, MutArg<'a>> for MutArg<'b> {
             image_preloader: &self.image_preloader,
             profiler: &mut self.profiler,
             gamepads: &mut self.gamepads,
+            mouse_position: &mut self.mouse_position,
         }
     }
 }
@@ -104,6 +109,7 @@ impl<'a> From<MutArg<'a>> for GenArg<'a> {
             image_preloader: arg.image_preloader,
             profiler: arg.profiler,
             gamepads: arg.gamepads,
+            mouse_position: arg.mouse_position,
         }
     }
 }
@@ -140,6 +146,7 @@ pub struct ComArg<'a> {
     pub current_t: usize,
     pub mic_spectrograms: &'a Option<FrequencySpectrograms>,
     pub gamepads: &'a Gamepads,
+    pub mouse_position: &'a Point2<f32>,
 }
 
 impl<'a> ComArg<'a> {
@@ -171,6 +178,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, ComArg<'a>> for ComArg<'b> {
             current_t: self.current_t,
             mic_spectrograms: &self.mic_spectrograms,
             gamepads: &self.gamepads,
+            mouse_position: &self.mouse_position,
         }
     }
 }
@@ -202,6 +210,7 @@ pub struct UpdArg<'a> {
     pub mic_spectrograms: &'a Option<FrequencySpectrograms>,
     pub profiler: &'a mut Option<MutagenProfiler>,
     pub gamepads: &'a mut Gamepads,
+    pub mouse_position: &'a mut Point2<f32>,
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, UpdArg<'a>> for UpdArg<'b> {
@@ -217,6 +226,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, UpdArg<'a>> for UpdArg<'b> {
             image_preloader: &self.image_preloader,
             profiler: &mut self.profiler,
             gamepads: &mut self.gamepads,
+            mouse_position: &mut self.mouse_position,
         }
     }
 }
@@ -232,6 +242,7 @@ impl<'a> From<UpdArg<'a>> for ComArg<'a> {
             current_t: arg.current_t,
             mic_spectrograms: arg.mic_spectrograms,
             gamepads: arg.gamepads,
+            mouse_position: arg.mouse_position,
         }
     }
 }
@@ -249,6 +260,7 @@ impl<'a> From<GenArg<'a>> for UpdArg<'a> {
             profiler: arg.profiler,
             mic_spectrograms: arg.mic_spectrograms,
             gamepads: arg.gamepads,
+            mouse_position: arg.mouse_position,
         }
     }
 }

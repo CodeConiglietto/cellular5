@@ -64,6 +64,16 @@ impl UNFloat {
         Self::new((scaled_value.fract() - scaled_value.signum().min(0.0) - 0.5).abs() * 2.0)
     }
 
+    pub fn new_sin(value: f32) -> Self {
+        let scaled_value = (value  - 0.5) * PI;
+        Self::new(scaled_value.sin() / 2.0 + 0.5)
+    }
+
+    pub fn new_sin_repeating(value: f32) -> Self {
+        let scaled_value = (value  + 0.5) * PI * 2.0;
+        Self::new(scaled_value.sin() / 2.0 + 0.5)
+    }
+
     pub fn sawtooth_add(self, other: Self) -> Self {
         self.sawtooth_add_f32(other.into_inner())
     }
@@ -181,9 +191,7 @@ impl SNFloat {
     }
 
     pub fn force_sign(self, sign: bool) -> Self {
-        Self::new(
-            self.value.abs() * if sign {1.0} else {-1.0}
-        )
+        Self::new(self.value.abs() * if sign { 1.0 } else { -1.0 })
     }
 
     pub fn invert(self) -> Self {
@@ -206,6 +214,16 @@ impl SNFloat {
     pub fn new_triangle(value: f32) -> Self {
         let scaled_value = (value - 1.0) / 4.0;
         Self::new((scaled_value.fract() - scaled_value.signum().min(0.0) - 0.5).abs() * 4.0 - 1.0)
+    }
+
+    pub fn new_sin(value: f32) -> Self {
+        let scaled_value = value / (2.0 * PI);
+        Self::new(scaled_value.sin())
+    }
+
+    pub fn new_sin_repeating(value: f32) -> Self {
+        let scaled_value = value * PI;
+        Self::new(scaled_value.sin())
     }
 
     pub fn new_fractional(value: f32) -> Self {
@@ -341,6 +359,10 @@ impl Angle {
         );
 
         Self::new_unchecked(normalised)
+    }
+
+    pub fn add(self, other: Self) -> Self {
+        Self::new(self.value + other.value)
     }
 
     pub fn average(self, other: Self) -> Self {

@@ -10,6 +10,8 @@ use crate::{datatype::continuous::*, mutagen_args::*};
 pub enum SFloatNormaliser {
     Sawtooth,
     Triangle,
+    Sin,
+    SinRepeating,
     TanH,
     Clamp,
     Fractional,
@@ -23,6 +25,8 @@ impl SFloatNormaliser {
         match self {
             Sawtooth => SNFloat::new_sawtooth(non_normal_to_default(value)),
             Triangle => SNFloat::new_triangle(non_normal_to_default(value)),
+            Sin => SNFloat::new_sin(non_normal_to_default(value)),
+            SinRepeating => SNFloat::new_sin_repeating(non_normal_to_default(value)),
             TanH => SNFloat::new_tanh(non_normal_to_default(value)),
             Clamp => SNFloat::new_clamped(non_normal_to_default(value)),
             Fractional => SNFloat::new_fractional(non_normal_to_default(value)),
@@ -45,6 +49,8 @@ pub enum UFloatNormaliser {
     //TODO: Add sigmoid function
     Sawtooth,
     Triangle,
+    Sin,
+    SinRepeating,
     Clamp,
     Random,
 }
@@ -56,6 +62,8 @@ impl UFloatNormaliser {
         match self {
             Sawtooth => UNFloat::new_sawtooth(non_normal_to_default(value)),
             Triangle => UNFloat::new_triangle(non_normal_to_default(value)),
+            Sin => UNFloat::new_sin(non_normal_to_default(value)),
+            SinRepeating => UNFloat::new_sin_repeating(non_normal_to_default(value)),
             Clamp => UNFloat::new_clamped(non_normal_to_default(value)),
             Random => UNFloat::new_random_clamped(non_normal_to_default(value)),
         }

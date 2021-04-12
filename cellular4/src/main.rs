@@ -831,6 +831,8 @@ impl EventHandler for MyGame {
 
             if now < next_update_time {
                 thread::sleep(next_update_time - now);
+            } else {
+                timer::yield_now();
             }
         } else {
             timer::yield_now();

@@ -248,7 +248,7 @@ impl Node for FloatColorNodes {
                 .get_pixel_normalised(
                     compute_arg.coordinate_set.x,
                     compute_arg.coordinate_set.y,
-                    compute_arg.coordinate_set.t * 24.0,
+                    compute_arg.coordinate_set.t,
                 )
                 .into(),
             FromCellArray => compute_arg
@@ -1189,7 +1189,7 @@ impl Node for BitColorNodes {
                 .get_pixel_normalised(
                     compute_arg.coordinate_set.x,
                     compute_arg.coordinate_set.y,
-                    compute_arg.coordinate_set.t * 24.0,
+                    compute_arg.coordinate_set.t,
                 )
                 .into(),
             FromCellArray => compute_arg
@@ -1301,7 +1301,7 @@ impl Node for ByteColorNodes {
             FromImage { image } => image.get_pixel_normalised(
                 compute_arg.coordinate_set.x,
                 compute_arg.coordinate_set.y,
-                compute_arg.coordinate_set.t * CONSTS.target_fps as f32,
+                compute_arg.coordinate_set.t,
             ),
             FromCellArray => compute_arg.history.get(
                 ((compute_arg.coordinate_set.x.into_inner() + 1.0)
@@ -1430,7 +1430,7 @@ impl Node for HSVColorNodes {
             FromImage { image } => FloatColor::from(image.get_pixel_normalised(
                 compute_arg.coordinate_set.x,
                 compute_arg.coordinate_set.y,
-                compute_arg.coordinate_set.t * 24.0,
+                compute_arg.coordinate_set.t,
             ))
             .into(),
 

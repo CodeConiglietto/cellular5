@@ -1,4 +1,5 @@
 use std::{
+    cmp::Ordering,
     fmt::{self, Debug, Display, Formatter},
     fs,
     io::Cursor,
@@ -138,12 +139,17 @@ pub struct Image(Arc<ImageData>);
 
 pub struct ImageData {
     source: ImageSource,
-    frames: Vec<RgbaImage>,
+    frames: Vec<ImageFrame>,
+    total_delay: f32,
 }
 
 impl Image {
-    pub fn new(source: ImageSource, frames: Vec<RgbaImage>) -> Self {
-        Self(Arc::new(ImageData { source, frames }))
+    pub fn new(source: ImageSource, frames: Vec<ImageFrame>) -> Self {
+        Self(Arc::new(ImageData {
+            source,
+            total_delay: frames.iter().map(|f| f.delay).sum(),
+            frames,
+        }))
     }
 
     pub fn load_file<P: AsRef<Path>>(path: P) -> image::ImageResult<Self> {
@@ -161,34 +167,37 @@ impl Image {
         Ok(Self::new(source, load_frames(data, format)?))
     }
 
-    pub fn get_pixel_wrapped(&self, x: u32, y: u32, t: u32) -> ByteColor {
-        let frame_count = self.0.frames.len();
-        let t_value = ((t as usize % frame_count) + frame_count) % frame_count;
+    pub fn get_frame_for_t(&self, t: f32) -> &ImageFrame {
+        if self.0.frames.len() == 1 {
+            return &self.0.frames[0];
+        }
 
-        let image_width = self.0.frames[t_value].width();
-        let image_height = self.0.frames[t_value].height();
+        let total_delay = self.0.total_delay;
 
-        //TODO refactor into helper method
-        (*self.0.frames[t_value].get_pixel(
-            ((x % image_width) + image_width) % image_width,
-            ((y % image_height) + image_height) % image_height,
-        ))
-        .into()
+        let t_normalised = match t.partial_cmp(&0.0).unwrap() {
+            Ordering::Greater => (t / total_delay).fract() * total_delay,
+            Ordering::Less => (t / total_delay).fract() * total_delay + total_delay,
+            Ordering::Equal => t,
+        };
+
+        let mut t_sum = 0.0;
+        self.0
+            .frames
+            .iter()
+            .find(|f| {
+                t_sum += f.delay;
+                t_sum >= t_normalised
+            })
+            .unwrap()
+    }
+
+    pub fn get_pixel_wrapped(&self, x: u32, y: u32, t: f32) -> ByteColor {
+        self.get_frame_for_t(t).get_pixel_wrapped(x, y)
     }
 
     //get a pixel from coords (-1.0..1.0, -1.0..1.0, 0.0..infinity)
     pub fn get_pixel_normalised(&self, x: SNFloat, y: SNFloat, t: f32) -> ByteColor {
-        let frame_count = self.0.frames.len();
-        let t_value = ((t as usize % frame_count) + frame_count) % frame_count;
-
-        let image_width = self.0.frames[t_value].width() as f32;
-        let image_height = self.0.frames[t_value].height() as f32;
-
-        self.get_pixel_wrapped(
-            (x.to_unsigned().into_inner() * image_width) as u32,
-            (y.to_unsigned().into_inner() * image_height) as u32,
-            t_value as u32,
-        )
+        self.get_frame_for_t(t).get_pixel_normalised(x, y)
     }
 
     pub fn source(&self) -> &ImageSource {
@@ -199,6 +208,35 @@ impl Image {
         ImageInfo {
             source: self.0.source.clone(),
         }
+    }
+}
+
+pub struct ImageFrame {
+    image: RgbaImage,
+    delay: f32,
+}
+
+impl ImageFrame {
+    pub fn get_pixel_wrapped(&self, x: u32, y: u32) -> ByteColor {
+        let image_width = self.image.width();
+        let image_height = self.image.height();
+
+        //TODO refactor into helper method
+        (*self.image.get_pixel(
+            ((x % image_width) + image_width) % image_width,
+            ((y % image_height) + image_height) % image_height,
+        ))
+        .into()
+    }
+
+    pub fn get_pixel_normalised(&self, x: SNFloat, y: SNFloat) -> ByteColor {
+        let image_width = self.image.width() as f32;
+        let image_height = self.image.height() as f32;
+
+        self.get_pixel_wrapped(
+            (x.to_unsigned().into_inner() * image_width) as u32,
+            (y.to_unsigned().into_inner() * image_height) as u32,
+        )
     }
 }
 
@@ -219,36 +257,47 @@ impl Display for ImageSource {
     }
 }
 
-fn load_frames(data: &[u8], format: Option<ImageFormat>) -> image::ImageResult<Vec<RgbaImage>> {
-    // Special handling for gifs in case they are animated
+fn load_frames(data: &[u8], format: Option<ImageFormat>) -> image::ImageResult<Vec<ImageFrame>> {
+    // Special handling for animated images
     match format {
         Some(ImageFormat::Gif) => Ok(gif::GifDecoder::new(Cursor::new(data))?
             .into_frames()
             .collect_frames()?
             .into_iter()
             .map(|f| {
-                imageops::resize(
-                    &f.into_buffer(),
-                    CONSTS.cell_array_width as u32,
-                    CONSTS.cell_array_height as u32,
-                    FilterType::Gaussian,
-                )
+                let (n, d) = f.delay().numer_denom_ms();
+
+                ImageFrame {
+                    image: imageops::resize(
+                        f.buffer(),
+                        CONSTS.cell_array_width as u32,
+                        CONSTS.cell_array_height as u32,
+                        FilterType::Gaussian,
+                    ),
+                    delay: (n as f32 / d as f32) / 1000.0,
+                }
             })
             .collect()),
 
-        Some(format) => Ok(vec![imageops::resize(
-            &image::load_from_memory_with_format(data, format)?.to_rgba8(),
-            CONSTS.cell_array_width as u32,
-            CONSTS.cell_array_height as u32,
-            FilterType::Gaussian,
-        )]),
+        Some(format) => Ok(vec![ImageFrame {
+            image: imageops::resize(
+                &image::load_from_memory_with_format(data, format)?.to_rgba8(),
+                CONSTS.cell_array_width as u32,
+                CONSTS.cell_array_height as u32,
+                FilterType::Gaussian,
+            ),
+            delay: 0.0,
+        }]),
 
-        None => Ok(vec![imageops::resize(
-            &image::load_from_memory(data)?.to_rgba8(),
-            CONSTS.cell_array_width as u32,
-            CONSTS.cell_array_height as u32,
-            FilterType::Gaussian,
-        )]),
+        None => Ok(vec![ImageFrame {
+            image: imageops::resize(
+                &image::load_from_memory(data)?.to_rgba8(),
+                CONSTS.cell_array_width as u32,
+                CONSTS.cell_array_height as u32,
+                FilterType::Gaussian,
+            ),
+            delay: 0.0,
+        }]),
     }
 }
 

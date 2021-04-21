@@ -51,11 +51,11 @@ macro_rules! ldbg {
     };
 
     ($val:expr,) => {
-        $crate::ldbg!($val)
+        ldbg!($val)
     };
 
     ($($val:expr),+ $(,)?) => {
-        ($($crate::ldbg!($val)),+,)
+        ($(ldbg!($val)),+,)
     };
 }
 

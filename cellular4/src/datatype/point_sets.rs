@@ -208,7 +208,7 @@ pub enum PointSetGenerator {
 
 impl PointSetGenerator {
     pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
-        match rng.gen_range(0..=12) {
+        match rng.gen_range(0..13) {
             // Skip Origin
             0 => PointSetGenerator::Moore,
             1 => PointSetGenerator::VonNeumann,

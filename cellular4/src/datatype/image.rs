@@ -274,7 +274,7 @@ fn load_frames(data: &[u8], format: Option<ImageFormat>) -> image::ImageResult<V
                         CONSTS.cell_array_height as u32,
                         FilterType::Gaussian,
                     ),
-                    delay: 1000.0 * (n as f32 / d as f32),
+                    delay: (n as f32 / d as f32) / 1000.0,
                 }
             })
             .collect()),

@@ -498,12 +498,15 @@ impl EventHandler for MyGame {
         let data = &self.data;
         let total_cells = CONSTS.cell_array_width * CONSTS.cell_array_height;
 
+        let t_coord = timer::time_since_start(ctx).as_secs_f32();
+
         let update_step = |y, x, mut new: ArrayViewMut1<u8>| {
             let coordinate_set = CoordinateSet {
                 x: UNFloat::new(x as f32 / CONSTS.cell_array_width as f32).to_signed(),
                 y: UNFloat::new((y + slice_y as usize) as f32 / CONSTS.cell_array_height as f32)
                     .to_signed(),
-                t: current_t as f32,
+                // t: current_t as f32,
+                t: t_coord,
             };
 
             let mut compute_arg = ComArg {
@@ -733,7 +736,8 @@ impl EventHandler for MyGame {
             //Workaround, TODO:please fix
             //double TODO: fix this please it could be breaking other stuff
             //triple TODO: please it's important
-            self.next_history_step.update_coordinate.t = timer::time_since_start(ctx).as_secs_f32(); //current_t as f32;
+            // self.next_history_step.update_coordinate.t = current_t as f32;
+            self.next_history_step.update_coordinate.t = t_coord;
 
             let mut step_upd_arg = UpdArg {
                 coordinate_set: self.next_history_step.update_coordinate,

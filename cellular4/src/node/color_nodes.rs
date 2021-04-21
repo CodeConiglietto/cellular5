@@ -248,7 +248,7 @@ impl Node for FloatColorNodes {
                 .get_pixel_normalised(
                     compute_arg.coordinate_set.x,
                     compute_arg.coordinate_set.y,
-                    compute_arg.coordinate_set.t,
+                    compute_arg.coordinate_set.t * 24.0,
                 )
                 .into(),
             FromCellArray => compute_arg
@@ -1189,7 +1189,7 @@ impl Node for BitColorNodes {
                 .get_pixel_normalised(
                     compute_arg.coordinate_set.x,
                     compute_arg.coordinate_set.y,
-                    compute_arg.coordinate_set.t,
+                    compute_arg.coordinate_set.t * 24.0,
                 )
                 .into(),
             FromCellArray => compute_arg
@@ -1301,7 +1301,7 @@ impl Node for ByteColorNodes {
             FromImage { image } => image.get_pixel_normalised(
                 compute_arg.coordinate_set.x,
                 compute_arg.coordinate_set.y,
-                compute_arg.coordinate_set.t,
+                compute_arg.coordinate_set.t * CONSTS.target_fps as f32,
             ),
             FromCellArray => compute_arg.history.get(
                 ((compute_arg.coordinate_set.x.into_inner() + 1.0)
@@ -1370,6 +1370,9 @@ pub enum HSVColorNodes {
     #[mutagen(gen_weight = pipe_node_weight)]
     FromGenericColor { child: NodeBox<GenericColorNodes> },
 
+    #[mutagen(gen_weight = leaf_node_weight)]
+    FromImage { image: Image },
+
     #[mutagen(gen_weight = branch_node_weight)]
     FromComponents {
         h: NodeBox<AngleNodes>,
@@ -1423,6 +1426,13 @@ impl Node for HSVColorNodes {
             Constant { value } => *value,
 
             FromGenericColor { child } => child.compute(compute_arg).into(),
+
+            FromImage { image } => FloatColor::from(image.get_pixel_normalised(
+                compute_arg.coordinate_set.x,
+                compute_arg.coordinate_set.y,
+                compute_arg.coordinate_set.t * 24.0,
+            ))
+            .into(),
 
             FromComponents { h, s, v, a, offset } => HSVColor {
                 h: h.compute(compute_arg.reborrow()) + *offset,

@@ -96,6 +96,14 @@ pub enum BooleanNodes {
         child_range_a: NodeBox<ByteNodes>,
         child_range_b: NodeBox<ByteNodes>,
     },
+    #[mutagen(gen_weight = pipe_node_weight)]
+    #[mutagen(gen_preferred)]
+    ElementaryAutomataBuffer {
+        buffer: Buffer<Boolean>,
+        rule: ElementaryAutomataRule,
+        // #[mutagen(ignore)]
+        // current_index: usize,
+    },
     // #[mutagen(gen_weight = branch_node_weight)]
     // Majority {
     //     child:NodeBox<BooleanNodes>,
@@ -229,6 +237,9 @@ impl Node for BooleanNodes {
                 Boolean {
                     value: value > min && value < max,
                 }
+            }
+            ElementaryAutomataBuffer { buffer, .. } => {
+                buffer[compute_arg.coordinate_set.get_coord_point()]
             }
             // Majority {
             //     child,

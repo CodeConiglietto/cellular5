@@ -1,3 +1,4 @@
+pub mod automata_rules;
 pub mod buffers;
 pub mod color_blend_functions;
 pub mod colors;

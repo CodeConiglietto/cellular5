@@ -5,7 +5,7 @@ use std::{
 };
 
 use bresenham::Bresenham;
-use mutagen::{Generatable, Mutatable, Updatable, UpdatableRecursively};
+use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
 use nalgebra::*;
 use ndarray::prelude::*;
 use rand::prelude::*;
@@ -26,9 +26,19 @@ impl<T> Buffer<T> {
         let (height, width) = self.array.dim();
 
         Point2::new(
-            ((coords.x().to_unsigned().into_inner() * width as f32) as usize).min(width - 1),
-            ((coords.y().to_unsigned().into_inner() * height as f32) as usize).min(height - 1),
+            ((coords.x().to_unsigned().into_inner() * width as f32).round() as usize)
+                .min(width - 1),
+            ((coords.y().to_unsigned().into_inner() * height as f32).round() as usize)
+                .min(height - 1),
         )
+    }
+
+    pub fn width(&self) -> usize {
+        self.array.ncols()
+    }
+
+    pub fn height(&self) -> usize {
+        self.array.nrows()
     }
 
     pub fn info(&self) -> BufferInfo {
@@ -119,13 +129,28 @@ where
     }
 }
 
-impl<'a, T: Default + Generatable<'a>> Generatable<'a> for Buffer<T> {
-    type GenArg = T::GenArg;
-
-    fn generate_rng<R: Rng + ?Sized>(_rng: &mut R, _arg: Self::GenArg) -> Self {
+impl<'a, T: Default> Default for Buffer<T> {
+    fn default() -> Self {
         Self::new(Array2::from_shape_fn(
             (CONSTS.cell_array_height, CONSTS.cell_array_width),
-            |(_y, _x)| T::default(), //generate_rng(rng, state, arg.clone()),
+            |(_y, _x)| T::default(),
+        ))
+    }
+}
+
+impl<'a, T> Generatable<'a> for Buffer<T>
+where
+    for<'b> T: Generatable<'b, GenArg = GenArg<'b>>,
+{
+    type GenArg = GenArg<'a>;
+
+    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, mut arg: Self::GenArg) -> Self {
+        Self::new(Array2::from_shape_fn(
+            (CONSTS.cell_array_height, CONSTS.cell_array_width),
+            move |(_y, _x)| {
+                let a: GenArg<'_> = GenArg::<'a>::reborrow(&mut arg);
+                T::generate_rng(rng, a)
+            },
         ))
     }
 }
@@ -189,12 +214,13 @@ mod test {
     }
 
     #[test]
+    #[rustfmt::skip]
     fn draw_line_tests() {
         test_draw_line(
             (-1.0, -1.0),
-            (-0.01, -0.01),
+            (-0.5, -0.5),
             array![
-                [1, 0, 0, 0], // comment for cargo fmt
+                [1, 0, 0, 0],
                 [0, 1, 0, 0],
                 [0, 0, 0, 0],
                 [0, 0, 0, 0],
@@ -205,7 +231,7 @@ mod test {
             (-1.0, -1.0),
             (0.0, 0.0),
             array![
-                [1, 0, 0, 0], // comment for cargo fmt
+                [1, 0, 0, 0],
                 [0, 1, 0, 0],
                 [0, 0, 1, 0],
                 [0, 0, 0, 0],
@@ -216,7 +242,7 @@ mod test {
             (-1.0, -1.0),
             (1.0, 1.0),
             array![
-                [1, 0, 0, 0], // comment for cargo fmt
+                [1, 0, 0, 0],
                 [0, 1, 0, 0],
                 [0, 0, 1, 0],
                 [0, 0, 0, 1],
@@ -227,7 +253,7 @@ mod test {
             (1.0, -1.0),
             (1.0, 1.0),
             array![
-                [0, 0, 0, 1], // comment for cargo fmt
+                [0, 0, 0, 1],
                 [0, 0, 0, 1],
                 [0, 0, 0, 1],
                 [0, 0, 0, 1],
@@ -238,7 +264,7 @@ mod test {
             (-1.0, 1.0),
             (1.0, -1.0),
             array![
-                [0, 0, 0, 1], // comment for cargo fmt
+                [0, 0, 0, 1],
                 [0, 0, 1, 0],
                 [0, 1, 0, 0],
                 [1, 0, 0, 0],

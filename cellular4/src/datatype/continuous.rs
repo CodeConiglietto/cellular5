@@ -465,10 +465,42 @@ impl<'a> UpdatableRecursively<'a> for Angle {
 mod tests {
     use super::*;
 
+    use approx::assert_relative_eq;
+
     #[test]
     fn test_angles() {
         for i in 0..100_000 {
             Angle::new(i as f32);
+        }
+    }
+
+    #[test]
+    fn test_sign_conversions() {
+        let n = 100_000;
+
+        for i in 0..n {
+            let un = UNFloat::new(i as f32 / n as f32);
+            let sn = un.to_signed();
+            let un2 = sn.to_unsigned();
+            let sn2 = un2.to_signed();
+
+            assert_relative_eq!(un.into_inner(), un2.into_inner());
+            assert_relative_eq!(sn.into_inner(), sn2.into_inner());
+        }
+    }
+
+    #[test]
+    fn test_integer_conversions() {
+        let n = 100_000;
+
+        for i in 0..n {
+            let un = UNFloat::new(i as f32 / n as f32);
+            let sn = un.to_signed();
+            let un2 = sn.to_unsigned();
+
+            let i2 = (un2.into_inner() * n as f32).round() as usize;
+
+            assert_eq!(i, i2);
         }
     }
 }

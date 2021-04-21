@@ -145,6 +145,8 @@ pub struct ImageData {
 
 impl Image {
     pub fn new(source: ImageSource, frames: Vec<ImageFrame>) -> Self {
+        assert!(!frames.is_empty());
+
         Self(Arc::new(ImageData {
             source,
             total_delay: frames.iter().map(|f| f.delay).sum(),
@@ -188,7 +190,7 @@ impl Image {
                 t_sum += f.delay;
                 t_sum >= t_normalised
             })
-            .unwrap()
+            .unwrap_or_else(|| &self.0.frames[self.0.frames.len() - 1])
     }
 
     pub fn get_pixel_wrapped(&self, x: u32, y: u32, t: f32) -> ByteColor {

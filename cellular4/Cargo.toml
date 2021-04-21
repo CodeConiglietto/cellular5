@@ -11,7 +11,7 @@ dot-serde = { path = "../dot-serde" }
 # TODO Update this to 0.6.0 once that's released
 ggez = { git = "https://github.com/cerebralcourt/ggez.git", branch = "patch-1" }
 
-approx = "0.3.2"
+approx = "0.4.0"
 bresenham = "0.1.1"
 chrono = { version = "0.4.10", features = ["serde"] }
 cpu-monitor = "0.1.1"
@@ -25,7 +25,7 @@ image = "0.23.0"
 itertools = "0.8.1"
 lazy_static = "1.4.0"
 log = "0.4.8"
-nalgebra = { version = "0.21.0", features = ["serde-serialize"] }
+nalgebra = { version = "0.26.0", features = ["serde-serialize"] }
 ndarray = { version = "0.13.0", features = ["rayon"] }
 noise = { version = "0.7.0", default-features = false }
 num = "0.2"

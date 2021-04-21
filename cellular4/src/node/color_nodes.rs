@@ -172,6 +172,7 @@ pub enum FloatColorNodes {
 
     #[mutagen(gen_weight = branch_node_weight)]
     PointDrawingBuffer {
+        #[serde(skip)]
         buffer: Buffer<FloatColor>,
         child: NodeBox<SNPointNodes>,
         child_color: NodeBox<FloatColorNodes>,
@@ -184,6 +185,7 @@ pub enum FloatColorNodes {
 
     #[mutagen(gen_weight = branch_node_weight)]
     PointSetLineBuffer {
+        #[serde(skip)]
         buffer: Buffer<FloatColor>,
         child_point_set: NodeBox<PointSetNodes>,
         child_point: NodeBox<SNPointNodes>,
@@ -192,6 +194,7 @@ pub enum FloatColorNodes {
 
     #[mutagen(gen_weight = branch_node_weight)]
     PointSetDotBuffer {
+        #[serde(skip)]
         buffer: Buffer<FloatColor>,
         child_point_set: NodeBox<PointSetNodes>,
         child_color: NodeBox<FloatColorNodes>,
@@ -199,6 +202,7 @@ pub enum FloatColorNodes {
 
     #[mutagen(gen_weight = branch_node_weight)]
     IterativeCenteredPolarLineBuffer {
+        #[serde(skip)]
         buffer: Buffer<FloatColor>,
         // TODO Replace child_theta and child_rho with a polar coordinate node when they're implemented
         theta: Angle,
@@ -209,6 +213,7 @@ pub enum FloatColorNodes {
 
     #[mutagen(gen_weight = branch_node_weight)]
     IterativePolarLineBuffer {
+        #[serde(skip)]
         buffer: Buffer<FloatColor>,
         // TODO Replace child_theta and child_rho with a polar coordinate node when they're implemented
         child_theta: NodeBox<AngleNodes>,
@@ -221,6 +226,7 @@ pub enum FloatColorNodes {
 
     #[mutagen(gen_weight = branch_node_weight)]
     ClosestPointLineBuffer {
+        #[serde(skip)]
         buffer: Buffer<FloatColor>,
         child_a: NodeBox<PointSetNodes>,
         child_b: NodeBox<PointSetNodes>,
@@ -229,6 +235,7 @@ pub enum FloatColorNodes {
 
     #[mutagen(gen_weight = branch_node_weight)]
     NextPointLineBuffer {
+        #[serde(skip)]
         buffer: Buffer<FloatColor>,
         child_set: NodeBox<PointSetNodes>,
         child_index: NodeBox<ByteNodes>,

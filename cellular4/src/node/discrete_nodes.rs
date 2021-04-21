@@ -1,6 +1,7 @@
 use average::WeightedMean;
 use float_ord::FloatOrd;
 use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
+use nalgebra::*;
 use serde::{Deserialize, Serialize};
 
 use crate::prelude::*;
@@ -101,8 +102,7 @@ pub enum BooleanNodes {
     ElementaryAutomataBuffer {
         buffer: Buffer<Boolean>,
         rule: ElementaryAutomataRule,
-        // #[mutagen(ignore)]
-        // current_index: usize,
+        current_index: SInt,
     },
     // #[mutagen(gen_weight = branch_node_weight)]
     // Majority {
@@ -287,6 +287,30 @@ impl<'a> Updatable<'a> for BooleanNodes {
         match self {
             FromGamepadButton { button, id } => {
                 arg.gamepads[*id].button_states.get_mut(*button).in_use = true
+            }
+
+            ElementaryAutomataBuffer {
+                buffer,
+                rule,
+                ref mut current_index,
+            } => {
+                let w = buffer.width();
+                let h = buffer.height();
+
+                let y = current_index.into_inner().rem_euclid(h as i32) as usize;
+                let prev_y = (y as isize - 1).rem_euclid(h as isize) as usize;
+
+                for x in 0..w {
+                    let p = Point2::new(x, y);
+
+                    let pl = Point2::new((x as isize - 1).rem_euclid(w as isize) as usize, prev_y);
+                    let pc = Point2::new(x, prev_y);
+                    let pr = Point2::new((x + 1) % w, prev_y);
+
+                    buffer[p] = rule.get_value_from_booleans(buffer[pl], buffer[pc], buffer[pr]);
+                }
+
+                *current_index = current_index.circular_add(SInt::new(1));
             }
 
             _ => {}

@@ -44,7 +44,7 @@ impl DistanceFunction {
     }
 
     pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
-        match rng.gen_range(0, 4) {
+        match rng.gen_range(0..=3) {
             0 => DistanceFunction::Euclidean,
             1 => DistanceFunction::Manhattan,
             2 => DistanceFunction::Chebyshev,

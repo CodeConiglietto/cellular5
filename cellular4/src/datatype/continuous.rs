@@ -124,7 +124,7 @@ impl UNFloat {
     pub const ONE: Self = Self { value: 1.0 };
 
     pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
-        Self::new_unchecked(rng.gen_range(0.0, 1.0))
+        Self::new_unchecked(rng.gen_range(0.0..=1.0))
     }
 }
 
@@ -285,7 +285,7 @@ impl SNFloat {
     }
 
     pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
-        Self::new_unchecked(rng.gen_range(-1.0, 1.0))
+        Self::new_unchecked(rng.gen_range(-1.0..=1.0))
     }
 
     pub fn lerp(self, other: SNFloat, scalar: UNFloat) -> Self {
@@ -386,7 +386,7 @@ impl Angle {
     }
 
     pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
-        Self::new_unchecked(rng.gen_range(-PI, PI))
+        Self::new_unchecked(rng.gen_range(-PI..=PI))
     }
 
     pub const ZERO: Self = Self { value: 0.0 };

@@ -57,7 +57,7 @@ impl ImageDownloader for Smithsonian {
                 return Err(format_err!("No topics available"));
             }
 
-            let topic_idx = rng.gen_range(0, self.topics.len());
+            let topic_idx = rng.gen_range(0..self.topics.len());
             let topic = &self.topics[topic_idx];
 
             match self.topic_items.entry(String::from(topic)) {

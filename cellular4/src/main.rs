@@ -535,7 +535,10 @@ impl EventHandler for MyGame {
             let current_color = history.get(x, y, current_t);
             let older_color = history.get(x, y, usize::max(current_t, 1) - 1);
 
-            let local_offset = (thread_rng().gen_range(-1, 2), thread_rng().gen_range(-1, 2));
+            let local_offset = (
+                thread_rng().gen_range(-1..=1),
+                thread_rng().gen_range(-1..=1),
+            );
             let local_color = history.get(
                 (x as i32 + local_offset.0)
                     .max(0)
@@ -577,7 +580,7 @@ impl EventHandler for MyGame {
                 .sum()
         } else {
             let mut stat = UpdateStat::default();
-            zip.apply(|(y, x), new| stat += update_step(y, x, new));
+            zip.for_each(|(y, x), new| stat += update_step(y, x, new));
             stat
         } / total_cells as f64;
 

@@ -208,7 +208,7 @@ pub enum PointSetGenerator {
 
 impl PointSetGenerator {
     pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
-        match rng.gen_range(0, 13) {
+        match rng.gen_range(0..=12) {
             // Skip Origin
             0 => PointSetGenerator::Moore,
             1 => PointSetGenerator::VonNeumann,
@@ -674,7 +674,7 @@ pub fn poisson<R: Rng + ?Sized>(
     const K: usize = 30;
 
     while points.len() < count && !active.is_empty() {
-        let active_idx = rng.gen_range(0, active.len());
+        let active_idx = rng.gen_range(0..active.len());
         let p = points[active[active_idx]];
         let mut attempts = 0;
 
@@ -685,8 +685,8 @@ pub fn poisson<R: Rng + ?Sized>(
                 break None;
             }
 
-            let theta = rng.gen_range(0.0, 2.0 * PI);
-            let r = rng.gen_range(radius, radius * 2.0);
+            let theta = rng.gen_range(0.0..2.0 * PI);
+            let r = rng.gen_range(radius..=radius * 2.0);
             let dx = f32::cos(theta) * r;
             let dy = f32::sin(theta) * r;
 

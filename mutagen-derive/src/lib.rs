@@ -564,7 +564,7 @@ where
 
         let total_weight = cumul_weights[#n - 1];
         assert!(total_weight > 0.0, "Failed to roll {}. Total weight was {} (should be > 0).", #err, total_weight);
-        let roll: f64 = rng.gen_range(0.0, total_weight);
+        let roll: f64 = rng.gen_range(0.0..total_weight);
 
         #checks
 

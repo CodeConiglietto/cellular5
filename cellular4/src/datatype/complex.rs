@@ -86,8 +86,8 @@ impl SNComplex {
 
     pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
         Self::new(Complex::new(
-            rng.gen_range(-1.0, 1.0),
-            rng.gen_range(-1.0, 1.0),
+            rng.gen_range(-1.0..=1.0),
+            rng.gen_range(-1.0..=1.0),
         ))
     }
 

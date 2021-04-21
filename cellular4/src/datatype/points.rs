@@ -147,8 +147,8 @@ impl SNPoint {
 
     pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
         Self::new(Point2::new(
-            rng.gen_range(-1.0, 1.0),
-            rng.gen_range(-1.0, 1.0),
+            rng.gen_range(-1.0..=1.0),
+            rng.gen_range(-1.0..=1.0),
         ))
     }
 }
@@ -367,8 +367,8 @@ impl<'a> UpdatableRecursively<'a> for SNPoint {
 
 //     pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
 //         Self::new(Point2::new(
-//             rng.gen_range(-1.0, 1.0),
-//             rng.gen_range(-1.0, 1.0),
+//             rng.gen_range(-1.0..=1.0),
+//             rng.gen_range(-1.0..=1.0),
 //         ))
 //     }
 // }

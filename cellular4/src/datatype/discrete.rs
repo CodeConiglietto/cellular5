@@ -36,7 +36,7 @@ impl<'a> Generatable<'a> for Boolean {
 impl<'a> Mutatable<'a> for Boolean {
     type MutArg = MutArg<'a>;
     fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, _arg: MutArg<'a>) {
-        match rng.gen_range(0, 2) {
+        match rng.gen_range(0..=1) {
             0 => *self = Self::random(rng),
             1 => *self = Self::new(!self.into_inner()),
             _ => unreachable!(),
@@ -102,7 +102,7 @@ impl Nibble {
     }
 
     pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
-        Nibble::new_unchecked(rng.gen_range(0, Self::MODULUS))
+        Nibble::new_unchecked(rng.gen_range(0..Self::MODULUS))
     }
 
     pub const MODULUS: u8 = 16;
@@ -119,7 +119,7 @@ impl<'a> Generatable<'a> for Nibble {
 impl<'a> Mutatable<'a> for Nibble {
     type MutArg = MutArg<'a>;
     fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, _arg: MutArg<'a>) {
-        match rng.gen_range(0, 3) {
+        match rng.gen_range(0..=2) {
             0 => *self = Self::new(self.into_inner().saturating_add(1) % 16),
             1 => *self = Self::new(self.into_inner().saturating_sub(1) % 16), //TODO: This won't wrap equally in both directiosn. Fix pls
             2 => *self = Self::random(rng),
@@ -198,7 +198,7 @@ impl<'a> Generatable<'a> for Byte {
 impl<'a> Mutatable<'a> for Byte {
     type MutArg = MutArg<'a>;
     fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, _arg: MutArg<'a>) {
-        match rng.gen_range(0, 5) {
+        match rng.gen_range(0..=5) {
             0 => *self = Self::new(self.into_inner().wrapping_add(1)),
             1 => *self = Self::new(self.into_inner().wrapping_sub(1)),
             2 => *self = Self::new(self.into_inner().saturating_add(1)),

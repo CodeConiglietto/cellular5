@@ -107,7 +107,7 @@ impl<'a> Generatable<'a> for GamepadId {
     type GenArg = GenArg<'a>;
 
     fn generate_rng<R: Rng + ?Sized>(rng: &mut R, arg: GenArg<'a>) -> Self {
-        GamepadId(rng.gen_range(0, arg.gamepads.gamepads.len()))
+        GamepadId(rng.gen_range(0..arg.gamepads.gamepads.len()))
     }
 }
 

@@ -55,7 +55,7 @@ impl Gfycat {
         rng: &mut DeterministicRng,
         http: &mut HttpClient,
     ) -> Fallible<Option<Vec<GfycatEntry>>> {
-        let idx = rng.gen_range(0, self.tags.len());
+        let idx = rng.gen_range(0..self.tags.len());
         let tag = &self.tags[idx];
 
         debug!("Querying tag {}", tag);
@@ -95,7 +95,7 @@ impl Gfycat {
         rng: &mut DeterministicRng,
         http: &mut HttpClient,
     ) -> Fallible<Option<Vec<GfycatEntry>>> {
-        let idx = rng.gen_range(0, self.config.search_terms.len());
+        let idx = rng.gen_range(0..self.config.search_terms.len());
         let term = &self.config.search_terms[idx];
 
         debug!("Querying search term {}", term);

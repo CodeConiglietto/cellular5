@@ -237,7 +237,7 @@ impl ImageFrame {
 
         self.get_pixel_wrapped(
             (x.to_unsigned().into_inner() * image_width).round() as u32,
-            (y.to_unsigned().into_inner() * image_height) / round() as u32,
+            (y.to_unsigned().into_inner() * image_height).round() as u32,
         )
     }
 }

@@ -224,11 +224,11 @@ impl ImageFrame {
         let image_height = self.image.height();
 
         //TODO refactor into helper method
-        (*self.image.get_pixel(
-            ((x % image_width) + image_width) % image_width,
-            ((y % image_height) + image_height) % image_height,
-        ))
-        .into()
+        ByteColor::from(
+            *self
+                .image
+                .get_pixel(x.rem_euclid(image_width), y.rem_euclid(image_height)),
+        )
     }
 
     pub fn get_pixel_normalised(&self, x: SNFloat, y: SNFloat) -> ByteColor {

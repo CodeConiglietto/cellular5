@@ -7,8 +7,8 @@ use crate::prelude::*;
 #[derive(Generatable, UpdatableRecursively, Mutatable, Serialize, Deserialize, Debug)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum CoordMapNodes {
-    #[mutagen(gen_weight = leaf_node_weight)]
-    // #[mutagen(gen_weight = 20.0)]
+    // #[mutagen(gen_weight = leaf_node_weight)]
+    #[mutagen(gen_weight = 20.0)]
     Identity,
 
     #[mutagen(gen_weight = pipe_node_weight)]

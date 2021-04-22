@@ -7,7 +7,6 @@ use crate::prelude::*;
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum SFloatNormaliserNodes {
     Random,
-    #[mutagen(gen_preferred)]
     Constant {
         value: SFloatNormaliser,
     },
@@ -52,7 +51,6 @@ impl<'a> Updatable<'a> for SFloatNormaliserNodes {
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum UFloatNormaliserNodes {
     Random,
-    #[mutagen(gen_preferred)]
     Constant {
         value: UFloatNormaliser,
     },

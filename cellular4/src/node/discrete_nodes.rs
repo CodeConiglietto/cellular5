@@ -98,7 +98,6 @@ pub enum BooleanNodes {
         child_range_b: NodeBox<ByteNodes>,
     },
     #[mutagen(gen_weight = pipe_node_weight)]
-    #[mutagen(gen_preferred)]
     ElementaryAutomataBuffer {
         buffer: Buffer<Boolean>,
         rule: ElementaryAutomataRule,

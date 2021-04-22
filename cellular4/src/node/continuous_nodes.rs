@@ -264,6 +264,16 @@ pub enum SNFloatNodes {
 
     #[mutagen(gen_weight = gamepad_node_weight)]
     FromGamepadAxis { axis: GamepadAxis, id: GamepadId },
+ 
+    #[mutagen(gen_weight = leaf_node_weight)]
+    PseudoElementaryAutomataBuffer {
+        buffer: Buffer<SNFloat>,
+        neighbour_left: SNFloat,
+        neighbour_top: SNFloat,
+        neighbour_right: SNFloat,
+        normaliser: SFloatNormaliser,
+        current_index: SInt,
+    },   
 }
 
 impl Node for SNFloatNodes {
@@ -418,6 +428,10 @@ impl Node for SNFloatNodes {
             FromGamepadAxis { axis, id } => {
                 SNFloat::new(compute_arg.gamepads[*id].axis_states.get(*axis).value)
             }
+
+            PseudoElementaryAutomataBuffer { buffer, .. } => {
+                buffer[compute_arg.coordinate_set.get_coord_point()]
+            }
         }
     }
 }
@@ -433,6 +447,32 @@ impl<'a> Updatable<'a> for SNFloatNodes {
                 arg.gamepads[*id].axis_states.get_mut(*axis).in_use = true
             }
 
+            PseudoElementaryAutomataBuffer {
+                buffer,
+                neighbour_left,
+                neighbour_top,
+                neighbour_right,
+                normaliser,
+                ref mut current_index,
+            } => {
+                let w = buffer.width();
+                let h = buffer.height();
+
+                let y = current_index.into_inner().rem_euclid(h as i32) as usize;
+                let prev_y = (y as isize - 1).rem_euclid(h as isize) as usize;
+
+                for x in 0..w {
+                    let p = Point2::new(x, y);
+
+                    let pl = Point2::new((x as isize - 1).rem_euclid(w as isize) as usize, prev_y);
+                    let pc = Point2::new(x, prev_y);
+                    let pr = Point2::new((x + 1) % w, prev_y);
+
+                    buffer[p] = normaliser.normalise(buffer[pl].into_inner() * neighbour_left.into_inner() + buffer[pc].into_inner() * neighbour_top.into_inner() + buffer[pr].into_inner() * neighbour_right.into_inner());
+                }
+
+                *current_index = current_index.circular_add(SInt::new(1));
+            }
             _ => {}
         }
     }
@@ -577,6 +617,16 @@ pub enum UNFloatNodes {
         predicate: NodeBox<BooleanNodes>,
         child_a: NodeBox<UNFloatNodes>,
         child_b: NodeBox<UNFloatNodes>,
+    },
+
+    #[mutagen(gen_weight = leaf_node_weight)]
+    PseudoElementaryAutomataBuffer {
+        buffer: Buffer<UNFloat>,
+        neighbour_left: SNFloat,
+        neighbour_top: SNFloat,
+        neighbour_right: SNFloat,
+        normaliser: UFloatNormaliser,
+        current_index: SInt,
     },
 }
 
@@ -910,6 +960,9 @@ impl Node for UNFloatNodes {
                     child_b.compute(compute_arg.reborrow())
                 }
             }
+            PseudoElementaryAutomataBuffer { buffer, .. } => {
+                buffer[compute_arg.coordinate_set.get_coord_point()]
+            }
         }
     }
 }
@@ -917,5 +970,37 @@ impl Node for UNFloatNodes {
 impl<'a> Updatable<'a> for UNFloatNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _arg: UpdArg<'a>) {}
+    fn update(&mut self, _arg: UpdArg<'a>) {
+        use UNFloatNodes::*;
+
+        match self{
+            PseudoElementaryAutomataBuffer {
+                buffer,
+                neighbour_left,
+                neighbour_top,
+                neighbour_right,
+                normaliser,
+                ref mut current_index,
+            } => {
+                let w = buffer.width();
+                let h = buffer.height();
+
+                let y = current_index.into_inner().rem_euclid(h as i32) as usize;
+                let prev_y = (y as isize - 1).rem_euclid(h as isize) as usize;
+
+                for x in 0..w {
+                    let p = Point2::new(x, y);
+
+                    let pl = Point2::new((x as isize - 1).rem_euclid(w as isize) as usize, prev_y);
+                    let pc = Point2::new(x, prev_y);
+                    let pr = Point2::new((x + 1) % w, prev_y);
+
+                    buffer[p] = normaliser.normalise(buffer[pl].into_inner() * neighbour_left.into_inner() + buffer[pc].into_inner() * neighbour_top.into_inner() + buffer[pr].into_inner() * neighbour_right.into_inner());
+                }
+
+                *current_index = current_index.circular_add(SInt::new(1));
+            }
+            _ => {}
+        }
+    }
 }

@@ -252,7 +252,7 @@ impl Display for ImageSource {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
             ImageSource::Fallback => write!(f, "Fallback"),
-            ImageSource::Local(p) => write!(f, "{}", p.to_string_lossy()),
+            ImageSource::Local(p) => write!(f, "{}", p.display()),
             ImageSource::Other(s) => write!(f, "{}", s),
         }
     }

@@ -143,7 +143,13 @@ impl<'a> Mutatable<'a> for NeighbourCountAutomataRule {
     type MutArg = MutArg<'a>;
 
     fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, arg: Self::MutArg) {
-        *self = Self::generate_rng(rng, arg.into());
+        // *self = Self::generate_rng(rng, arg.into());
+        let n = self.neighbourhood.offsets().len() + 1;
+        let index_r = thread_rng().gen::<usize>() % n;
+        let index_g = thread_rng().gen::<usize>() % n;
+        let index_b = thread_rng().gen::<usize>() % n;
+
+        self.truth_table[[index_r, index_g, index_b]] = BitColor::generate_rng(rng, arg.into());
     }
 }
 

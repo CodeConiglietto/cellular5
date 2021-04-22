@@ -223,7 +223,6 @@ impl ImageFrame {
         let image_width = self.image.width();
         let image_height = self.image.height();
 
-        //TODO refactor into helper method
         ByteColor::from(
             *self
                 .image

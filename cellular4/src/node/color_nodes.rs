@@ -1150,6 +1150,9 @@ pub enum BitColorNodes {
     #[mutagen(gen_weight = leaf_node_weight)]
     NeighbourCountAutomata { rule: NeighbourCountAutomataRule },
 
+    #[mutagen(gen_weight = leaf_node_weight)]
+    LifeLikeAutomata { rule: LifeLikeAutomataRule },
+
     #[mutagen(gen_weight = branch_node_weight)]
     ModifyState {
         child: NodeBox<BitColorNodes>,
@@ -1262,6 +1265,57 @@ impl Node for BitColorNodes {
                 }
 
                 rule.truth_table[[rc, gc, bc]]
+            }
+
+            LifeLikeAutomata { rule } => {
+                let x = (compute_arg.coordinate_set.x.to_unsigned().into_inner()
+                    * CONSTS.cell_array_width as f32)
+                    .round() as usize;
+                let y = (compute_arg.coordinate_set.y.to_unsigned().into_inner()
+                    * CONSTS.cell_array_height as f32)
+                    .round() as usize;
+                let prev_t = compute_arg.current_t.saturating_sub(1);
+
+                let mut neighbour_counts = [0; 8];
+
+                for (dx, dy) in rule.neighbourhood.offsets() {
+                    let neighbour = BitColor::from(compute_arg.history.get(
+                        (x as isize + dx).rem_euclid(CONSTS.cell_array_width as isize) as usize,
+                        (y as isize + dy).rem_euclid(CONSTS.cell_array_height as isize) as usize,
+                        prev_t,
+                    ));
+
+                    for (color, neighbour_count) in
+                        rule.color_order.iter().zip(neighbour_counts.iter_mut())
+                    {
+                        if neighbour.has_color(*color) {
+                            *neighbour_count += 1;
+                        }
+                    }
+                }
+
+                let mut new_color = BitColor::from(compute_arg.history.get(x, y, prev_t));
+
+                for (i, (color, neighbour_count)) in rule
+                    .color_order
+                    .iter()
+                    .zip(neighbour_counts.iter())
+                    .enumerate()
+                {
+                    let table = &rule.truth_table[*neighbour_count][i];
+
+                    if new_color.has_color(*color) {
+                        if !table.survival.into_inner() {
+                            new_color = BitColor::from_components(new_color.take_color(*color));
+                        }
+                    } else {
+                        if table.birth.into_inner() {
+                            new_color = BitColor::from_components(new_color.give_color(*color));
+                        }
+                    }
+                }
+
+                new_color
             }
 
             ModifyState { child, child_state } => child.compute(ComArg {

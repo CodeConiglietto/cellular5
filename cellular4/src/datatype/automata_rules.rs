@@ -163,6 +163,74 @@ impl<'a> UpdatableRecursively<'a> for NeighbourCountAutomataRule {
     fn update_recursively(&mut self, _arg: Self::UpdateArg) {}
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LifeLikeAutomataRule {
+    pub neighbourhood: PixelNeighbourhood,
+    pub color_order: [BitColor; 8],
+    /// Indexed by (neighbour_count, color_idx)
+    pub truth_table: Vec<[LifeLikeTable; 8]>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Generatable, Mutatable)]
+#[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
+pub struct LifeLikeTable {
+    pub birth: Boolean,
+    pub survival: Boolean,
+}
+
+impl<'a> Generatable<'a> for LifeLikeAutomataRule {
+    type GenArg = GenArg<'a>;
+
+    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, mut arg: Self::GenArg) -> Self {
+        let neighbourhood = PixelNeighbourhood::generate_rng(rng, arg.reborrow());
+        let n = neighbourhood.offsets().len() + 1;
+        let mut color_order = BitColor::values();
+        color_order.shuffle(rng);
+
+        Self {
+            neighbourhood,
+            color_order,
+            truth_table: (0..n)
+                .map(|_| {
+                    [
+                        LifeLikeTable::generate_rng(rng, arg.reborrow()),
+                        LifeLikeTable::generate_rng(rng, arg.reborrow()),
+                        LifeLikeTable::generate_rng(rng, arg.reborrow()),
+                        LifeLikeTable::generate_rng(rng, arg.reborrow()),
+                        LifeLikeTable::generate_rng(rng, arg.reborrow()),
+                        LifeLikeTable::generate_rng(rng, arg.reborrow()),
+                        LifeLikeTable::generate_rng(rng, arg.reborrow()),
+                        LifeLikeTable::generate_rng(rng, arg.reborrow()),
+                    ]
+                })
+                .collect(),
+        }
+    }
+}
+
+impl<'a> Mutatable<'a> for LifeLikeAutomataRule {
+    type MutArg = MutArg<'a>;
+
+    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, arg: Self::MutArg) {
+        // *self = Self::generate_rng(rng, arg.into());
+        let n = self.neighbourhood.offsets().len() + 1;
+        let i = thread_rng().gen::<usize>() % n;
+        let j = thread_rng().gen::<usize>() % 8;
+
+        self.truth_table[i][j].mutate_rng(rng, arg);
+    }
+}
+
+impl<'a> Updatable<'a> for LifeLikeAutomataRule {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _arg: Self::UpdateArg) {}
+}
+
+impl<'a> UpdatableRecursively<'a> for LifeLikeAutomataRule {
+    fn update_recursively(&mut self, _arg: Self::UpdateArg) {}
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

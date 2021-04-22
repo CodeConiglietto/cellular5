@@ -193,6 +193,19 @@ impl BitColor {
         }
     }
 
+    pub fn values() -> [Self; 8] {
+        [
+            BitColor::Black,
+            BitColor::Red,
+            BitColor::Green,
+            BitColor::Blue,
+            BitColor::Cyan,
+            BitColor::Magenta,
+            BitColor::Yellow,
+            BitColor::White,
+        ]
+    }
+
     pub fn to_components(self) -> [bool; 3] {
         match self {
             BitColor::Black => [false, false, false],

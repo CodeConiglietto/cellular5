@@ -1,4 +1,5 @@
 use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
+use ndarray::prelude::*;
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -88,6 +89,71 @@ impl<'a> Updatable<'a> for ElementaryAutomataRule {
 }
 
 impl<'a> UpdatableRecursively<'a> for ElementaryAutomataRule {
+    fn update_recursively(&mut self, _arg: Self::UpdateArg) {}
+}
+
+#[derive(Debug, Clone, Copy, Generatable, Serialize, Deserialize)]
+#[mutagen(gen_arg = type GenArg<'a>)]
+pub enum PixelNeighbourhood {
+    Moore,
+    VonNeumann,
+}
+
+impl PixelNeighbourhood {
+    pub fn offsets(&self) -> &'static [(isize, isize)] {
+        match self {
+            PixelNeighbourhood::Moore => &[(-1, 0), (1, 0), (0, -1), (0, 1)],
+            PixelNeighbourhood::VonNeumann => &[
+                (-1, -1),
+                (-1, 0),
+                (-1, 1),
+                (0, -1),
+                (0, 1),
+                (1, -1),
+                (1, 0),
+                (1, 1),
+            ],
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NeighbourCountAutomataRule {
+    pub neighbourhood: PixelNeighbourhood,
+    pub truth_table: Array3<BitColor>,
+}
+
+impl<'a> Generatable<'a> for NeighbourCountAutomataRule {
+    type GenArg = GenArg<'a>;
+
+    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, mut arg: Self::GenArg) -> Self {
+        let neighbourhood = PixelNeighbourhood::generate_rng(rng, arg.reborrow());
+        let n = neighbourhood.offsets().len() + 1;
+
+        Self {
+            neighbourhood,
+            truth_table: Array3::from_shape_fn((n, n, n), move |_| {
+                BitColor::generate_rng(rng, arg.reborrow())
+            }),
+        }
+    }
+}
+
+impl<'a> Mutatable<'a> for NeighbourCountAutomataRule {
+    type MutArg = MutArg<'a>;
+
+    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, arg: Self::MutArg) {
+        *self = Self::generate_rng(rng, arg.into());
+    }
+}
+
+impl<'a> Updatable<'a> for NeighbourCountAutomataRule {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _arg: Self::UpdateArg) {}
+}
+
+impl<'a> UpdatableRecursively<'a> for NeighbourCountAutomataRule {
     fn update_recursively(&mut self, _arg: Self::UpdateArg) {}
 }
 

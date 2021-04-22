@@ -1147,6 +1147,9 @@ pub enum BitColorNodes {
     #[mutagen(gen_weight = pipe_node_weight)]
     FromNibbleIndex { child: NodeBox<NibbleNodes> },
 
+    #[mutagen(gen_weight = leaf_node_weight)]
+    NeighbourCountAutomata { rule: NeighbourCountAutomataRule },
+
     #[mutagen(gen_weight = branch_node_weight)]
     ModifyState {
         child: NodeBox<BitColorNodes>,
@@ -1204,11 +1207,13 @@ impl Node for BitColorNodes {
                 .get(
                     ((compute_arg.coordinate_set.x.into_inner() + 1.0)
                         * 0.5
-                        * CONSTS.cell_array_width as f32) as usize,
+                        * CONSTS.cell_array_width as f32)
+                        .round() as usize,
                     ((compute_arg.coordinate_set.y.into_inner() + 1.0)
                         * 0.5
-                        * CONSTS.cell_array_height as f32) as usize,
-                    (compute_arg.reborrow().current_t - 1).max(0),
+                        * CONSTS.cell_array_height as f32)
+                        .round() as usize,
+                    compute_arg.reborrow().current_t.saturating_sub(1),
                 )
                 .into(),
             FromUNFloat { child } => BitColor::from_index(
@@ -1221,6 +1226,44 @@ impl Node for BitColorNodes {
             FromNibbleIndex { child } => BitColor::from_index(
                 child.compute(compute_arg.reborrow()).into_inner() as usize % 8,
             ),
+
+            NeighbourCountAutomata { rule } => {
+                let x = (compute_arg.coordinate_set.x.to_unsigned().into_inner()
+                    * CONSTS.cell_array_width as f32)
+                    .round() as isize;
+                let y = (compute_arg.coordinate_set.y.to_unsigned().into_inner()
+                    * CONSTS.cell_array_height as f32)
+                    .round() as isize;
+                let prev_t = compute_arg.current_t.saturating_sub(1);
+
+                let mut rc = 0;
+                let mut gc = 0;
+                let mut bc = 0;
+
+                for (dx, dy) in rule.neighbourhood.offsets() {
+                    let [r, g, b] = BitColor::from(compute_arg.history.get(
+                        (x + dx).rem_euclid(CONSTS.cell_array_width as isize) as usize,
+                        (y + dy).rem_euclid(CONSTS.cell_array_height as isize) as usize,
+                        prev_t,
+                    ))
+                    .to_components();
+
+                    if r {
+                        rc += 1;
+                    }
+
+                    if g {
+                        gc += 1;
+                    }
+
+                    if b {
+                        bc += 1;
+                    }
+                }
+
+                rule.truth_table[[rc, gc, bc]]
+            }
+
             ModifyState { child, child_state } => child.compute(ComArg {
                 coordinate_set: child_state.compute(compute_arg.reborrow()),
                 ..compute_arg.reborrow()

@@ -65,8 +65,8 @@ impl History {
 
     pub fn get_normalised(&self, pos: SNPoint, t: usize) -> FloatColor {
         self.get(
-            ((pos.x().into_inner() + 1.0) * 0.5 * CONSTS.cell_array_width as f32) as usize,
-            ((pos.y().into_inner() + 1.0) * 0.5 * CONSTS.cell_array_height as f32) as usize,
+            (pos.x().to_unsigned().into_inner() * CONSTS.cell_array_width as f32).round() as usize,
+            (pos.y().to_unsigned().into_inner() * CONSTS.cell_array_height as f32).round() as usize,
             t as usize,
         )
         .into()

@@ -1153,6 +1153,15 @@ pub enum BitColorNodes {
     #[mutagen(gen_weight = leaf_node_weight)]
     LifeLikeAutomata { rule: LifeLikeAutomataRule },
 
+    //This is a total hack
+    #[mutagen(gen_weight = branch_node_weight)]
+    ReactionDiffusionLikeAutomata { rule: LifeLikeAutomataRule, 
+        rho_divisor: Byte,
+        child_rho: NodeBox<UNFloatNodes>,
+        child_theta: NodeBox<AngleNodes>,
+        child_normaliser: NodeBox<SFloatNormaliserNodes>,
+    },
+
     #[mutagen(gen_weight = branch_node_weight)]
     ModifyState {
         child: NodeBox<BitColorNodes>,
@@ -1295,6 +1304,74 @@ impl Node for BitColorNodes {
                 }
 
                 let mut new_color = BitColor::from(compute_arg.history.get(x, y, prev_t));
+
+                for (i, (color, neighbour_count)) in rule
+                    .color_order
+                    .iter()
+                    .zip(neighbour_counts.iter())
+                    .enumerate()
+                {
+                    let table = &rule.truth_table[*neighbour_count][i];
+
+                    if new_color.has_color(*color) {
+                        if !table.survival.into_inner() {
+                            new_color = BitColor::from_components(new_color.take_color(*color));
+                        }
+                    } else {
+                        if table.birth.into_inner() {
+                            new_color = BitColor::from_components(new_color.give_color(*color));
+                        }
+                    }
+                }
+
+                new_color
+            }
+
+            ReactionDiffusionLikeAutomata { rule, rho_divisor, child_rho, child_theta, child_normaliser } => {
+                let rho = 
+                child_rho.compute(compute_arg.reborrow()).into_inner() 
+                / rho_divisor.into_inner().saturating_add(1) as f32;
+                let theta = child_theta.compute(compute_arg.reborrow());
+                let normaliser = child_normaliser.compute(compute_arg.reborrow());
+
+                let middle = compute_arg.coordinate_set.get_coord_point();
+
+                let hist_t = compute_arg.reborrow().current_t.saturating_sub(1);
+
+
+                let point_count = rule.neighbourhood.offsets().len();
+
+                let mut neighbour_counts = [0; 8];
+
+                for i in 0..point_count {
+                    let theta_offset =
+                        theta + Angle::new((i as f32 / point_count as f32) * 2.0 * PI - PI);
+
+                    let neighbour: BitColor = compute_arg.reborrow().history.get_normalised(
+                        middle.normalised_add(
+                            SNPoint::from_snfloats(
+                                SNFloat::new(
+                                    rho * f32::sin(theta_offset.into_inner()),
+                                ),
+                                SNFloat::new(
+                                    rho * f32::cos(theta_offset.into_inner()),
+                                ),
+                            ),
+                            normaliser,
+                        ),
+                        hist_t,
+                    ).into();
+
+                    for (color, neighbour_count) in
+                        rule.color_order.iter().zip(neighbour_counts.iter_mut())
+                    {
+                        if neighbour.has_color(*color) {
+                            *neighbour_count += 1;
+                        }
+                    }
+                }
+
+                let mut new_color = BitColor::from(compute_arg.history.get_normalised(middle, hist_t));
 
                 for (i, (color, neighbour_count)) in rule
                     .color_order

@@ -1501,6 +1501,9 @@ pub enum ByteColorNodes {
     #[mutagen(gen_weight = leaf_node_weight)]
     FromCellArray,
 
+    #[mutagen(gen_weight = camera_leaf_node_weight)]
+    FromCamera,
+
     #[mutagen(gen_weight = pipe_node_weight)]
     FromGenericColor { child: NodeBox<GenericColorNodes> },
 
@@ -1562,6 +1565,12 @@ impl Node for ByteColorNodes {
                     * CONSTS.cell_array_height as f32) as usize,
                 (compute_arg.reborrow().current_t - 1).max(0),
             ),
+
+            FromCamera => compute_arg.camera.as_ref().unwrap().get(
+                compute_arg.coordinate_set.get_coord_point(),
+                compute_arg.current_t,
+            ),
+
             Decompose { r, g, b, a } => ByteColor {
                 r: r.compute(compute_arg.reborrow()),
                 g: g.compute(compute_arg.reborrow()),

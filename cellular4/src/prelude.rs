@@ -1,6 +1,7 @@
 pub use crate::{
     arena_wrappers::NodeBox,
     arena_wrappers::*,
+    camera::*,
     constants::*,
     coordinate_set::*,
     data_set::*,

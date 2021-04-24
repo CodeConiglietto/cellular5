@@ -60,6 +60,7 @@ macro_rules! ldbg {
 }
 
 pub mod arena_wrappers;
+pub mod camera;
 pub mod constants;
 pub mod coordinate_set;
 pub mod data_set;
@@ -253,6 +254,7 @@ struct MyGame {
 
     image_preloader: Rc<Preloader<Image>>,
     profiler: Option<MutagenProfiler>,
+    camera: Option<Camera>,
 }
 
 impl MyGame {
@@ -308,6 +310,18 @@ impl MyGame {
             (None, None)
         };
 
+        let camera = if let Some(config) = &CONSTS.camera {
+            match Camera::new(config.clone()) {
+                Ok(camera) => Some(camera),
+                Err(e) => {
+                    warn!("Failed to initialize camera: {}", e);
+                    None
+                }
+            }
+        } else {
+            None
+        };
+
         let mut gamepads = Gamepads::new();
         let mut mouse_position = ggez::input::mouse::position(ctx);
 
@@ -350,6 +364,7 @@ impl MyGame {
                     mic_spectrograms: &mic_spectrograms,
                     gamepads: &mut gamepads,
                     mouse_position: &mut mouse_position,
+                    camera: &camera,
                 },
             ),
 
@@ -372,6 +387,7 @@ impl MyGame {
             mic_spectrograms,
             gamepads,
             mouse_position,
+            camera,
         }
     }
 }
@@ -489,6 +505,7 @@ impl EventHandler for MyGame {
         //TODO
         let gamepads = &self.gamepads;
         let mut mouse_position = ggez::input::mouse::position(ctx);
+        let camera = &self.camera;
 
         //let rule_sets = self.rule_sets;
 
@@ -519,6 +536,7 @@ impl EventHandler for MyGame {
                 mic_spectrograms,
                 gamepads,
                 mouse_position: &mouse_position,
+                camera,
             };
 
             let transformed_coords = root_coordinate_node.compute(compute_arg.reborrow());
@@ -594,6 +612,12 @@ impl EventHandler for MyGame {
                     .unwrap_or_else(|e| warn!("Failed to update mic: {}", e));
             }
 
+            if let Some(camera) = self.camera.as_mut() {
+                camera
+                    .update()
+                    .unwrap_or_else(|e| warn!("Failed to update camera: {}", e));
+            }
+
             let next_cpu_t = CpuInstant::now().unwrap();
             let cpu_usage = (next_cpu_t - self.cpu_t).non_idle();
             let graph_stability = 1.0 - 0.95_f64.powf((current_t - self.last_mutation_t) as f64);
@@ -657,6 +681,7 @@ impl EventHandler for MyGame {
                             mic_spectrograms: &self.mic_spectrograms,
                             gamepads: &mut self.gamepads,
                             mouse_position: &mut self.mouse_position,
+                            camera: &self.camera,
                         },
                     );
                 } else {
@@ -676,6 +701,7 @@ impl EventHandler for MyGame {
                                 mic_spectrograms: &self.mic_spectrograms,
                                 gamepads: &mut self.gamepads,
                                 mouse_position: &mut self.mouse_position,
+                                camera: &self.camera,
                             },
                         );
                     } else {
@@ -694,6 +720,7 @@ impl EventHandler for MyGame {
                                 mic_spectrograms: &self.mic_spectrograms,
                                 gamepads: &mut self.gamepads,
                                 mouse_position: &mut self.mouse_position,
+                                camera: &self.camera,
                             },
                         );
                     }
@@ -725,6 +752,7 @@ impl EventHandler for MyGame {
                 gamepads: &mut self.gamepads,
                 current_t,
                 mouse_position: &mut mouse_position,
+                camera: &self.camera,
             };
 
             // dbg!(last_update_arg.coordinate_set);
@@ -754,6 +782,7 @@ impl EventHandler for MyGame {
                 gamepads: &mut self.gamepads,
                 current_t,
                 mouse_position: &mut mouse_position,
+                camera: &self.camera,
             };
 
             let mut step_com_arg: ComArg = step_upd_arg.reborrow().into();
@@ -803,6 +832,7 @@ impl EventHandler for MyGame {
                     depth,
                     current_t,
                     mouse_position: &mut mouse_position,
+                    camera: &self.camera,
                 };
 
                 current.update_recursively(step_upd_arg.reborrow());

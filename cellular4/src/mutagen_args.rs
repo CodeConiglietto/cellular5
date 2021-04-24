@@ -6,8 +6,8 @@ use ggez::mint::Point2;
 pub trait MutagenArg {
     fn depth(&self) -> usize;
     fn gamepads(&self) -> &Gamepads;
-
     fn mic_spectrograms(&self) -> &Option<FrequencySpectrograms>;
+    fn camera(&self) -> &Option<Camera>;
 }
 
 pub struct GenArg<'a> {
@@ -22,6 +22,7 @@ pub struct GenArg<'a> {
     pub profiler: &'a mut Option<MutagenProfiler>,
     pub gamepads: &'a mut Gamepads,
     pub mouse_position: &'a mut Point2<f32>,
+    pub camera: &'a Option<Camera>,
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, GenArg<'a>> for GenArg<'b> {
@@ -38,6 +39,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, GenArg<'a>> for GenArg<'b> {
             profiler: &mut self.profiler,
             gamepads: &mut self.gamepads,
             mouse_position: &mut self.mouse_position,
+            camera: &self.camera,
         }
     }
 }
@@ -62,6 +64,10 @@ impl<'a> MutagenArg for GenArg<'a> {
     fn mic_spectrograms(&self) -> &Option<FrequencySpectrograms> {
         &self.mic_spectrograms
     }
+
+    fn camera(&self) -> &Option<Camera> {
+        &self.camera
+    }
 }
 
 pub struct MutArg<'a> {
@@ -76,6 +82,7 @@ pub struct MutArg<'a> {
     pub profiler: &'a mut Option<MutagenProfiler>,
     pub gamepads: &'a mut Gamepads,
     pub mouse_position: &'a mut Point2<f32>,
+    pub camera: &'a Option<Camera>,
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, MutArg<'a>> for MutArg<'b> {
@@ -92,6 +99,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, MutArg<'a>> for MutArg<'b> {
             profiler: &mut self.profiler,
             gamepads: &mut self.gamepads,
             mouse_position: &mut self.mouse_position,
+            camera: &self.camera,
         }
     }
 }
@@ -110,6 +118,7 @@ impl<'a> From<MutArg<'a>> for GenArg<'a> {
             profiler: arg.profiler,
             gamepads: arg.gamepads,
             mouse_position: arg.mouse_position,
+            camera: arg.camera,
         }
     }
 }
@@ -134,6 +143,10 @@ impl<'a> MutagenArg for MutArg<'a> {
     fn mic_spectrograms(&self) -> &Option<FrequencySpectrograms> {
         &self.mic_spectrograms
     }
+
+    fn camera(&self) -> &Option<Camera> {
+        &self.camera
+    }
 }
 
 #[derive(Clone)]
@@ -147,6 +160,7 @@ pub struct ComArg<'a> {
     pub mic_spectrograms: &'a Option<FrequencySpectrograms>,
     pub gamepads: &'a Gamepads,
     pub mouse_position: &'a Point2<f32>,
+    pub camera: &'a Option<Camera>,
 }
 
 impl<'a> ComArg<'a> {
@@ -179,6 +193,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, ComArg<'a>> for ComArg<'b> {
             mic_spectrograms: &self.mic_spectrograms,
             gamepads: &self.gamepads,
             mouse_position: &self.mouse_position,
+            camera: &self.camera,
         }
     }
 }
@@ -197,6 +212,10 @@ impl<'a> MutagenArg for ComArg<'a> {
     fn mic_spectrograms(&self) -> &Option<FrequencySpectrograms> {
         &self.mic_spectrograms
     }
+
+    fn camera(&self) -> &Option<Camera> {
+        &self.camera
+    }
 }
 
 pub struct UpdArg<'a> {
@@ -211,6 +230,7 @@ pub struct UpdArg<'a> {
     pub profiler: &'a mut Option<MutagenProfiler>,
     pub gamepads: &'a mut Gamepads,
     pub mouse_position: &'a mut Point2<f32>,
+    pub camera: &'a Option<Camera>,
 }
 
 impl<'a, 'b: 'a> Reborrow<'a, 'b, UpdArg<'a>> for UpdArg<'b> {
@@ -227,6 +247,7 @@ impl<'a, 'b: 'a> Reborrow<'a, 'b, UpdArg<'a>> for UpdArg<'b> {
             profiler: &mut self.profiler,
             gamepads: &mut self.gamepads,
             mouse_position: &mut self.mouse_position,
+            camera: &self.camera,
         }
     }
 }
@@ -243,6 +264,7 @@ impl<'a> From<UpdArg<'a>> for ComArg<'a> {
             mic_spectrograms: arg.mic_spectrograms,
             gamepads: arg.gamepads,
             mouse_position: arg.mouse_position,
+            camera: arg.camera,
         }
     }
 }
@@ -261,6 +283,7 @@ impl<'a> From<GenArg<'a>> for UpdArg<'a> {
             mic_spectrograms: arg.mic_spectrograms,
             gamepads: arg.gamepads,
             mouse_position: arg.mouse_position,
+            camera: arg.camera,
         }
     }
 }
@@ -284,6 +307,10 @@ impl<'a> MutagenArg for UpdArg<'a> {
 
     fn mic_spectrograms(&self) -> &Option<FrequencySpectrograms> {
         &self.mic_spectrograms
+    }
+
+    fn camera(&self) -> &Option<Camera> {
+        &self.camera
     }
 }
 

@@ -178,5 +178,11 @@ gamepad_node_weight_mod: 1.0
 #   #   - bepis
 #   #   - bunny
 
+# Uncomment this to use a camera
+# camera:
+#   # Find your camera's device path with `v4l2-ctl --list-devices`
+#   device_path: "/dev/video2"
+
+
 mutagen_profiler: false
 mutagen_profiler_graphs: false

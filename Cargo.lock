@@ -340,6 +340,7 @@ dependencies = [
  "cpal",
  "cpu-monitor",
  "dot-serde",
+ "escapi",
  "failure",
  "fern",
  "float-ord 0.3.1",
@@ -366,6 +367,7 @@ dependencies = [
  "realfft",
  "regex",
  "reqwest",
+ "rscam",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -898,6 +900,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2d2f06b9cac1506ece98fe3231e3cc9c4410ec3d5b1f24ae1c8946f0742cdefc"
 dependencies = [
  "version_check",
+]
+
+[[package]]
+name = "escapi"
+version = "4.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6b81edeba6842be0eb9c7fc5c88098cd45485ec44a96cdf32f3c1e1cde247406"
+dependencies = [
+ "cc",
+ "kernel32-sys",
+ "libc",
 ]
 
 [[package]]
@@ -3013,6 +3026,15 @@ dependencies = [
  "hound",
  "lewton",
  "minimp3",
+]
+
+[[package]]
+name = "rscam"
+version = "0.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "89056084211cd54924fedf2e2199b906409d1f795cfd8e7e3271061742457018"
+dependencies = [
+ "libc",
 ]
 
 [[package]]

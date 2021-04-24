@@ -14,7 +14,7 @@ use lazy_static::lazy_static;
 use lerp::Lerp;
 use log::debug;
 use nalgebra::*;
-use ndarray::{Array3, ArrayView3};
+use ndarray::prelude::*;
 use rand::prelude::*;
 use rand::{RngCore, SeedableRng};
 use walkdir::WalkDir;
@@ -156,17 +156,6 @@ where
     }
 
     (c, max_iterations)
-}
-
-pub fn init_cell_array(width: usize, height: usize) -> Array3<u8> {
-    Array3::from_shape_fn((height, width, 4), |(_y, _x, c)| {
-        if c == 3 {
-            255
-        } else {
-            // 0
-            thread_rng().gen::<u8>()
-        }
-    })
 }
 
 pub fn compute_texture(

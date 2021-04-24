@@ -1,5 +1,6 @@
 use ggez::{graphics::Image as GgImage, Context};
 use ndarray::{s, Array3, ArrayView1};
+use rand::prelude::*;
 
 use crate::prelude::*;
 
@@ -81,4 +82,15 @@ impl History {
             a: Byte::new(raw[3]),
         }
     }
+}
+
+fn init_cell_array(width: usize, height: usize) -> Array3<u8> {
+    Array3::from_shape_fn((height, width, 4), |(_y, _x, c)| {
+        if c == 3 {
+            255
+        } else {
+            // 0
+            thread_rng().gen::<u8>()
+        }
+    })
 }

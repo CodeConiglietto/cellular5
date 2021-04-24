@@ -3,11 +3,11 @@ use std::fs;
 use lazy_static::lazy_static;
 use serde::Deserialize;
 
-use crate::util;
+use crate::prelude::*;
 
 lazy_static! {
     pub static ref CONSTS: Constants = {
-        let path = util::local_path("constants.yml");
+        let path = crate::util::local_path("constants.yml");
 
         serde_yaml::from_str(&fs::read_to_string(&path).unwrap_or_else(|e| {
             panic!(
@@ -98,6 +98,7 @@ pub struct Constants {
 
     pub smithsonian_api_key: Option<String>,
     pub gfycat: Option<GfycatConfig>,
+    pub camera: Option<CameraConfig>,
 
     pub mutagen_profiler: bool,
     pub mutagen_profiler_graphs: bool,

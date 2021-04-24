@@ -40,7 +40,9 @@ impl From<FloatColor> for NibbleColor {
     }
 }
 
-#[derive(Generatable, Mutatable, Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(
+    Generatable, Mutatable, Serialize, Deserialize, Clone, Copy, Default, Debug, PartialEq, Eq,
+)]
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub struct ByteColor {
     pub r: Byte,

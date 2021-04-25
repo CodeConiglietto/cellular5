@@ -99,7 +99,7 @@ pub mod mutagen_functions {
     }
 
     pub fn camera_leaf_node_weight<T: MutagenArg>(arg: T) -> f64 {
-        if arg.camera().is_none() {
+        if arg.camera_frames().is_none() {
             0.0
         } else {
             leaf_node_weight(arg)
@@ -115,7 +115,7 @@ pub mod mutagen_functions {
             depth: usize,
             gamepads: &'a Gamepads,
             mic_spectrograms: &'a Option<FrequencySpectrograms>,
-            camera: &'a Option<Camera>,
+            camera_frames: &'a Option<CameraFrames>,
         }
 
         impl<'a> MutagenArg for TestArg<'a> {
@@ -131,8 +131,8 @@ pub mod mutagen_functions {
                 &self.mic_spectrograms
             }
 
-            fn camera(&self) -> &Option<Camera> {
-                &self.camera
+            fn camera_frames(&self) -> &Option<CameraFrames> {
+                &self.camera_frames
             }
         }
 
@@ -143,7 +143,7 @@ pub mod mutagen_functions {
                     depth,
                     gamepads: &Gamepads::new(),
                     mic_spectrograms: &Some(FrequencySpectrograms::new(256)),
-                    camera: &None,
+                    camera_frames: &None,
                 };
 
                 assert!(
@@ -160,7 +160,7 @@ pub mod mutagen_functions {
                 depth: max_node_depth(),
                 gamepads: &Gamepads::new(),
                 mic_spectrograms: &Some(FrequencySpectrograms::new(256)),
-                camera: &None,
+                camera_frames: &None,
             };
 
             assert!(leaf_node_weight(arg) > 0.0);

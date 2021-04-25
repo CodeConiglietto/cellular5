@@ -5,7 +5,7 @@ use crate::prelude::*;
 pub struct Camera {}
 
 impl GenericCamera for Camera {
-    fn new(config: Self::Config) -> Fallible<Self> {
+    fn new(config: Self::Config) -> Fallible<(Self, CameraFrames)> {
         todo!()
     }
 
@@ -13,7 +13,7 @@ impl GenericCamera for Camera {
         todo!()
     }
 
-    fn get(&self, pos: SNPoint, t: usize) -> ByteColor {
+    fn update(&mut self, frames: &mut CameraFrames) -> Fallible<()> {
         todo!()
     }
 }

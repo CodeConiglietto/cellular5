@@ -1,8 +1,17 @@
-use std::{iter::IntoIterator, ops::Deref};
+use std::{
+    iter::IntoIterator,
+    ops::Deref,
+    sync::{
+        atomic::{self, AtomicBool},
+        mpsc::{self, Receiver, SyncSender, TryRecvError},
+        Arc,
+    },
+    thread::{self, JoinHandle},
+};
 
 use failure::{ensure, format_err, Fallible};
 use float_ord::FloatOrd;
-use log::info;
+use log::{info, warn};
 use ndarray::{prelude::*, Zip};
 use serde::Deserialize;
 
@@ -15,17 +24,16 @@ pub struct CameraConfig {
 }
 
 pub struct Camera {
-    camera: rscam::Camera,
-    frames: Array3<ByteColor>,
-    skip_ratio: usize,
-    current_frame: usize,
-    skipped_updates: usize,
+    empty_frames_sender: SyncSender<Array2<ByteColor>>,
+    ready_frames_receiver: Receiver<Array2<ByteColor>>,
+    worker_thread: Option<JoinHandle<()>>,
+    running: Arc<AtomicBool>,
 }
 
 impl GenericCamera for Camera {
     type Config = CameraConfig;
 
-    fn new(config: Self::Config) -> Fallible<Self> {
+    fn new(config: Self::Config) -> Fallible<(Self, CameraFrames)> {
         let mut camera = rscam::Camera::new(
             config
                 .device_path
@@ -82,15 +90,14 @@ impl GenericCamera for Camera {
         }
         .ok_or_else(|| format_err!("No supported framerate"))?;
 
-        let camera_fps = interval.1 as f32 / interval.0 as f32;
-        let skip_ratio = (CONSTS.target_fps as f32 / camera_fps).ceil() as usize;
+        let fps = interval.1 as f32 / interval.0 as f32;
 
         info!(
             "Initializing camera with format {}, resolution {}x{}, {} fps",
             String::from_utf8_lossy(format.to_code()),
             resolution.0,
             resolution.1,
-            camera_fps,
+            fps,
         );
 
         camera.start(&rscam::Config {
@@ -100,55 +107,84 @@ impl GenericCamera for Camera {
             ..Default::default()
         })?;
 
-        Ok(Self {
-            camera,
-            frames: Array3::default((
-                config.n_frames.unwrap_or(CONSTS.cell_array_history_length),
-                resolution.1 as usize,
-                resolution.0 as usize,
-            )),
-            skip_ratio,
-            current_frame: 0,
-            skipped_updates: 0,
-        })
-    }
+        let n_frames = config.n_frames.unwrap_or(CONSTS.cell_array_history_length);
 
-    fn update(&mut self) -> Fallible<()> {
-        if self.skipped_updates < self.skip_ratio - 1 {
-            self.skipped_updates += 1;
-            return Ok(());
+        let running = Arc::new(AtomicBool::new(true));
+        let worker_running = Arc::clone(&running);
+
+        let (ready_frames_sender, ready_frames_receiver) = mpsc::sync_channel(n_frames);
+        let (empty_frames_sender, empty_frames_receiver) = mpsc::sync_channel(n_frames);
+
+        for _ in 0..n_frames {
+            empty_frames_sender
+                .send(Array2::default((
+                    resolution.1 as usize,
+                    resolution.0 as usize,
+                )))
+                .unwrap();
         }
 
-        self.skipped_updates = 0;
+        let worker_thread = thread::spawn(move || loop {
+            if !worker_running.load(atomic::Ordering::Relaxed) {
+                break;
+            }
 
-        let frame = self.camera.capture()?;
-        let format = ImageFormats::try_from_code(&frame.format).unwrap();
+            let frame = match camera.capture() {
+                Ok(f) => f,
+                Err(e) => {
+                    warn!("Error capturing frame: {}", e);
+                    break;
+                }
+            };
 
-        ensure!(
-            frame.resolution.1 as usize == self.frames.len_of(Axis(1))
-                && frame.resolution.0 as usize == self.frames.len_of(Axis(2)),
-            "Mismatched resolution"
-        );
+            let format = ImageFormats::try_from_code(&frame.format).unwrap();
 
-        self.current_frame = (self.current_frame + 1) % self.frames.len_of(Axis(0));
+            let mut next_frame_buf = empty_frames_receiver.recv().unwrap();
 
-        format.decode(
-            frame.deref(),
-            self.frames.slice_mut(s![self.current_frame, .., ..]),
-        );
+            assert_eq!(frame.resolution.1 as usize, next_frame_buf.len_of(Axis(0)));
+            assert_eq!(frame.resolution.0 as usize, next_frame_buf.len_of(Axis(1)));
 
-        Ok(())
+            format.decode(frame.deref(), next_frame_buf.view_mut());
+
+            ready_frames_sender.send(next_frame_buf).unwrap();
+        });
+
+        Ok((
+            Self {
+                ready_frames_receiver,
+                empty_frames_sender,
+                worker_thread: Some(worker_thread),
+                running,
+            },
+            CameraFrames {
+                frames: (0..n_frames)
+                    .map(|_| Array2::default((resolution.1 as usize, resolution.0 as usize)))
+                    .collect(),
+                fps,
+                resolution,
+                current_t: 0,
+            },
+        ))
     }
 
-    fn get(&self, pos: SNPoint, t: usize) -> ByteColor {
-        let h = self.frames.len_of(Axis(1));
-        let w = self.frames.len_of(Axis(2));
+    fn update(&mut self, frames: &mut CameraFrames, current_t: usize) -> Fallible<()> {
+        loop {
+            match self.ready_frames_receiver.try_recv() {
+                Err(TryRecvError::Empty) => break,
+                Err(TryRecvError::Disconnected) => panic!("Worker thread lost"),
 
-        self.frames[[
-            ((t - self.skipped_updates) / self.skip_ratio) % self.frames.len_of(Axis(0)),
-            ((pos.y().to_unsigned().into_inner() * h as f32).round() as usize).min(h - 1),
-            ((pos.x().to_unsigned().into_inner() * w as f32).round() as usize).min(w - 1),
-        ]]
+                Ok(frame) => {
+                    frames.frames.push_front(frame);
+                    self.empty_frames_sender
+                        .send(frames.frames.pop_back().unwrap())
+                        .unwrap();
+                }
+            }
+        }
+
+        frames.current_t = current_t;
+
+        Ok(())
     }
 }
 
@@ -178,6 +214,15 @@ where
             it.into_iter()
                 .max_by_key(|(n, d)| FloatOrd(*d as f32 / *n as f32))
         })
+}
+
+impl Drop for Camera {
+    fn drop(&mut self) {
+        if let Some(handle) = self.worker_thread.take() {
+            self.running.store(false, atomic::Ordering::Relaxed);
+            handle.join().unwrap();
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug)]

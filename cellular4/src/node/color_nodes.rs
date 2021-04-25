@@ -1566,7 +1566,7 @@ impl Node for ByteColorNodes {
                 (compute_arg.reborrow().current_t - 1).max(0),
             ),
 
-            FromCamera => compute_arg.camera.as_ref().unwrap().get(
+            FromCamera => compute_arg.camera_frames.as_ref().unwrap().get(
                 compute_arg.coordinate_set.get_coord_point(),
                 compute_arg.current_t,
             ),

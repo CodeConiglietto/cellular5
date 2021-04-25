@@ -264,7 +264,7 @@ pub enum SNFloatNodes {
 
     #[mutagen(gen_weight = gamepad_node_weight)]
     FromGamepadAxis { axis: GamepadAxis, id: GamepadId },
- 
+
     #[mutagen(gen_weight = leaf_node_weight)]
     PseudoElementaryAutomataBuffer {
         buffer: Buffer<SNFloat>,
@@ -273,7 +273,7 @@ pub enum SNFloatNodes {
         neighbour_right: SNFloat,
         normaliser: SFloatNormaliser,
         current_index: SInt,
-    },   
+    },
 }
 
 impl Node for SNFloatNodes {
@@ -468,7 +468,11 @@ impl<'a> Updatable<'a> for SNFloatNodes {
                     let pc = Point2::new(x, prev_y);
                     let pr = Point2::new((x + 1) % w, prev_y);
 
-                    buffer[p] = normaliser.normalise(buffer[pl].into_inner() * neighbour_left.into_inner() + buffer[pc].into_inner() * neighbour_top.into_inner() + buffer[pr].into_inner() * neighbour_right.into_inner());
+                    buffer[p] = normaliser.normalise(
+                        buffer[pl].into_inner() * neighbour_left.into_inner()
+                            + buffer[pc].into_inner() * neighbour_top.into_inner()
+                            + buffer[pr].into_inner() * neighbour_right.into_inner(),
+                    );
                 }
 
                 *current_index = current_index.circular_add(SInt::new(1));
@@ -973,7 +977,7 @@ impl<'a> Updatable<'a> for UNFloatNodes {
     fn update(&mut self, _arg: UpdArg<'a>) {
         use UNFloatNodes::*;
 
-        match self{
+        match self {
             PseudoElementaryAutomataBuffer {
                 buffer,
                 neighbour_left,
@@ -995,7 +999,11 @@ impl<'a> Updatable<'a> for UNFloatNodes {
                     let pc = Point2::new(x, prev_y);
                     let pr = Point2::new((x + 1) % w, prev_y);
 
-                    buffer[p] = normaliser.normalise(buffer[pl].into_inner() * neighbour_left.into_inner() + buffer[pc].into_inner() * neighbour_top.into_inner() + buffer[pr].into_inner() * neighbour_right.into_inner());
+                    buffer[p] = normaliser.normalise(
+                        buffer[pl].into_inner() * neighbour_left.into_inner()
+                            + buffer[pc].into_inner() * neighbour_top.into_inner()
+                            + buffer[pr].into_inner() * neighbour_right.into_inner(),
+                    );
                 }
 
                 *current_index = current_index.circular_add(SInt::new(1));

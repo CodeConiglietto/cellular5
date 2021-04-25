@@ -102,7 +102,7 @@ where
             mic_spectrograms: arg.mic_spectrograms,
             gamepads: arg.gamepads,
             mouse_position: arg.mouse_position,
-            camera: arg.camera,
+            camera_frames: arg.camera_frames,
         })
     }
 }
@@ -160,7 +160,7 @@ where
             mic_spectrograms,
             gamepads,
             mouse_position,
-            camera,
+            camera_frames,
         } = arg;
 
         let nodes_len = nodes.len();
@@ -205,7 +205,7 @@ where
                 mic_spectrograms,
                 gamepads,
                 mouse_position,
-                camera,
+                camera_frames,
             };
 
             ldbg!(crate::node::mutagen_functions::leaf_node_weight(
@@ -234,7 +234,7 @@ where
                     mic_spectrograms,
                     gamepads,
                     mouse_position,
-                    camera,
+                    camera_frames,
                 },
             ),
             last_accessed: current_t,
@@ -280,7 +280,7 @@ where
                     mic_spectrograms: arg.mic_spectrograms,
                     gamepads: arg.gamepads,
                     mouse_position: arg.mouse_position,
-                    camera: arg.camera,
+                    camera_frames: arg.camera_frames,
                 },
             );
         }
@@ -314,7 +314,7 @@ where
                 mic_spectrograms: arg.mic_spectrograms,
                 gamepads: arg.gamepads,
                 mouse_position: arg.mouse_position,
-                camera: arg.camera,
+                camera_frames: arg.camera_frames,
             });
         }
     }
@@ -345,7 +345,7 @@ where
                 mic_spectrograms: arg.mic_spectrograms,
                 gamepads: arg.gamepads,
                 mouse_position: arg.mouse_position,
-                camera: arg.camera,
+                camera_frames: arg.camera_frames,
             });
         }
     }

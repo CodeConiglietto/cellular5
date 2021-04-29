@@ -1529,6 +1529,20 @@ pub enum ByteColorNodes {
         child_b: NodeBox<ByteNodes>,
     },
 
+    #[mutagen(gen_weight = leaf_node_weight)]
+    LifeLikeDeltaAutomata {
+        r_inc: Nibble,
+        r_dec: Nibble,
+        g_inc: Nibble,
+        g_dec: Nibble,
+        b_inc: Nibble,
+        b_dec: Nibble,
+        r_clamp: Boolean, //TODO: change these to normalisers
+        g_clamp: Boolean,
+        b_clamp: Boolean,
+        rule: LifeLikeAutomataRule,
+    },
+
     #[mutagen(gen_weight = branch_node_weight)]
     ModifyState {
         child: NodeBox<ByteColorNodes>,
@@ -1595,6 +1609,103 @@ impl Node for ByteColorNodes {
             }
             FromGenericColor { child } => child.compute(compute_arg).into(),
             // FromBitColor { child } => child.compute(compute_arg.reborrow()).into(),
+            LifeLikeDeltaAutomata {
+                r_inc,
+                r_dec,
+                g_inc,
+                g_dec,
+                b_inc,
+                b_dec,
+                r_clamp,
+                g_clamp,
+                b_clamp,
+                rule,
+            } => {
+                let x = (compute_arg.coordinate_set.x.to_unsigned().into_inner()
+                    * CONSTS.cell_array_width as f32)
+                    .round() as usize;
+                let y = (compute_arg.coordinate_set.y.to_unsigned().into_inner()
+                    * CONSTS.cell_array_height as f32)
+                    .round() as usize;
+                let prev_t = compute_arg.current_t.saturating_sub(1);
+
+                let mut neighbour_counts = [0; 8];
+
+                for (dx, dy) in rule.neighbourhood.offsets() {
+                    let neighbour = BitColor::from(compute_arg.history.get(
+                        (x as isize + dx).rem_euclid(CONSTS.cell_array_width as isize) as usize,
+                        (y as isize + dy).rem_euclid(CONSTS.cell_array_height as isize) as usize,
+                        prev_t,
+                    ));
+
+                    for (color, neighbour_count) in
+                        rule.color_order.iter().zip(neighbour_counts.iter_mut())
+                    {
+                        if neighbour.has_color(*color) {
+                            *neighbour_count += 1;
+                        }
+                    }
+                }
+
+                let mut new_color = BitColor::from(compute_arg.history.get(x, y, prev_t));
+
+                for (i, (color, neighbour_count)) in rule
+                    .color_order
+                    .iter()
+                    .zip(neighbour_counts.iter())
+                    .enumerate()
+                {
+                    let table = &rule.truth_table[*neighbour_count][i];
+
+                    if new_color.has_color(*color) {
+                        if !table.survival.into_inner() {
+                            new_color = BitColor::from_components(new_color.take_color(*color));
+                        }
+                    } else {
+                        if table.birth.into_inner() {
+                            new_color = BitColor::from_components(new_color.give_color(*color));
+                        }
+                    }
+                }
+
+                let other = new_color.to_components();
+                let old_color: ByteColor = compute_arg.history.get(x, y, prev_t).into();
+
+                let r_delta = if other[0] {
+                    r_inc.into_inner() as i32
+                } else {
+                    r_dec.into_inner() as i32 * -1
+                };
+                let g_delta = if other[1] {
+                    g_inc.into_inner() as i32
+                } else {
+                    g_dec.into_inner() as i32 * -1
+                };
+                let b_delta = if other[2] {
+                    b_inc.into_inner() as i32
+                } else {
+                    b_dec.into_inner() as i32 * -1
+                };
+
+                ByteColor {
+                    r: if r_clamp.into_inner() {
+                        old_color.r.clamped_add_i32(r_delta)
+                    } else {
+                        old_color.r.circular_add_i32(r_delta)
+                    },
+                    g: if g_clamp.into_inner() {
+                        old_color.g.clamped_add_i32(g_delta)
+                    } else {
+                        old_color.g.circular_add_i32(g_delta)
+                    },
+                    b: if b_clamp.into_inner() {
+                        old_color.b.clamped_add_i32(b_delta)
+                    } else {
+                        old_color.b.circular_add_i32(b_delta)
+                    },
+                    a: old_color.a,
+                }
+            }
             ModifyState { child, child_state } => child.compute(ComArg {
                 coordinate_set: child_state.compute(compute_arg.reborrow()),
                 ..compute_arg.reborrow()
@@ -2003,6 +2114,7 @@ impl<'a> Updatable<'a> for LABColorNodes {
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum GenericColorNodes {
     //Necessary for using a generic color node as a child
+    #[mutagen(mut_reroll = 0.9)]
     #[mutagen(gen_weight = leaf_node_weight)]
     Constant { value: FloatColor },
     #[mutagen(mut_reroll = 0.5)]

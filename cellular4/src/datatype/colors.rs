@@ -51,6 +51,19 @@ pub struct ByteColor {
     pub a: Byte,
 }
 
+impl ByteColor {
+    pub fn add_bit_color(self, other: BitColor) -> Self {
+        let other = other.to_components();
+
+        Self {
+            r: self.r.circular_add_i32(if other[0] { 1 } else { -1 }),
+            g: self.g.circular_add_i32(if other[1] { 1 } else { -1 }),
+            b: self.b.circular_add_i32(if other[2] { 1 } else { -1 }),
+            a: self.a,
+        }
+    }
+}
+
 impl<'a> Updatable<'a> for ByteColor {
     type UpdateArg = UpdArg<'a>;
 

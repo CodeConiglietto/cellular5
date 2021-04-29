@@ -158,6 +158,14 @@ impl Byte {
         Self::new((self.value + other.value).0)
     }
 
+    pub fn circular_add_i32(self, other: i32) -> Self {
+        Self::new((self.value.0 as i32 + other).rem_euclid(256) as u8)
+    }
+
+    pub fn clamped_add_i32(self, other: i32) -> Self {
+        Self::new((self.value.0 as i32 + other).min(255).max(0) as u8)
+    }
+
     pub fn divide(self, other: Self) -> Self {
         if other.value.0 == 0 {
             Self::new(other.value.0)

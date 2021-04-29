@@ -245,6 +245,7 @@ struct MyGame {
     //record_tree: bool,
     tree_dirty: bool,
     current_t: usize,
+    time_elapsed: f32,
     last_mutation_t: usize,
     last_render_t: usize,
     cpu_t: CpuInstant,
@@ -375,6 +376,7 @@ impl MyGame {
             //record_tree: false,
             tree_dirty: false,
             current_t: 0,
+            time_elapsed: 0.0,
             last_mutation_t: 0,
             last_render_t: 0,
             cpu_t: CpuInstant::now().unwrap(),
@@ -517,7 +519,7 @@ impl EventHandler for MyGame {
         let data = &self.data;
         let total_cells = CONSTS.cell_array_width * CONSTS.cell_array_height;
 
-        let t_coord = timer::time_since_start(ctx).as_secs_f32();
+        let t_coord = self.time_elapsed;
 
         let update_step = |y, x, mut new: ArrayViewMut1<u8>| {
             let coordinate_set = CoordinateSet {
@@ -607,6 +609,8 @@ impl EventHandler for MyGame {
         self.rolling_update_stat_total += slice_update_stat;
 
         if timer::ticks(ctx) % CONSTS.tics_per_update == 0 {
+            self.time_elapsed = timer::time_since_start(ctx).as_secs_f32();
+
             self.gamepads.update(ctx);
 
             if let Some(mic) = self.mic.as_mut() {

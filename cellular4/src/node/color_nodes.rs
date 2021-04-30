@@ -267,13 +267,8 @@ impl Node for FloatColorNodes {
                 .into(),
             FromCellArray => compute_arg
                 .history
-                .get(
-                    ((compute_arg.coordinate_set.x.into_inner() + 1.0)
-                        * 0.5
-                        * CONSTS.cell_array_width as f32) as usize,
-                    ((compute_arg.coordinate_set.y.into_inner() + 1.0)
-                        * 0.5
-                        * CONSTS.cell_array_height as f32) as usize,
+                .get_normalised(
+                    compute_arg.coordinate_set.get_coord_point(),
                     compute_arg.reborrow().current_t.saturating_sub(1),
                 )
                 .into(),
@@ -1227,15 +1222,8 @@ impl Node for BitColorNodes {
                 .into(),
             FromCellArray => compute_arg
                 .history
-                .get(
-                    ((compute_arg.coordinate_set.x.into_inner() + 1.0)
-                        * 0.5
-                        * CONSTS.cell_array_width as f32)
-                        .round() as usize,
-                    ((compute_arg.coordinate_set.y.into_inner() + 1.0)
-                        * 0.5
-                        * CONSTS.cell_array_height as f32)
-                        .round() as usize,
+                .get_normalised(
+                    compute_arg.coordinate_set.get_coord_point(),
                     compute_arg.reborrow().current_t.saturating_sub(1),
                 )
                 .into(),
@@ -1570,15 +1558,13 @@ impl Node for ByteColorNodes {
                 compute_arg.coordinate_set.y,
                 compute_arg.coordinate_set.t,
             ),
-            FromCellArray => compute_arg.history.get(
-                ((compute_arg.coordinate_set.x.into_inner() + 1.0)
-                    * 0.5
-                    * CONSTS.cell_array_width as f32) as usize,
-                ((compute_arg.coordinate_set.y.into_inner() + 1.0)
-                    * 0.5
-                    * CONSTS.cell_array_height as f32) as usize,
-                (compute_arg.reborrow().current_t - 1).max(0),
-            ),
+            FromCellArray => compute_arg
+                .history
+                .get_normalised(
+                    compute_arg.coordinate_set.get_coord_point(),
+                    compute_arg.reborrow().current_t.saturating_sub(1),
+                )
+                .into(),
 
             FromCamera => compute_arg.camera_frames.as_ref().unwrap().get(
                 compute_arg.coordinate_set.get_coord_point(),

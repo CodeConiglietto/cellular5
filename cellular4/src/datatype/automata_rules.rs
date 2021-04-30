@@ -95,15 +95,38 @@ impl<'a> UpdatableRecursively<'a> for ElementaryAutomataRule {
 #[derive(Debug, Clone, Copy, Generatable, Serialize, Deserialize)]
 #[mutagen(gen_arg = type GenArg<'a>)]
 pub enum PixelNeighbourhood {
-    Moore,
+    Melt,
+    BigMelt,
     VonNeumann,
+    AntiVonNeumann,
+    Cross,
+    Moore,
+    Spiral,
+    Diamond,
+    Circle,
+    Flower,
 }
 
 impl PixelNeighbourhood {
     pub fn offsets(&self) -> &'static [(isize, isize)] {
         match self {
-            PixelNeighbourhood::Moore => &[(-1, 0), (1, 0), (0, -1), (0, 1)],
-            PixelNeighbourhood::VonNeumann => &[
+            PixelNeighbourhood::Melt => &[(-1, -1), (0, -1), (1, -1)],
+            PixelNeighbourhood::BigMelt => {
+                &[(-1, -1), (0, -1), (1, -1), (-1, -2), (0, -2), (1, -2)]
+            }
+            PixelNeighbourhood::VonNeumann => &[(-1, 0), (1, 0), (0, -1), (0, 1)],
+            PixelNeighbourhood::AntiVonNeumann => &[(-1, -1), (1, -1), (1, -1), (1, 1)],
+            PixelNeighbourhood::Cross => &[
+                (-1, 0),
+                (-2, 0),
+                (1, 0),
+                (2, 0),
+                (0, -1),
+                (0, -2),
+                (0, 1),
+                (0, 2),
+            ],
+            PixelNeighbourhood::Moore => &[
                 (-1, -1),
                 (-1, 0),
                 (-1, 1),
@@ -112,6 +135,58 @@ impl PixelNeighbourhood {
                 (1, -1),
                 (1, 0),
                 (1, 1),
+            ],
+            PixelNeighbourhood::Spiral => &[
+                //TODO: Double check when not tired
+                (-1, 0),
+                (-2, 1),
+                (1, 0),
+                (2, 1),
+                (0, -1),
+                (1, -2),
+                (0, 1),
+                (1, 2),
+            ],
+            PixelNeighbourhood::Diamond => &[
+                //TODO: Double check when not tired
+                (-1, -1),
+                (-2, 0),
+                (-1, 1),
+                (2, 0),
+                (1, -1),
+                (0, -2),
+                (1, 1),
+                (0, 2),
+            ],
+            PixelNeighbourhood::Circle => &[
+                //TODO: Double check when not tired
+                (-2, -1),
+                (-2, 0),
+                (-2, 1),
+                (2, -1),
+                (2, 0),
+                (2, 1),
+                (-1, -2),
+                (0, -2),
+                (1, -2),
+                (-1, 2),
+                (0, 2),
+                (1, 2),
+            ],
+            PixelNeighbourhood::Flower => &[
+                //TODO: Double check when not tired
+                (-2, -1),
+                (-1, 0),
+                (-2, 1),
+                (2, -1),
+                (1, 0),
+                (2, 1),
+                (-1, -2),
+                (0, -1),
+                (1, -2),
+                (-1, 2),
+                (0, 1),
+                (1, 2),
             ],
         }
     }

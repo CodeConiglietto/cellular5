@@ -5,12 +5,12 @@ use std::{borrow::Cow, collections::HashMap};
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, quote, ToTokens};
 use syn::{
-    parenthesized,
+    bracketed, parenthesized,
     parse::{Parse, ParseStream},
     parse2, parse_macro_input,
     punctuated::Punctuated,
     spanned::Spanned,
-    token::Paren,
+    token::{Bracket, Paren},
     Attribute, Data, DataEnum, DataStruct, Error, ExprClosure, Field, Fields, Ident, LitFloat,
     Result, Token, Type,
 };
@@ -637,6 +637,7 @@ impl Parse for KeyValue {
 enum Value {
     Lit(LitFloat),
     FnIdent(Ident),
+    Values(Values),
     Closure(ExprClosure),
     Val(f64),
     Type(Type),
@@ -648,6 +649,7 @@ impl Value {
         match self {
             Value::Lit(lit) => Err(Error::new(lit.span(), "Expected type, found literal")),
             Value::FnIdent(ident) => Err(Error::new(ident.span(), "Expected type, found ident")),
+            Value::Values(values) => Err(Error::new_spanned(values, "Expected type, found array")),
             Value::Closure(c) => Err(Error::new(c.span(), "Expected type, found closure")),
             Value::Val(_) => panic!("Internal error: expected type, found value"),
             Value::Type(t) => Ok(quote!(#t)),
@@ -679,6 +681,7 @@ impl Value {
                 }
                 }))
             }
+            Value::Values(values) => values.to_weight(),
             Value::Closure(c) => Ok(Some(quote! {
                 {
                     let value = (#c)(::mutagen::Reborrow::reborrow(&mut arg));
@@ -721,6 +724,10 @@ impl Value {
                     }
                 }))
             }
+            Value::Values(values) => Err(Error::new_spanned(
+                values,
+                "Expected probability, found array",
+            )),
             Value::Closure(c) => Ok(Some(quote! {
                 {
                     let value = (#c)(::mutagen::Reborrow::reborrow(&mut arg));
@@ -745,7 +752,9 @@ impl Parse for Value {
     fn parse(input: ParseStream) -> Result<Self> {
         // TODO Add support for closure variant
         let lookahead = input.lookahead1();
-        if lookahead.peek(Token![type]) {
+        if lookahead.peek(Bracket) {
+            input.parse().map(Value::Values)
+        } else if lookahead.peek(Token![type]) {
             let _type: Token![type] = input.parse()?;
             input.parse().map(Value::Type)
         } else if lookahead.peek(LitFloat) {
@@ -755,6 +764,69 @@ impl Parse for Value {
         } else {
             Err(lookahead.error())
         }
+    }
+}
+
+impl ToTokens for Value {
+    fn to_tokens(&self, tokens: &mut TokenStream2) {
+        match self {
+            Value::Lit(lit) => lit.to_tokens(tokens),
+            Value::FnIdent(ident) => ident.to_tokens(tokens),
+            Value::Values(values) => values.to_tokens(tokens),
+            Value::Closure(c) => c.to_tokens(tokens),
+            Value::Val(v) => {
+                if *v == 0.0 {
+                } else {
+                    TokenStream2::to_tokens(&quote!(#v), tokens);
+                }
+            }
+            Value::Type(t) => t.to_tokens(tokens),
+            Value::None(_) => {}
+        }
+    }
+}
+
+#[derive(Clone)]
+struct Values {
+    bracket: Bracket,
+    values: Punctuated<Value, Token![,]>,
+}
+
+impl Values {
+    fn to_weight(&self) -> Result<Option<TokenStream2>> {
+        let weights = self
+            .values
+            .iter()
+            .map(|value| {
+                let value_weight = value.to_weight()?;
+                Ok(quote! {weight *= #value_weight;})
+            })
+            .collect::<Result<Vec<TokenStream2>>>()?;
+
+        Ok(Some(quote! {
+            {
+                let mut weight = 1.0;
+                #(#weights)*
+                weight
+            }
+        }))
+    }
+}
+
+impl Parse for Values {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let content;
+        Ok(Self {
+            bracket: bracketed!(content in input),
+            values: content.parse_terminated(Value::parse)?,
+        })
+    }
+}
+
+impl ToTokens for Values {
+    fn to_tokens(&self, tokens: &mut TokenStream2) {
+        self.bracket
+            .surround(tokens, |tokens| self.values.to_tokens(tokens));
     }
 }
 

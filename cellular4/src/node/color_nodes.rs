@@ -1489,7 +1489,7 @@ pub enum ByteColorNodes {
     #[mutagen(gen_weight = leaf_node_weight)]
     FromCellArray,
 
-    #[mutagen(gen_weight = camera_leaf_node_weight)]
+    #[mutagen(gen_weight = [leaf_node_weight, camera_node_weight])]
     FromCamera,
 
     #[mutagen(gen_weight = pipe_node_weight)]

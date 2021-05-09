@@ -504,10 +504,10 @@ pub enum ByteNodes {
         child: NodeBox<IterativeFunctionNodes>,
     },
 
-    #[mutagen(gen_weight = mic_leaf_node_weight)]
+    #[mutagen(gen_weight = [leaf_node_weight, mic_node_weight])]
     PeakMicFrequency { use_gamma: Boolean },
 
-    #[mutagen(gen_weight = mic_leaf_node_weight)]
+    #[mutagen(gen_weight = [leaf_node_weight, mic_node_weight])]
     AverageMicFrequency { use_gamma: Boolean },
 
     #[mutagen(gen_weight = leaf_node_weight)]

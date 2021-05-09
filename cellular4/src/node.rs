@@ -78,31 +78,23 @@ pub mod mutagen_functions {
         if arg.gamepads().gamepads.is_empty() {
             0.0
         } else {
-            CONSTS.gamepad_node_weight_mod * leaf_node_weight(arg)
+            1.0
         }
     }
 
-    pub fn mic_pipe_node_weight<T: MutagenArg>(arg: T) -> f64 {
+    pub fn mic_node_weight<T: MutagenArg>(arg: T) -> f64 {
         if arg.mic_spectrograms().is_none() {
             0.0
         } else {
-            pipe_node_weight(arg)
+            1.0
         }
     }
 
-    pub fn mic_leaf_node_weight<T: MutagenArg>(arg: T) -> f64 {
-        if arg.mic_spectrograms().is_none() {
-            0.0
-        } else {
-            leaf_node_weight(arg)
-        }
-    }
-
-    pub fn camera_leaf_node_weight<T: MutagenArg>(arg: T) -> f64 {
+    pub fn camera_node_weight<T: MutagenArg>(arg: T) -> f64 {
         if arg.camera_frames().is_none() {
             0.0
         } else {
-            leaf_node_weight(arg)
+            1.0
         }
     }
 

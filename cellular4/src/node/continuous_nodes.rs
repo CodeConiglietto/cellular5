@@ -561,16 +561,16 @@ pub enum UNFloatNodes {
         child_exit_normaliser: NodeBox<UFloatNormaliserNodes>,
     },
 
-    #[mutagen(gen_weight = mic_leaf_node_weight)]
+    #[mutagen(gen_weight = [leaf_node_weight, mic_node_weight])]
     AverageMicAmplitude { use_gamma: Boolean },
-    #[mutagen(gen_weight = mic_pipe_node_weight)]
+    #[mutagen(gen_weight = [pipe_node_weight, mic_node_weight])]
     SingleMicFrequency {
         child_index: NodeBox<ByteNodes>,
         use_gamma: Boolean,
     },
-    #[mutagen(gen_weight = mic_leaf_node_weight)]
+    #[mutagen(gen_weight = [leaf_node_weight, mic_node_weight])]
     PeakMicFrequency { use_gamma: Boolean },
-    #[mutagen(gen_weight = mic_leaf_node_weight)]
+    #[mutagen(gen_weight = [leaf_node_weight, mic_node_weight])]
     AverageMicFrequency { use_gamma: Boolean },
 
     // #[mutagen(gen_weight = leaf_node_weight)]

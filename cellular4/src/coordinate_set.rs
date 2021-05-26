@@ -59,10 +59,10 @@ impl CoordinateSet {
 
     //todo refactor divisor into constant
     pub fn get_unfloat_t(&self) -> UNFloat {
-        UNFloat::new_triangle(self.t / 10.0 / CONSTS.time_scale_divisor)
+        UNFloat::new_triangle(self.t / CONSTS.time_scale_divisor)
     }
 
     pub fn get_angle_t(&self) -> Angle {
-        Angle::new((((self.t as usize % 360) as f32 / 360.0) * 2.0 * PI) - PI)
+        Angle::new(self.t / CONSTS.time_scale_divisor - PI)
     }
 }

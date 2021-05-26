@@ -52,6 +52,20 @@ impl SNPoint {
         )
     }
 
+    pub fn from_range(val: Point2<f32>, min: Point2<f32>, max: Point2<f32>) -> Self {
+        Self::from_snfloats(
+            SNFloat::new_from_range(val.x, min.x, max.x),
+            SNFloat::new_from_range(val.y, min.y, max.y),
+        )
+    }
+
+    pub fn from_usize_range(val: Point2<usize>, min: Point2<usize>, max: Point2<usize>) -> Self {
+        Self::from_snfloats(
+            SNFloat::new_from_range(val.x as f32, min.x as f32, max.x as f32),
+            SNFloat::new_from_range(val.y as f32, min.y as f32, max.y as f32),
+        )
+    }
+
     pub fn from_snfloats(x: SNFloat, y: SNFloat) -> Self {
         Self::new_unchecked(Point2::new(x.into_inner(), y.into_inner()))
     }

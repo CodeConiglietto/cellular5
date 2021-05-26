@@ -245,7 +245,7 @@ impl<'a> Updatable<'a> for PointSetNodes {
                             p.normalised_add(
                                 child
                                     .compute(compute_arg.clone().replace_coords(p))
-                                    .scale_unfloat(UNFloat::new(0.05)), //magic number makes things translate at a not-insane rate
+                                    .scale_unfloat(UNFloat::new(0.25 / CONSTS.target_fps as f32)), //magic number makes things translate at a not-insane rate
                                 normaliser,
                             )
                         })
@@ -271,7 +271,9 @@ impl<'a> Updatable<'a> for PointSetNodes {
                                     .scale_unfloat(
                                         child
                                             .compute(compute_arg.clone().replace_coords(p))
-                                            .multiply(UNFloat::new(0.05)),
+                                            .multiply(UNFloat::new(
+                                                0.25 / CONSTS.target_fps as f32,
+                                            )),
                                     ),
                                 normaliser,
                             )

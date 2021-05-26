@@ -2,8 +2,9 @@
 
 use std::{collections::VecDeque, f32::consts::PI, iter};
 
+use itertools::izip;
 use mutagen::{Generatable, Mutatable, Reborrow, Updatable, UpdatableRecursively};
-use rand::thread_rng;
+use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::prelude::*;
@@ -996,6 +997,29 @@ impl<'a> Updatable<'a> for FloatColorNodes {
                 }
             }
 
+            // RandomWalkBuffer {
+            //     buffer,
+            //     x,
+            //     y,
+            //     point,
+            //     neighbourhood,
+            //     child_color,
+            // } => {
+
+            //     let offsets = neighbourhood.offsets();
+            //     let offset = offsets[thread_rng().gen::<usize>() % offsets.len()];
+            //     *point = point + offset
+
+            //     *x = x + offset[0];
+            //     *y = y + offset[1];
+
+            //     arg.coordinate_set.x = point.x();
+            //     arg.coordinate_set.y = point.y();
+
+            //     let color = child_color.compute(arg.reborrow().into());
+
+            //     buffer.draw_dot(*dest, color);
+            // }
             IterativeCenteredPolarLineBuffer {
                 buffer,
                 ref mut theta,
@@ -1286,16 +1310,19 @@ impl Node for BitColorNodes {
 
                 let mut neighbour_counts = [0; 8];
 
-                for (dx, dy) in rule.neighbourhood.offsets() {
-                    let neighbour = BitColor::from(compute_arg.history.get(
-                        (x as isize + dx).rem_euclid(CONSTS.cell_array_width as isize) as usize,
-                        (y as isize + dy).rem_euclid(CONSTS.cell_array_height as isize) as usize,
-                        prev_t,
-                    ));
+                for (color, neighbour_count, rule) in izip!(
+                    rule.color_order.iter(),
+                    neighbour_counts.iter_mut(),
+                    rule.color_rules.iter()
+                ) {
+                    for (dx, dy) in rule.neighbourhood.offsets() {
+                        let neighbour = BitColor::from(compute_arg.history.get(
+                            (x as isize + dx).rem_euclid(CONSTS.cell_array_width as isize) as usize,
+                            (y as isize + dy).rem_euclid(CONSTS.cell_array_height as isize)
+                                as usize,
+                            prev_t,
+                        ));
 
-                    for (color, neighbour_count) in
-                        rule.color_order.iter().zip(neighbour_counts.iter_mut())
-                    {
                         if neighbour.has_color(*color) {
                             *neighbour_count += 1;
                         }
@@ -1304,13 +1331,12 @@ impl Node for BitColorNodes {
 
                 let mut new_color = BitColor::from(compute_arg.history.get(x, y, prev_t));
 
-                for (i, (color, neighbour_count)) in rule
-                    .color_order
-                    .iter()
-                    .zip(neighbour_counts.iter())
-                    .enumerate()
-                {
-                    let table = &rule.truth_table[*neighbour_count][i];
+                for (color, neighbour_count, rule) in izip!(
+                    rule.color_order.iter(),
+                    neighbour_counts.iter(),
+                    rule.color_rules.iter()
+                ) {
+                    let table = &rule.rules[*neighbour_count];
 
                     if new_color.has_color(*color) {
                         if !table.survival.into_inner() {
@@ -1337,16 +1363,19 @@ impl Node for BitColorNodes {
 
                 let mut neighbour_counts = [0; 8];
 
-                for (dx, dy) in rule.neighbourhood.offsets() {
-                    let neighbour = BitColor::from(compute_arg.history.get(
-                        (x as isize + dx).rem_euclid(CONSTS.cell_array_width as isize) as usize,
-                        (y as isize + dy).rem_euclid(CONSTS.cell_array_height as isize) as usize,
-                        prev_t,
-                    ));
+                for (color, neighbour_count, rule) in izip!(
+                    rule.color_order.iter(),
+                    neighbour_counts.iter_mut(),
+                    rule.color_rules.iter()
+                ) {
+                    for (dx, dy) in rule.neighbourhood.offsets() {
+                        let neighbour = BitColor::from(compute_arg.history.get(
+                            (x as isize + dx).rem_euclid(CONSTS.cell_array_width as isize) as usize,
+                            (y as isize + dy).rem_euclid(CONSTS.cell_array_height as isize)
+                                as usize,
+                            prev_t,
+                        ));
 
-                    for (color, neighbour_count) in
-                        rule.color_order.iter().zip(neighbour_counts.iter_mut())
-                    {
                         if neighbour.has_color(*color) {
                             *neighbour_count += 1;
                         }
@@ -1360,10 +1389,12 @@ impl Node for BitColorNodes {
                 let color_order_cycled =
                     rest_color_order.iter().chain(iter::once(first_color_order));
 
-                for (i, (color, neighbour_count)) in
-                    color_order_cycled.zip(neighbour_counts.iter()).enumerate()
-                {
-                    let table = &rule.truth_table[*neighbour_count][i];
+                for (color, neighbour_count, rule) in izip!(
+                    color_order_cycled,
+                    neighbour_counts.iter(),
+                    rule.color_rules.iter()
+                ) {
+                    let table = &rule.rules[*neighbour_count];
 
                     if new_color.has_color(*color) {
                         if !table.survival.into_inner() {
@@ -1395,32 +1426,33 @@ impl Node for BitColorNodes {
 
                 let hist_t = compute_arg.reborrow().current_t.saturating_sub(1);
 
-                let point_count = rule.neighbourhood.offsets().len();
-
                 let mut neighbour_counts = [0; 8];
 
-                for i in 0..point_count {
-                    let theta_offset =
-                        theta + Angle::new((i as f32 / point_count as f32) * 2.0 * PI - PI);
+                for (color, neighbour_count, rule) in izip!(
+                    rule.color_order.iter(),
+                    neighbour_counts.iter_mut(),
+                    rule.color_rules.iter()
+                ) {
+                    let point_count = rule.neighbourhood.offsets().len();
+                    for i in 0..point_count {
+                        let theta_offset =
+                            theta + Angle::new((i as f32 / point_count as f32) * 2.0 * PI - PI);
 
-                    let neighbour: BitColor = compute_arg
-                        .reborrow()
-                        .history
-                        .get_normalised(
-                            middle.normalised_add(
-                                SNPoint::from_snfloats(
-                                    SNFloat::new(rho * f32::sin(theta_offset.into_inner())),
-                                    SNFloat::new(rho * f32::cos(theta_offset.into_inner())),
+                        let neighbour: BitColor = compute_arg
+                            .reborrow()
+                            .history
+                            .get_normalised(
+                                middle.normalised_add(
+                                    SNPoint::from_snfloats(
+                                        SNFloat::new(rho * f32::sin(theta_offset.into_inner())),
+                                        SNFloat::new(rho * f32::cos(theta_offset.into_inner())),
+                                    ),
+                                    normaliser,
                                 ),
-                                normaliser,
-                            ),
-                            hist_t,
-                        )
-                        .into();
+                                hist_t,
+                            )
+                            .into();
 
-                    for (color, neighbour_count) in
-                        rule.color_order.iter().zip(neighbour_counts.iter_mut())
-                    {
                         if neighbour.has_color(*color) {
                             *neighbour_count += 1;
                         }
@@ -1430,13 +1462,12 @@ impl Node for BitColorNodes {
                 let mut new_color =
                     BitColor::from(compute_arg.history.get_normalised(middle, hist_t));
 
-                for (i, (color, neighbour_count)) in rule
-                    .color_order
-                    .iter()
-                    .zip(neighbour_counts.iter())
-                    .enumerate()
-                {
-                    let table = &rule.truth_table[*neighbour_count][i];
+                for (color, neighbour_count, rule) in izip!(
+                    rule.color_order.iter(),
+                    neighbour_counts.iter(),
+                    rule.color_rules.iter()
+                ) {
+                    let table = &rule.rules[*neighbour_count];
 
                     if new_color.has_color(*color) {
                         if !table.survival.into_inner() {
@@ -1617,16 +1648,35 @@ impl Node for ByteColorNodes {
 
                 let mut neighbour_counts = [0; 8];
 
-                for (dx, dy) in rule.neighbourhood.offsets() {
-                    let neighbour = BitColor::from(compute_arg.history.get(
-                        (x as isize + dx).rem_euclid(CONSTS.cell_array_width as isize) as usize,
-                        (y as isize + dy).rem_euclid(CONSTS.cell_array_height as isize) as usize,
-                        prev_t,
-                    ));
+                // for (dx, dy) in rule.neighbourhood.offsets() {
+                //     let neighbour = BitColor::from(compute_arg.history.get(
+                //         (x as isize + dx).rem_euclid(CONSTS.cell_array_width as isize) as usize,
+                //         (y as isize + dy).rem_euclid(CONSTS.cell_array_height as isize) as usize,
+                //         prev_t,
+                //     ));
 
-                    for (color, neighbour_count) in
-                        rule.color_order.iter().zip(neighbour_counts.iter_mut())
-                    {
+                //     for (color, neighbour_count) in
+                //         rule.color_order.iter().zip(neighbour_counts.iter_mut())
+                //     {
+                //         if neighbour.has_color(*color) {
+                //             *neighbour_count += 1;
+                //         }
+                //     }
+                // }
+
+                for (color, neighbour_count, rule) in izip!(
+                    rule.color_order.iter(),
+                    neighbour_counts.iter_mut(),
+                    rule.color_rules.iter()
+                ) {
+                    for (dx, dy) in rule.neighbourhood.offsets() {
+                        let neighbour = BitColor::from(compute_arg.history.get(
+                            (x as isize + dx).rem_euclid(CONSTS.cell_array_width as isize) as usize,
+                            (y as isize + dy).rem_euclid(CONSTS.cell_array_height as isize)
+                                as usize,
+                            prev_t,
+                        ));
+
                         if neighbour.has_color(*color) {
                             *neighbour_count += 1;
                         }
@@ -1635,13 +1685,12 @@ impl Node for ByteColorNodes {
 
                 let mut new_color = BitColor::from(compute_arg.history.get(x, y, prev_t));
 
-                for (i, (color, neighbour_count)) in rule
-                    .color_order
-                    .iter()
-                    .zip(neighbour_counts.iter())
-                    .enumerate()
-                {
-                    let table = &rule.truth_table[*neighbour_count][i];
+                for (color, neighbour_count, rule) in izip!(
+                    rule.color_order.iter(),
+                    neighbour_counts.iter(),
+                    rule.color_rules.iter()
+                ) {
+                    let table = &rule.rules[*neighbour_count];
 
                     if new_color.has_color(*color) {
                         if !table.survival.into_inner() {
@@ -2016,6 +2065,14 @@ pub enum LABColorNodes {
     #[mutagen(gen_weight = branch_node_weight)]
     FromComponents {
         l: NodeBox<SNFloatNodes>,
+        a: NodeBox<SNFloatNodes>,
+        b: NodeBox<SNFloatNodes>,
+        alpha: NodeBox<UNFloatNodes>,
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    FromComplexComponents {
+        l: NodeBox<SNFloatNodes>,
         ab: NodeBox<SNComplexNodes>,
         alpha: NodeBox<UNFloatNodes>,
     },
@@ -2051,7 +2108,16 @@ impl Node for LABColorNodes {
 
             FromGenericColor { child } => child.compute(compute_arg).into(),
 
-            FromComponents { l, ab, alpha } => LABColor {
+            FromComponents { l, a, b, alpha } => LABColor {
+                l: l.compute(compute_arg.reborrow()),
+                ab: SNComplex::from_snfloats(
+                    a.compute(compute_arg.reborrow()),
+                    b.compute(compute_arg.reborrow()),
+                ),
+                alpha: alpha.compute(compute_arg.reborrow()),
+            },
+
+            FromComplexComponents { l, ab, alpha } => LABColor {
                 l: l.compute(compute_arg.reborrow()),
                 ab: ab.compute(compute_arg.reborrow()),
                 alpha: alpha.compute(compute_arg.reborrow()),

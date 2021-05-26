@@ -95,6 +95,10 @@ impl<'a> UpdatableRecursively<'a> for ElementaryAutomataRule {
 #[derive(Debug, Clone, Copy, Generatable, Serialize, Deserialize)]
 #[mutagen(gen_arg = type GenArg<'a>)]
 pub enum PixelNeighbourhood {
+    Vertical,
+    Horizontal,
+    DiagLeft,
+    DiagRight,
     Melt,
     BigMelt,
     VonNeumann,
@@ -105,11 +109,16 @@ pub enum PixelNeighbourhood {
     Diamond,
     Circle,
     Flower,
+    Square,
 }
 
 impl PixelNeighbourhood {
     pub fn offsets(&self) -> &'static [(isize, isize)] {
         match self {
+            PixelNeighbourhood::Vertical => &[(0, -1), (0, 1)],
+            PixelNeighbourhood::Horizontal => &[(-1, 0), (1, 0)],
+            PixelNeighbourhood::DiagLeft => &[(-1, -1), (1, 1)],
+            PixelNeighbourhood::DiagRight => &[(1, -1), (-1, 1)],
             PixelNeighbourhood::Melt => &[(-1, -1), (0, -1), (1, -1)],
             PixelNeighbourhood::BigMelt => {
                 &[(-1, -1), (0, -1), (1, -1), (-1, -2), (0, -2), (1, -2)]
@@ -188,6 +197,25 @@ impl PixelNeighbourhood {
                 (0, 1),
                 (1, 2),
             ],
+            PixelNeighbourhood::Square => &[
+                //TODO: Double check when not tired
+                (-2, -2),
+                (-2, -1),
+                (-2, 0),
+                (-2, 1),
+                (2, -2),
+                (2, -1),
+                (2, 0),
+                (2, 1),
+                (-2, 2),
+                (-1, -2),
+                (0, -2),
+                (1, -2),
+                (2, 2),
+                (-1, 2),
+                (0, 2),
+                (1, 2),
+            ],
         }
     }
 }
@@ -239,11 +267,58 @@ impl<'a> UpdatableRecursively<'a> for NeighbourCountAutomataRule {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct LifeLikeAutomataRule {
+pub struct IndivAutomataRule {
     pub neighbourhood: PixelNeighbourhood,
+    pub rules: Vec<LifeLikeTable>,
+}
+
+impl<'a> Generatable<'a> for IndivAutomataRule {
+    type GenArg = GenArg<'a>;
+
+    fn generate_rng<R: Rng + ?Sized>(rng: &mut R, mut arg: Self::GenArg) -> Self {
+        let neighbourhood = PixelNeighbourhood::generate_rng(rng, arg.reborrow());
+        let n = neighbourhood.offsets().len();
+
+        Self {
+            neighbourhood,
+            rules: (0..=n)
+                .map(|_| LifeLikeTable::generate_rng(rng, arg.reborrow()))
+                .collect(),
+        }
+    }
+}
+
+impl<'a> Mutatable<'a> for IndivAutomataRule {
+    type MutArg = MutArg<'a>;
+
+    fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, arg: Self::MutArg) {
+        if thread_rng().gen::<bool>() {
+            *self = Self::generate_rng(rng, arg.into());
+        } else {
+            self.rules[thread_rng().gen::<usize>() % self.neighbourhood.offsets().len()]
+                .mutate_rng(rng, arg);
+        }
+    }
+}
+
+impl<'a> Updatable<'a> for IndivAutomataRule {
+    type UpdateArg = UpdArg<'a>;
+
+    fn update(&mut self, _arg: Self::UpdateArg) {}
+}
+
+impl<'a> UpdatableRecursively<'a> for IndivAutomataRule {
+    fn update_recursively(&mut self, _arg: Self::UpdateArg) {}
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LifeLikeAutomataRule {
+    // pub neighbourhood: PixelNeighbourhood,
     pub color_order: [BitColor; 8],
     /// Indexed by (neighbour_count, color_idx)
-    pub truth_table: Vec<[LifeLikeTable; 8]>,
+    // pub truth_table: Vec<[LifeLikeTable; 8]>,
+    /// Indexed by color_idx
+    pub color_rules: [IndivAutomataRule; 8],
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Generatable, Mutatable)]
@@ -257,28 +332,21 @@ impl<'a> Generatable<'a> for LifeLikeAutomataRule {
     type GenArg = GenArg<'a>;
 
     fn generate_rng<R: Rng + ?Sized>(rng: &mut R, mut arg: Self::GenArg) -> Self {
-        let neighbourhood = PixelNeighbourhood::generate_rng(rng, arg.reborrow());
-        let n = neighbourhood.offsets().len() + 1;
         let mut color_order = BitColor::values();
         color_order.shuffle(rng);
 
         Self {
-            neighbourhood,
             color_order,
-            truth_table: (0..n)
-                .map(|_| {
-                    [
-                        LifeLikeTable::generate_rng(rng, arg.reborrow()),
-                        LifeLikeTable::generate_rng(rng, arg.reborrow()),
-                        LifeLikeTable::generate_rng(rng, arg.reborrow()),
-                        LifeLikeTable::generate_rng(rng, arg.reborrow()),
-                        LifeLikeTable::generate_rng(rng, arg.reborrow()),
-                        LifeLikeTable::generate_rng(rng, arg.reborrow()),
-                        LifeLikeTable::generate_rng(rng, arg.reborrow()),
-                        LifeLikeTable::generate_rng(rng, arg.reborrow()),
-                    ]
-                })
-                .collect(),
+            color_rules: [
+                IndivAutomataRule::generate_rng(rng, arg.reborrow()),
+                IndivAutomataRule::generate_rng(rng, arg.reborrow()),
+                IndivAutomataRule::generate_rng(rng, arg.reborrow()),
+                IndivAutomataRule::generate_rng(rng, arg.reborrow()),
+                IndivAutomataRule::generate_rng(rng, arg.reborrow()),
+                IndivAutomataRule::generate_rng(rng, arg.reborrow()),
+                IndivAutomataRule::generate_rng(rng, arg.reborrow()),
+                IndivAutomataRule::generate_rng(rng, arg.reborrow()),
+            ],
         }
     }
 }
@@ -287,12 +355,11 @@ impl<'a> Mutatable<'a> for LifeLikeAutomataRule {
     type MutArg = MutArg<'a>;
 
     fn mutate_rng<R: Rng + ?Sized>(&mut self, rng: &mut R, arg: Self::MutArg) {
-        // *self = Self::generate_rng(rng, arg.into());
-        let n = self.neighbourhood.offsets().len() + 1;
-        let i = thread_rng().gen::<usize>() % n;
-        let j = thread_rng().gen::<usize>() % 8;
-
-        self.truth_table[i][j].mutate_rng(rng, arg);
+        if thread_rng().gen::<bool>() {
+            *self = Self::generate_rng(rng, arg.into());
+        } else {
+            self.color_rules[thread_rng().gen::<usize>() % 8].mutate_rng(rng, arg);
+        }
     }
 }
 

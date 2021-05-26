@@ -274,6 +274,16 @@ pub enum SNFloatNodes {
         normaliser: SFloatNormaliser,
         current_index: SInt,
     },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    PseudoNodedElementaryAutomataBuffer {
+        buffer: Buffer<SNFloat>,
+        neighbour_left: NodeBox<SNFloatNodes>,
+        neighbour_top: NodeBox<SNFloatNodes>,
+        neighbour_right: NodeBox<SNFloatNodes>,
+        normaliser: SFloatNormaliser,
+        current_index: SInt,
+    },
 }
 
 impl Node for SNFloatNodes {
@@ -432,6 +442,10 @@ impl Node for SNFloatNodes {
             PseudoElementaryAutomataBuffer { buffer, .. } => {
                 buffer[compute_arg.coordinate_set.get_coord_point()]
             }
+
+            PseudoNodedElementaryAutomataBuffer { buffer, .. } => {
+                buffer[compute_arg.coordinate_set.get_coord_point()]
+            }
         }
     }
 }
@@ -472,6 +486,60 @@ impl<'a> Updatable<'a> for SNFloatNodes {
                         buffer[pl].into_inner() * neighbour_left.into_inner()
                             + buffer[pc].into_inner() * neighbour_top.into_inner()
                             + buffer[pr].into_inner() * neighbour_right.into_inner(),
+                    );
+                }
+
+                *current_index = current_index.circular_add(SInt::new(1));
+            }
+            PseudoNodedElementaryAutomataBuffer {
+                buffer,
+                neighbour_left,
+                neighbour_top,
+                neighbour_right,
+                normaliser,
+                ref mut current_index,
+            } => {
+                let w = buffer.width();
+                let h = buffer.height();
+
+                let y = current_index.into_inner().rem_euclid(h as i32) as usize;
+                let prev_y = (y as isize - 1).rem_euclid(h as isize) as usize;
+
+                let size = Point2::new(w, h);
+                let zero = Point2::new(0, 0);
+
+                let mut arg: ComArg<'a> = arg.into();
+
+                for x in 0..w {
+                    let p = Point2::new(x, y);
+
+                    let pl = Point2::new((x as isize - 1).rem_euclid(w as isize) as usize, prev_y);
+                    let pc = Point2::new(x, prev_y);
+                    let pr = Point2::new((x + 1) % w, prev_y);
+
+                    let point_l = SNPoint::from_usize_range(pl, zero, size);
+                    let point_c = SNPoint::from_usize_range(pc, zero, size);
+                    let point_r = SNPoint::from_usize_range(pr, zero, size);
+
+                    let l_arg = arg.reborrow();
+                    let l_val = neighbour_left
+                        .compute(l_arg.replace_coords(&point_l))
+                        .into_inner();
+
+                    let c_arg = arg.reborrow();
+                    let c_val = neighbour_top
+                        .compute(c_arg.replace_coords(&point_c))
+                        .into_inner();
+
+                    let r_arg = arg.reborrow();
+                    let r_val = neighbour_right
+                        .compute(r_arg.replace_coords(&point_r))
+                        .into_inner();
+
+                    buffer[p] = normaliser.normalise(
+                        buffer[pl].into_inner() * l_val
+                            + buffer[pc].into_inner() * c_val
+                            + buffer[pr].into_inner() * r_val,
                     );
                 }
 
@@ -629,6 +697,16 @@ pub enum UNFloatNodes {
         neighbour_left: SNFloat,
         neighbour_top: SNFloat,
         neighbour_right: SNFloat,
+        normaliser: UFloatNormaliser,
+        current_index: SInt,
+    },
+
+    #[mutagen(gen_weight = branch_node_weight)]
+    PseudoNodedElementaryAutomataBuffer {
+        buffer: Buffer<UNFloat>,
+        neighbour_left: NodeBox<SNFloatNodes>,
+        neighbour_top: NodeBox<SNFloatNodes>,
+        neighbour_right: NodeBox<SNFloatNodes>,
         normaliser: UFloatNormaliser,
         current_index: SInt,
     },
@@ -967,6 +1045,9 @@ impl Node for UNFloatNodes {
             PseudoElementaryAutomataBuffer { buffer, .. } => {
                 buffer[compute_arg.coordinate_set.get_coord_point()]
             }
+            PseudoNodedElementaryAutomataBuffer { buffer, .. } => {
+                buffer[compute_arg.coordinate_set.get_coord_point()]
+            }
         }
     }
 }
@@ -974,7 +1055,7 @@ impl Node for UNFloatNodes {
 impl<'a> Updatable<'a> for UNFloatNodes {
     type UpdateArg = UpdArg<'a>;
 
-    fn update(&mut self, _arg: UpdArg<'a>) {
+    fn update(&mut self, arg: UpdArg<'a>) {
         use UNFloatNodes::*;
 
         match self {
@@ -1003,6 +1084,60 @@ impl<'a> Updatable<'a> for UNFloatNodes {
                         buffer[pl].into_inner() * neighbour_left.into_inner()
                             + buffer[pc].into_inner() * neighbour_top.into_inner()
                             + buffer[pr].into_inner() * neighbour_right.into_inner(),
+                    );
+                }
+
+                *current_index = current_index.circular_add(SInt::new(1));
+            }
+            PseudoNodedElementaryAutomataBuffer {
+                buffer,
+                neighbour_left,
+                neighbour_top,
+                neighbour_right,
+                normaliser,
+                ref mut current_index,
+            } => {
+                let w = buffer.width();
+                let h = buffer.height();
+
+                let y = current_index.into_inner().rem_euclid(h as i32) as usize;
+                let prev_y = (y as isize - 1).rem_euclid(h as isize) as usize;
+
+                let size = Point2::new(w, h);
+                let zero = Point2::new(0, 0);
+
+                let mut arg: ComArg<'a> = arg.into();
+
+                for x in 0..w {
+                    let p = Point2::new(x, y);
+
+                    let pl = Point2::new((x as isize - 1).rem_euclid(w as isize) as usize, prev_y);
+                    let pc = Point2::new(x, prev_y);
+                    let pr = Point2::new((x + 1) % w, prev_y);
+
+                    let point_l = SNPoint::from_usize_range(pl, zero, size);
+                    let point_c = SNPoint::from_usize_range(pc, zero, size);
+                    let point_r = SNPoint::from_usize_range(pr, zero, size);
+
+                    let l_arg = arg.reborrow();
+                    let l_val = neighbour_left
+                        .compute(l_arg.replace_coords(&point_l))
+                        .into_inner();
+
+                    let c_arg = arg.reborrow();
+                    let c_val = neighbour_top
+                        .compute(c_arg.replace_coords(&point_c))
+                        .into_inner();
+
+                    let r_arg = arg.reborrow();
+                    let r_val = neighbour_right
+                        .compute(r_arg.replace_coords(&point_r))
+                        .into_inner();
+
+                    buffer[p] = normaliser.normalise(
+                        buffer[pl].into_inner() * l_val
+                            + buffer[pc].into_inner() * c_val
+                            + buffer[pr].into_inner() * r_val,
                     );
                 }
 

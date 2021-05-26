@@ -621,7 +621,7 @@ impl<'a> Updatable<'a> for CoordMapNodes {
             } => {
                 let translation_scale = child_scale
                     .compute(arg.reborrow().into())
-                    .scale_unfloat(UNFloat::new(0.025));
+                    .scale_unfloat(UNFloat::new(0.1 / CONSTS.target_fps as f32));
 
                 let normaliser = child_normaliser.compute(arg.reborrow().into());
 

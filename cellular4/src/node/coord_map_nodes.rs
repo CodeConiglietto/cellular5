@@ -47,7 +47,7 @@ pub enum CoordMapNodes {
     #[mutagen(gen_weight = leaf_node_weight)]
     Abs,
 
-    #[mutagen(gen_weight = mic_pipe_node_weight)]
+    #[mutagen(gen_weight = [pipe_node_weight, mic_node_weight])]
     ShiftAxisSpectrogram {
         axis: Boolean,
         invert_freq_indexing: Boolean,

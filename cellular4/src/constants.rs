@@ -92,8 +92,6 @@ pub struct Constants {
     pub min_branch_depth: usize,
     pub max_branch_depth: usize,
 
-    pub gamepad_node_weight_mod: f64,
-
     pub mic: Option<MicConfig>,
 
     pub smithsonian_api_key: Option<String>,

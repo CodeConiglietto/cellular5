@@ -8,8 +8,7 @@ edition = "2018"
 mutagen = { path = "../mutagen", features = ["serde"] }
 dot-serde = { path = "../dot-serde" }
 
-# TODO Update this to 0.6.0 once that's released
-ggez = { git = "https://github.com/cerebralcourt/ggez.git", branch = "patch-1" }
+ggez = { version = "0.6.0", git = "https://github.com/ggez/ggez.git" }
 
 apodize = "1.0.0"
 approx = "0.4.0"

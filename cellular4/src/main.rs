@@ -396,7 +396,7 @@ impl MyGame {
     }
 }
 
-impl EventHandler for MyGame {
+impl EventHandler<ggez::GameError> for MyGame {
     fn key_down_event(
         &mut self,
         ctx: &mut Context,

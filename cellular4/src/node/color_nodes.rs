@@ -1798,8 +1798,9 @@ pub enum HSVColorNodes {
         scaling_factor: SNFloat,
     },
 
-    #[mutagen(gen_weight = 0.0)]
-    //branch_node_weight)]//TODO FIX, yes I know it says it down there but this is important. Go learn some fractal stuff buttface
+    // #[mutagen(gen_weight = 0.0)]
+    #[mutagen(gen_preferred)]//TODO FIX
+    #[mutagen(gen_weight = branch_node_weight)]
     DucksFractal {
         child_offset: NodeBox<SNPointNodes>,
         child_scale: NodeBox<SNPointNodes>,
@@ -1880,54 +1881,104 @@ impl Node for HSVColorNodes {
             } => {
                 let _offset = child_offset.compute(compute_arg.reborrow()).into_inner();
                 let _scale = child_scale.compute(compute_arg.reborrow()).into_inner();
-                let iterations = //50;
-                128 - (128 - compute_arg.coordinate_set.get_byte_t().into_inner() as i32).abs();
+                let iterations = 25;
+                // 128 - (128 - compute_arg.coordinate_set.get_byte_t().into_inner() as i32).abs();
                 // 1 + child_iterations
                 //     .compute(compute_arg.reborrow())
                 //     .into_inner()
                 //     / 4;
 
                 // x and y are swapped intentionally
+                // let c = Complex::new(
+                //     f64::from(
+                //         compute_arg.coordinate_set.x.into_inner(),
+                //     ),
+                //     f64::from(
+                //         (compute_arg.coordinate_set.y.into_inner() * 0.5 + 0.5) * -1.0 * PI,
+                //     ),
+                // );
                 let c = Complex::new(
                     f64::from(
-                        //0.001 *
-                        (1.0 - compute_arg.coordinate_set.get_unfloat_t().into_inner()) *
-                    // scale.y * 
-                    compute_arg.coordinate_set.y.into_inner(), // - 0.5
+                        compute_arg.coordinate_set.y.into_inner() * 16.0 * UNFloat::new_sin(compute_arg.coordinate_set.t / (CONSTS.time_scale_divisor * 20.0)).into_inner(),
                     ),
                     f64::from(
-                        //0.001 *
-                        (1.0 - compute_arg.coordinate_set.get_unfloat_t().into_inner()) *
-                    // scale.x * 
-                    compute_arg.coordinate_set.x.into_inner(), // - 0.5
+                        compute_arg.coordinate_set.x.into_inner() * 16.0 * UNFloat::new_sin(compute_arg.coordinate_set.t / (CONSTS.time_scale_divisor * 20.0)).into_inner(),
+                    ),
+                );
+                // let c = Complex::new(
+                //     f64::from(
+                //         0.0,
+                //     ),
+                //     f64::from(
+                //         0.0,
+                //     ),
+                // );
+
+                // let c = Complex::new(
+                //     f64::from(
+                //         //0.001 *
+                //         (1.0 - compute_arg.coordinate_set.get_unfloat_t().into_inner()) *
+                //     // scale.y * 
+                //     compute_arg.coordinate_set.y.into_inner(), // - 0.5
+                //     ),
+                //     f64::from(
+                //         //0.001 *
+                //         (1.0 - compute_arg.coordinate_set.get_unfloat_t().into_inner()) *
+                //     // scale.x * 
+                //     compute_arg.coordinate_set.x.into_inner(), // - 0.5
+                //     ),
+                // );
+
+                // let c_offset = Complex::new(
+                //     // compute_arg.coordinate_set.get_unfloat_t().into_inner() as f64
+                //     // f64::from(scale.y) *
+                //     // f64::from(offset.y)
+                //     0.0,
+                //     // f64::from(scale.x) *
+                //     // f64::from(offset.x)
+                //     // compute_arg.coordinate_set.get_unfloat_t().into_inner() as f64
+                //     0.0,
+                // );
+
+                let normaliser = UFloatNormaliser::Triangle;
+
+                let mouse_pos = SNPoint::from_snfloats(
+                    normaliser
+                        .normalise(compute_arg.mouse_position.x / CONSTS.initial_window_width as f32)
+                        .to_signed(),
+                    normaliser
+                        .normalise(compute_arg.mouse_position.y / CONSTS.initial_window_height as f32)
+                        .to_signed(),
+                );
+
+                let c_offset = Complex::new(
+                    f64::from(
+                        // mouse_pos.x().into_inner(),
+                        UNFloat::new_sin(mouse_pos.x().into_inner() + compute_arg.coordinate_set.t / (CONSTS.time_scale_divisor * 10.0)).to_signed().into_inner(),
+                    
+                    ),
+                    f64::from(
+                        UNFloat::new_sin(mouse_pos.y().into_inner() + compute_arg.coordinate_set.t / (CONSTS.time_scale_divisor * 5.0)).into_inner() * -1.0 * PI,
+                        // (arg.coordinate_set.get_unfloat_t().into_inner()) * -1.0 * PI,
                     ),
                 );
 
-                let _c_offset = Complex::new(
-                    // compute_arg.coordinate_set.get_unfloat_t().into_inner() as f64
-                    // f64::from(scale.y) *
-                    // f64::from(offset.y)
-                    0.0,
-                    // f64::from(scale.x) *
-                    // f64::from(offset.x)
-                    // compute_arg.coordinate_set.get_unfloat_t().into_inner() as f64
-                    0.0,
-                );
-
-                let mut magnitude = 0.0;
+                let mut magnitude: f64 = 0.0;
 
                 let (_z_final, _escape) = escape_time_system(
-                    c, // + c_offset
+                    c,
                     iterations as usize,
                     |z, _i| {
-                        (
-                            // if z.im > 0.0 { z } else { z.conj() }
-                            z.abs() + c
-                        )
-                            .ln()
+                        ((if z.im >= 0.0 { z } else { z.conj() })).ln() + c_offset
                     },
-                    |z, _i| {
-                        magnitude += z.norm();
+                    |z, i| {
+                        // magnitude += z.norm();
+                        // if magnitude != 0.0 && !magnitude.is_normal() {
+                        //     panic!("Magnitude is {} at iteration {} with z {} and c {}", magnitude, i, z, c); 
+                        // }
+                        // if z.norm().is_normal() {
+                            magnitude += z.norm();
+                        // }
                         false
                     },
                 );
@@ -1942,8 +1993,14 @@ impl Node for HSVColorNodes {
                 //     Byte::new(iterations),
                 // )
 
+                
+                if !magnitude.is_normal() {
+                    magnitude = 0.0;
+                }
+
                 HSVColor {
                     h: Angle::new(magnitude as f32),
+                    // h: Angle::new(magnitude as f32 / iterations as f32),
                     s: UNFloat::new(1.0),
                     v: UNFloat::new(0.5),
                     a: UNFloat::new(1.0),
@@ -2095,6 +2152,17 @@ pub enum LABColorNodes {
         child_a: NodeBox<LABColorNodes>,
         child_b: NodeBox<LABColorNodes>,
     },
+
+    // #[mutagen(gen_weight = 0.0)]
+    #[mutagen(gen_preferred)]//TODO FIX
+    #[mutagen(gen_weight = branch_node_weight)]
+    DucksFractal {
+        child_offset: NodeBox<SNPointNodes>,
+        child_scale: NodeBox<SNPointNodes>,
+        child_iterations: NodeBox<ByteNodes>,
+        child_magnitude_normaliser: NodeBox<UFloatNormaliserNodes>,
+    },
+    
 }
 
 impl Node for LABColorNodes {
@@ -2152,6 +2220,74 @@ impl Node for LABColorNodes {
                     child_b.compute(compute_arg.reborrow())
                 }
             }
+
+            DucksFractal {
+                //TODO make gooderer
+                child_offset,
+                child_scale,
+                child_magnitude_normaliser,
+                ..
+            } => {
+                let _offset = child_offset.compute(compute_arg.reborrow()).into_inner();
+                let _scale = child_scale.compute(compute_arg.reborrow()).into_inner();
+                let iterations = 25;
+
+                let c = Complex::new(
+                    f64::from(
+                        compute_arg.coordinate_set.y.into_inner() * 16.0 * UNFloat::new_sin(compute_arg.coordinate_set.t / (CONSTS.time_scale_divisor * 20.0)).into_inner(),
+                    ),
+                    f64::from(
+                        compute_arg.coordinate_set.x.into_inner() * 16.0 * UNFloat::new_sin(compute_arg.coordinate_set.t / (CONSTS.time_scale_divisor * 20.0)).into_inner(),
+                    ),
+                );
+
+                let normaliser = UFloatNormaliser::Triangle;
+
+                let mouse_pos = SNPoint::from_snfloats(
+                    normaliser
+                        .normalise(compute_arg.mouse_position.x / CONSTS.initial_window_width as f32)
+                        .to_signed(),
+                    normaliser
+                        .normalise(compute_arg.mouse_position.y / CONSTS.initial_window_height as f32)
+                        .to_signed(),
+                );
+
+                let c_offset = Complex::new(
+                    f64::from(
+                        UNFloat::new_sin(mouse_pos.x().into_inner() + compute_arg.coordinate_set.t / (CONSTS.time_scale_divisor * 10.0)).to_signed().into_inner(),
+                    
+                    ),
+                    f64::from(
+                        UNFloat::new_sin(mouse_pos.y().into_inner() + compute_arg.coordinate_set.t / (CONSTS.time_scale_divisor * 5.0)).into_inner() * -1.0 * PI,
+                    ),
+                );
+
+                let mut magnitude: f64 = 0.0;
+
+                let (z_final, _escape) = escape_time_system(
+                    c,
+                    iterations as usize,
+                    |z, _i| {
+                        ((if z.im >= 0.0 { z } else { z.conj() })).ln() + c_offset
+                    },
+                    |z, i| {
+                        magnitude += z.norm();
+                        false
+                    },
+                );
+                
+                if !magnitude.is_normal() {
+                    magnitude = 0.0;
+                }
+
+                let magnitude_normaliser = child_magnitude_normaliser.compute(compute_arg.reborrow());
+
+                LABColor {
+                    l: magnitude_normaliser.normalise(magnitude as f32).to_signed(),
+                    ab: SNComplex::new_normalised(z_final, SFloatNormaliser::SinRepeating),
+                    alpha: UNFloat::ONE,
+                }
+            }
         }
     }
 }
@@ -2187,6 +2323,7 @@ pub enum GenericColorNodes {
     CMYK { child: NodeBox<CMYKColorNodes> },
     #[mutagen(mut_reroll = 0.5)]
     #[mutagen(gen_weight = pipe_node_weight)]
+    #[mutagen(gen_preferred)]
     LAB { child: NodeBox<LABColorNodes> },
 }
 

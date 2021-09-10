@@ -8,6 +8,7 @@ use crate::prelude::*;
 #[mutagen(gen_arg = type GenArg<'a>, mut_arg = type MutArg<'a>)]
 pub enum CoordMapNodes {
     // #[mutagen(gen_weight = leaf_node_weight)]
+    #[mutagen(gen_preferred)]
     #[mutagen(gen_weight = 20.0)]
     Identity,
 

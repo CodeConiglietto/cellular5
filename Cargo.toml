@@ -1,6 +1,6 @@
 [workspace]
 members = [
-  "cellular4",
+  "cellular5",
   "mutagen",
   "mutagen-derive",
   "dot-serde",
